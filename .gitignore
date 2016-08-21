@@ -2,3 +2,4 @@ android-project/obj/*
 android-project/libs/*
 android-project/apk/*
 bin/*.exe
+obj/
