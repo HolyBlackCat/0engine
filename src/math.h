@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 1.4.0 by HolyBlackCat
+// Version 1.6.1 by HolyBlackCat
 
 #include <functional>
 #include <cmath>
@@ -1896,9 +1896,10 @@ namespace Math
             return in * (T)180 / pi<T>();
         }
 
-        template <typename T> constexpr T ipow(T a, T b)
+        template <typename T, typename TT> constexpr T ipow(T a, TT b)
         {
-            static_assert(std::is_integral<T>::value, "Non integral template parameter makes no sense for this function.");
+            static_assert(std::is_integral<T>::value &&
+                          std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
             T ret = 1;
             while (b--)
             {
@@ -1907,9 +1908,11 @@ namespace Math
             return ret;
         }
 
-        template <typename T> constexpr T clamp(T val, T min, T max)
+        template <typename T, typename MIN, typename MAX> constexpr T clamp(T val, MIN min, MAX max)
         {
-            static_assert(std::is_arithmetic<T>::value, "Non arithmetic template parameter makes no sense for this function.");
+            static_assert(std::is_arithmetic<T>::value &&
+                          std::is_arithmetic<MIN>::value &&
+                          std::is_arithmetic<MAX>::value, "Non arithmetic template parameters make no sense for this function.");
             if (val < min) return min;
             if (val > max) return max;
             return val;
@@ -1925,6 +1928,26 @@ namespace Math
             static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
             return 3*x*x-2*x*x*x;
         }
+    }
+
+    template <typename T, typename TT> constexpr T true_div(T a, TT b)
+    {
+        static_assert(std::is_integral<T>::value &&
+                      std::is_integral<TT>::value, "Argument types must be integral.");
+        if (a >= 0)
+            return a / b;
+        else
+            return (a + 1) / b - (b >= 0 ? 1 : -1);
+    }
+
+    template <typename T, typename TT> constexpr T true_mod(T a, TT b)
+    {
+        static_assert(std::is_integral<T>::value &&
+                      std::is_integral<TT>::value, "Argument types must be integral.");
+        if (a >= 0)
+            return a % b;
+        else
+            return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
     }
 }
 
