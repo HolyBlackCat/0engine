@@ -1,0 +1,961 @@
+// math.h
+// by HolyBlackCat (c)
+// Apr 16, 2016
+
+#ifndef MATH_H_INCLUDED
+#define MATH_H_INCLUDED
+
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <utility>
+
+inline namespace Math
+{
+    inline namespace Vector
+    {
+        inline namespace Structs
+        {
+            template <unsigned int D, typename T> struct vec;
+            template <typename T> struct vec<2, T>;
+            template <typename T> struct vec<3, T>;
+            template <typename T> struct vec<4, T>;
+        }
+
+        inline namespace Using
+        {
+            namespace Internal
+            {
+                template <unsigned int D, typename T> struct usingvec;
+                template <typename T> struct usingvec<1, T> {using type = T;};
+                template <typename T> struct usingvec<2, T> {using type = vec<2, T>;};
+                template <typename T> struct usingvec<3, T> {using type = vec<3, T>;};
+                template <typename T> struct usingvec<4, T> {using type = vec<4, T>;};
+            }
+            template <unsigned int D1, unsigned int D2, typename T> using mat = typename Internal::usingvec<D1, typename Internal::usingvec<D2, T>::type>::type;
+
+            template <typename T> using vec2 = vec<2, T>;
+            template <typename T> using vec3 = vec<3, T>;
+            template <typename T> using vec4 = vec<4, T>;
+            #define LXINTERNAL_MU(a, b) template <typename T> using mat##a##x##b = mat<a, b, T>;
+            LXINTERNAL_MU(2,2) LXINTERNAL_MU(3,2) LXINTERNAL_MU(4,2)
+            LXINTERNAL_MU(2,3) LXINTERNAL_MU(3,3) LXINTERNAL_MU(4,3)
+            LXINTERNAL_MU(2,4) LXINTERNAL_MU(3,4) LXINTERNAL_MU(4,4)
+            #undef LXINTERNAL_MU
+            template <typename T> using mat2 = mat<2,2,T>;
+            template <typename T> using mat3 = mat<3,3,T>;
+            template <typename T> using mat4 = mat<4,4,T>;
+
+            #define LXINTERNAL_MU(a, b, t, y) using t##mat##a##x##b = mat<a, b, y>;
+
+            #define LXINTERNAL_U(x, y) using x##vec2 = vec2<y>; \
+                                     using x##vec3 = vec3<y>; \
+                                     using x##vec4 = vec4<y>; \
+                                     template <unsigned int D1, unsigned int D2> using x##mat = mat<D1, D2, y>; \
+                                     LXINTERNAL_MU(2,2,x,y) LXINTERNAL_MU(3,2,x,y) LXINTERNAL_MU(4,2,x,y) \
+                                     LXINTERNAL_MU(2,3,x,y) LXINTERNAL_MU(3,3,x,y) LXINTERNAL_MU(4,3,x,y) \
+                                     LXINTERNAL_MU(2,4,x,y) LXINTERNAL_MU(3,4,x,y) LXINTERNAL_MU(4,4,x,y) \
+                                     using x##mat2 = mat<2, 2, y>; \
+                                     using x##mat3 = mat<3, 3, y>; \
+                                     using x##mat4 = mat<4, 4, y>;
+            LXINTERNAL_U(c, char)
+            LXINTERNAL_U(sc, signed char)
+            LXINTERNAL_U(uc, unsigned char)
+            LXINTERNAL_U(s, short)
+            LXINTERNAL_U(us, unsigned short)
+            LXINTERNAL_U(i, int)
+            LXINTERNAL_U(u, unsigned int)
+            LXINTERNAL_U(l, long)
+            LXINTERNAL_U(ul, unsigned long)
+            LXINTERNAL_U(ll, long long)
+            LXINTERNAL_U(ull, unsigned long long)
+            LXINTERNAL_U(f, float)
+            LXINTERNAL_U(d, double)
+            LXINTERNAL_U(ld, long double)
+            LXINTERNAL_U(i8, int8_t)
+            LXINTERNAL_U(u8, uint8_t)
+            LXINTERNAL_U(i16, int16_t)
+            LXINTERNAL_U(u16, uint16_t)
+            LXINTERNAL_U(i32, int32_t)
+            LXINTERNAL_U(u32, uint32_t)
+            LXINTERNAL_U(i64, int64_t)
+            LXINTERNAL_U(u64, uint64_t)
+            #undef LXINTERNAL_MU
+            #undef LXINTERNAL_U
+        }
+
+        inline namespace Structs
+        {
+            #define LXINTERNAL_COMMON static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed."); \
+                                      static_assert(std::is_trivial<T>::value, "Vectors of non-trivial types are not allowed.");
+            #define LXINTERNAL_MEMBERS(N) static constexpr unsigned int dim = N; \
+                                          T *as_array() {return (T *)this;} \
+                                          const T *as_array() const {return (T *)this;} \
+                                          auto len() const {return std::sqrt(len_sqr());} \
+                                          vec<N, type> norm() const {auto l = len_sqr(); if (l == 0) return {}; else return *this / std::sqrt(l);} \
+                                          template <typename TT> vec<N, type> interpolate(const vec<N, type> &o, TT fac) const {return *this * (1-fac) + o * fac;} \
+                                          template <typename TT> vec<N, type> interpolate_reverse(const vec<N, type> &o, TT fac) const {return *this * fac + o * (1 - fac);} \
+
+            #define LXINTERNAL_VEC2_MEMBERS \
+                    LXINTERNAL_COMMON \
+                    LXINTERNAL_MEMBERS(2) \
+                    union {type x, r;}; \
+                    union {type y, g;}; \
+                    auto sum() const {return x + y;} \
+                    auto product() const {return x * y;} \
+                    bool none() const {return !x && !y;} \
+                    bool any() const {return x || y;} \
+                    bool all() const {return x && y;} \
+                    auto len_sqr() const {return x*x + y*y;} \
+                    template <typename TT> auto dot(const vec2<TT> &o) const {return x*o.x + y*o.y;} \
+                    template <typename TT> operator vec2<TT>() const {return {(TT)x, (TT)y};} \
+                    vec new_x(T o) const {return {o,y};} \
+                    vec new_r(T o) const {return {o,y};} \
+                    vec new_y(T o) const {return {x,o};} \
+                    vec new_g(T o) const {return {x,o};} \
+
+            #define LXINTERNAL_VEC3_MEMBERS \
+                    LXINTERNAL_COMMON \
+                    LXINTERNAL_MEMBERS(3) \
+                    union {type x, r;}; \
+                    union {type y, g;}; \
+                    union {type z, b;}; \
+                    auto sum() const {return x + y + z;} \
+                    auto product() const {return x * y * z;} \
+                    bool none() const {return !x && !y && !z;} \
+                    bool any() const {return x || y || z;} \
+                    bool all() const {return x && y && z;} \
+                    auto len_sqr() const {return x*x + y*y + z*z;} \
+                    template <typename TT> auto dot(const vec3<TT> &o) const {return x*o.x + y*o.y + z*o.z;} \
+                    template <typename TT> operator vec3<TT>() const {return {(TT)x, (TT)y, (TT)z};} \
+                    template <typename TT> auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};} \
+                    vec new_x(T o) const {return {o,y,z};} \
+                    vec new_r(T o) const {return {o,y,z};} \
+                    vec new_y(T o) const {return {x,o,z};} \
+                    vec new_g(T o) const {return {x,o,z};} \
+                    vec new_z(T o) const {return {x,y,o};} \
+                    vec new_b(T o) const {return {x,y,o};} \
+
+            #define LXINTERNAL_VEC4_MEMBERS \
+                    LXINTERNAL_COMMON \
+                    LXINTERNAL_MEMBERS(4) \
+                    union {type x, r;}; \
+                    union {type y, g;}; \
+                    union {type z, b;}; \
+                    union {type w, a;}; \
+                    auto sum() const {return x + y + z + w;} \
+                    auto product() const {return x * y * z * w;} \
+                    bool none() const {return !x && !y && !z && !w;} \
+                    bool any() const {return x || y || z || w;} \
+                    bool all() const {return x && y && z && w;} \
+                    auto len_sqr() const {return x*x + y*y + z*z + w*w;} \
+                    template <typename TT> auto dot(const vec4<TT> &o) const {return x*o.x + y*o.y + z*o.z + w*o.w;} \
+                    template <typename TT> operator vec4<TT>() const {return {(TT)x, (TT)y, (TT)z, (TT)w};} \
+                    vec new_x(T o) const {return {o,y,z,w};} \
+                    vec new_r(T o) const {return {o,y,z,w};} \
+                    vec new_y(T o) const {return {x,o,z,w};} \
+                    vec new_g(T o) const {return {x,o,z,w};} \
+                    vec new_z(T o) const {return {x,y,o,w};} \
+                    vec new_b(T o) const {return {x,y,o,w};} \
+                    vec new_w(T o) const {return {x,y,z,o};} \
+                    vec new_a(T o) const {return {x,y,z,o};} \
+
+            #define LXINTERNAL_MAT23_MEMBERS \
+                    static mat2x3<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize2x3(); \
+                    }
+            #define LXINTERNAL_MAT24_MEMBERS \
+                    static mat2x4<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize2x4(); \
+                    }
+            #define LXINTERNAL_MAT32_MEMBERS \
+                    static mat3x2<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize3x2(); \
+                    }
+            #define LXINTERNAL_MAT34_MEMBERS \
+                    static mat3x4<T> ortho(const vec2<T> &size, T near, T far) \
+                    { \
+                        return {2 / size.x, 0, 0, 0, \
+                                0, 2 / size.y, 0, 0, \
+                                0, 0, 2 / (near - far), (near + far) / (near - far)}; \
+                    } \
+                    static mat3x4<T> look_at(const vec3<T> &src, const vec3<T> &dst, const vec3<T> &local_up) \
+                    { \
+                        vec3<T> v3 = (src-dst).norm(); \
+                        vec3<T> v1 = local_up.cross(v3).norm(); \
+                        vec3<T> v2 = v3.cross(v1); \
+                        return {v1.x, v1.y, v1.z, -src.x*v1.x - src.y*v1.y - src.z*v1.z, \
+                                v2.x, v2.y, v2.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z, \
+                                v3.x, v3.y, v3.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z}; \
+                    } \
+                    static mat3x4<T> translate(const vec3<T> &in) \
+                    { \
+                        return {1, 0, 0, in.x, \
+                                0, 1, 0, in.y, \
+                                0, 0, 1, in.z}; \
+                    } \
+                    static mat3x4<T> rotate_with_normalized_axis(const vec3<T> &in, T angle) \
+                    { \
+                        return mat3<T>::rotate_with_normalized_axis(in, angle).resize3x4(); \
+                    } \
+                    static mat3x4<T> rotate(const vec3<T> &in, T angle) \
+                    { \
+                        return mat3<T>::rotate(in, angle).resize3x4(); \
+                    } \
+                    static mat3x4<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize3x4(); \
+                    } \
+                    static mat3x4<T> dia3(const vec3<T> &in) \
+                    { \
+                        return mat3<T>::dia3(in).resize3x4(); \
+                    }
+            #define LXINTERNAL_MAT42_MEMBERS \
+                    static mat4x2<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize4x2(); \
+                    }
+            #define LXINTERNAL_MAT43_MEMBERS \
+                    static mat4x3<T> rotate_with_normalized_axis(const vec3<T> &in, T angle) \
+                    { \
+                        return mat3<T>::rotate_with_normalized_axis(in, angle).resize4x3(); \
+                    } \
+                    static mat4x3<T> rotate(const vec3<T> &in, T angle) \
+                    { \
+                        return mat3<T>::rotate(in, angle).resize4x3(); \
+                    } \
+                    static mat4x3<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize4x3(); \
+                    } \
+                    static mat4x3<T> dia3(const vec3<T> &in) \
+                    { \
+                        return mat3<T>::dia3(in).resize4x3(); \
+                    }
+
+            #define LXINTERNAL_MAT22_MEMBERS \
+                    mat2<T> inverse() const \
+                    { \
+                        mat2<T> inv; \
+                        T det; \
+                        inv.x.x =  y.y; \
+                        inv.y.x = -y.x; \
+                        inv.x.y = -x.y; \
+                        inv.y.y =  x.x; \
+                        det = x.x * inv.x.x + x.y * inv.y.x; \
+                        if (det == 0) \
+                            return mat2<T>::identity(); \
+                        det = 1.0f / det; \
+                        return inv * det; \
+                    } \
+                    static mat2<T> dia2(const vec2<T> &in) \
+                    { \
+                        return {in.x, 0, 0, in.y}; \
+                    }
+            #define LXINTERNAL_MAT33_MEMBERS \
+                    static mat3<T> rotate_with_normalized_axis(const vec3<T> &in, T angle) \
+                    { \
+                        T c = std::cos(angle); \
+                        T s = std::sin(angle); \
+                        return {in.x * in.x * (1 - c) + c, in.x * in.y * (1 - c) - in.z * s, in.x * in.z * (1 - c) + in.y * s, \
+                                in.y * in.x * (1 - c) + in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) - in.x * s, \
+                                in.x * in.z * (1 - c) - in.y * s, in.y * in.z * (1 - c) + in.x * s, in.z * in.z * (1 - c) + c}; \
+                    } \
+                    static mat3<T> rotate(const vec3<T> &in, T angle) \
+                    { \
+                        return rotate_with_normalized_axis(in.norm(), angle); \
+                    } \
+                    mat3<T> inverse() const \
+                    { \
+                        mat3<T> inv; \
+                        T det; \
+                        inv.x.x =  y.y * z.z - \
+                                   z.y * y.z;  \
+                        inv.y.x = -y.x * z.z + \
+                                   z.x * y.z;  \
+                        inv.z.x =  y.x * z.y - \
+                                   z.x * y.y;  \
+                        inv.x.y = -x.y * z.z + \
+                                   z.y * x.z;  \
+                        inv.y.y =  x.x * z.z - \
+                                   z.x * x.z;  \
+                        inv.z.y = -x.x * z.y + \
+                                   z.x * x.y;  \
+                        inv.x.z =  x.y * y.z - \
+                                   y.y * x.z;  \
+                        inv.y.z = -x.x * y.z + \
+                                   y.x * x.z;  \
+                        inv.z.z =  x.x * y.y - \
+                                   y.x * x.y;  \
+                        det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x; \
+                        if (det == 0) \
+                            return mat3<T>::identity(); \
+                        det = 1.0f / det; \
+                        return inv * det; \
+                    } \
+                    static mat3<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize3x3(); \
+                    } \
+                    static mat3<T> dia3(const vec3<T> &in) \
+                    { \
+                        return {in.x, 0, 0, 0, in.y, 0, 0, 0, in.z}; \
+                    }
+            #define LXINTERNAL_MAT44_MEMBERS \
+                    static mat4<T> ortho(const vec2<T> &size, T near, T far) \
+                    { \
+                        return mat3x4<T>::ortho(size, near, far).resize4x4(); \
+                    }; \
+                    static mat4<T> frustum(const vec2<T> &size, T near, T far) \
+                    { \
+                        return {2 * near / size.x, 0, 0, 0, \
+                                0, 2 * near / size.y, 0, 0, \
+                                0, 0, (near + far) / (near - far), 2 * far / (near - far), \
+                                0, 0, -1, 0}; \
+                    } \
+                    static mat4<T> look_at(const vec3<T> &src, const vec3<T> &dst, vec3<T> const &local_up) \
+                    { \
+                        return mat3x4<T>::look_at(src, dst, local_up).resize4x4(); \
+                    } \
+                    static mat4<T> perspective(T yfov, T wh_aspect, T near, T far) \
+                    { \
+                        yfov = (T)1 / std::tan(yfov / 2); \
+                        return {yfov / wh_aspect , 0    , 0                           , 0                             , \
+                                0                , yfov , 0                           , 0                             , \
+                                0                , 0    , (near + far) / (near - far) , 2 * near * far / (near - far) , \
+                                0                , 0    , -1                          , 0                             }; \
+                    } \
+                    static mat4<T> translate(const vec3<T> &in) \
+                    { \
+                        return mat3x4<T>::translate(in).resize4x4(); \
+                    } \
+                    static mat4<T> rotate_with_normalized_axis(const vec3<T> &in, T angle) \
+                    { \
+                        return mat3<T>::rotate_with_normalized_axis(in, angle).resize4x4(); \
+                    } \
+                    static mat4<T> rotate(const vec3<T> &in, T angle) \
+                    { \
+                        return mat3<T>::rotate(in, angle).resize4x4(); \
+                    } \
+                    mat4<T> inverse() const \
+                    { \
+                        mat4<T> inv; \
+                        T det; \
+                        inv.x.x =  y.y * z.z * w.w - \
+                                   y.y * z.w * w.z - \
+                                   z.y * y.z * w.w + \
+                                   z.y * y.w * w.z + \
+                                   w.y * y.z * z.w - \
+                                   w.y * y.w * z.z;  \
+                        inv.y.x = -y.x * z.z * w.w + \
+                                   y.x * z.w * w.z + \
+                                   z.x * y.z * w.w - \
+                                   z.x * y.w * w.z - \
+                                   w.x * y.z * z.w + \
+                                   w.x * y.w * z.z;  \
+                        inv.z.x =  y.x * z.y * w.w - \
+                                   y.x * z.w * w.y - \
+                                   z.x * y.y * w.w + \
+                                   z.x * y.w * w.y + \
+                                   w.x * y.y * z.w - \
+                                   w.x * y.w * z.y;  \
+                        inv.w.x = -y.x * z.y * w.z + \
+                                   y.x * z.z * w.y + \
+                                   z.x * y.y * w.z - \
+                                   z.x * y.z * w.y - \
+                                   w.x * y.y * z.z + \
+                                   w.x * y.z * z.y;  \
+                        inv.x.y = -x.y * z.z * w.w + \
+                                   x.y * z.w * w.z + \
+                                   z.y * x.z * w.w - \
+                                   z.y * x.w * w.z - \
+                                   w.y * x.z * z.w + \
+                                   w.y * x.w * z.z;  \
+                        inv.y.y =  x.x * z.z * w.w - \
+                                   x.x * z.w * w.z - \
+                                   z.x * x.z * w.w + \
+                                   z.x * x.w * w.z + \
+                                   w.x * x.z * z.w - \
+                                   w.x * x.w * z.z;  \
+                        inv.z.y = -x.x * z.y * w.w + \
+                                   x.x * z.w * w.y + \
+                                   z.x * x.y * w.w - \
+                                   z.x * x.w * w.y - \
+                                   w.x * x.y * z.w + \
+                                   w.x * x.w * z.y;  \
+                        inv.w.y =  x.x * z.y * w.z - \
+                                   x.x * z.z * w.y - \
+                                   z.x * x.y * w.z + \
+                                   z.x * x.z * w.y + \
+                                   w.x * x.y * z.z - \
+                                   w.x * x.z * z.y;  \
+                        inv.x.z =  x.y * y.z * w.w - \
+                                   x.y * y.w * w.z - \
+                                   y.y * x.z * w.w + \
+                                   y.y * x.w * w.z + \
+                                   w.y * x.z * y.w - \
+                                   w.y * x.w * y.z;  \
+                        inv.y.z = -x.x * y.z * w.w + \
+                                   x.x * y.w * w.z + \
+                                   y.x * x.z * w.w - \
+                                   y.x * x.w * w.z - \
+                                   w.x * x.z * y.w + \
+                                   w.x * x.w * y.z;  \
+                        inv.z.z =  x.x * y.y * w.w - \
+                                   x.x * y.w * w.y - \
+                                   y.x * x.y * w.w + \
+                                   y.x * x.w * w.y + \
+                                   w.x * x.y * y.w - \
+                                   w.x * x.w * y.y;  \
+                        inv.w.z = -x.x * y.y * w.z + \
+                                   x.x * y.z * w.y + \
+                                   y.x * x.y * w.z - \
+                                   y.x * x.z * w.y - \
+                                   w.x * x.y * y.z + \
+                                   w.x * x.z * y.y;  \
+                        inv.x.w = -x.y * y.z * z.w + \
+                                   x.y * y.w * z.z + \
+                                   y.y * x.z * z.w - \
+                                   y.y * x.w * z.z - \
+                                   z.y * x.z * y.w + \
+                                   z.y * x.w * y.z;  \
+                        inv.y.w =  x.x * y.z * z.w - \
+                                   x.x * y.w * z.z - \
+                                   y.x * x.z * z.w + \
+                                   y.x * x.w * z.z + \
+                                   z.x * x.z * y.w - \
+                                   z.x * x.w * y.z;  \
+                        inv.z.w = -x.x * y.y * z.w + \
+                                   x.x * y.w * z.y + \
+                                   y.x * x.y * z.w - \
+                                   y.x * x.w * z.y - \
+                                   z.x * x.y * y.w + \
+                                   z.x * x.w * y.y;  \
+                        inv.w.w =  x.x * y.y * z.z - \
+                                   x.x * y.z * z.y - \
+                                   y.x * x.y * z.z + \
+                                   y.x * x.z * z.y + \
+                                   z.x * x.y * y.z - \
+                                   z.x * x.z * y.y;  \
+                        det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x + x.w * inv.w.x; \
+                        if (det == 0) \
+                            return mat4<T>::identity(); \
+                        det = 1.0f / det; \
+                        return inv * det; \
+                    } \
+                    static mat4<T> dia2(const vec2<T> &in) \
+                    { \
+                        return mat2<T>::dia2(in).resize4x4(); \
+                    } \
+                    static mat4<T> dia3(const vec3<T> &in) \
+                    { \
+                        return mat3<T>::dia3(in).resize4x4(); \
+                    } \
+                    static mat4<T> dia4(const vec4<T> &in) \
+                    { \
+                        return {in.x, 0, 0, 0, 0, in.y, 0, 0, 0, 0, in.z, 0, 0, 0, 0, in.w}; \
+                    }
+
+            #define LXINTERNAL_T1 decltype((*(T*)0 * *(T2*)0))
+            #define LXINTERNAL_T2 decltype((*(T*)0 * *(T2*)0) + (*(T*)0 * *(T2*)0))
+            #define LXINTERNAL_T3 decltype((*(T*)0 * *(T2*)0) + (*(T*)0 * *(T2*)0) + (*(T*)0 * *(T2*)0))
+            #define LXINTERNAL_T4 decltype((*(T*)0 * *(T2*)0) + (*(T*)0 * *(T2*)0) + (*(T*)0 * *(T2*)0) + (*(T*)0 * *(T2*)0))
+            #define LXINTERNAL_GET1(obj)
+            #define LXINTERNAL_GET2(obj) .obj
+            #define LXINTERNAL_GET3(obj) .obj
+            #define LXINTERNAL_GET4(obj) .obj
+            #define LXINTERNAL_SEQ(x1y2, y1, x2, px, py, what) (*this) LXINTERNAL_GET##x1y2(what) LXINTERNAL_GET##y1(py) * o LXINTERNAL_GET##x2(px) LXINTERNAL_GET##x1y2(what)
+            #define LXINTERNAL_SEQ1(x1y2, y1, x2, px, py)                                       LXINTERNAL_SEQ(x1y2, y1, x2, px, py, x)
+            #define LXINTERNAL_SEQ2(x1y2, y1, x2, px, py) LXINTERNAL_SEQ1(x1y2, y1, x2, px, py) + LXINTERNAL_SEQ(x1y2, y1, x2, px, py, y)
+            #define LXINTERNAL_SEQ3(x1y2, y1, x2, px, py) LXINTERNAL_SEQ2(x1y2, y1, x2, px, py) + LXINTERNAL_SEQ(x1y2, y1, x2, px, py, z)
+            #define LXINTERNAL_SEQ4(x1y2, y1, x2, px, py) LXINTERNAL_SEQ3(x1y2, y1, x2, px, py) + LXINTERNAL_SEQ(x1y2, y1, x2, px, py, w)
+            #define LXINTERNAL_ASEQ1(x1y2, y1, x2, px)                                   LXINTERNAL_SEQ##x1y2(x1y2, y1, x2, px, x)
+            #define LXINTERNAL_ASEQ2(x1y2, y1, x2, px) LXINTERNAL_ASEQ1(x1y2, y1, x2, px), LXINTERNAL_SEQ##x1y2(x1y2, y1, x2, px, y)
+            #define LXINTERNAL_ASEQ3(x1y2, y1, x2, px) LXINTERNAL_ASEQ2(x1y2, y1, x2, px), LXINTERNAL_SEQ##x1y2(x1y2, y1, x2, px, z)
+            #define LXINTERNAL_ASEQ4(x1y2, y1, x2, px) LXINTERNAL_ASEQ3(x1y2, y1, x2, px), LXINTERNAL_SEQ##x1y2(x1y2, y1, x2, px, w)
+            #define LXINTERNAL_BSEQ1(x1y2, y1, x2, yy)                                   LXINTERNAL_ASEQ##yy(x1y2, y1, x2, x)
+            #define LXINTERNAL_BSEQ2(x1y2, y1, x2, yy) LXINTERNAL_BSEQ1(x1y2, y1, x2, yy), LXINTERNAL_ASEQ##yy(x1y2, y1, x2, y)
+            #define LXINTERNAL_BSEQ3(x1y2, y1, x2, yy) LXINTERNAL_BSEQ2(x1y2, y1, x2, yy), LXINTERNAL_ASEQ##yy(x1y2, y1, x2, z)
+            #define LXINTERNAL_BSEQ4(x1y2, y1, x2, yy) LXINTERNAL_BSEQ3(x1y2, y1, x2, yy), LXINTERNAL_ASEQ##yy(x1y2, y1, x2, w)
+            #define LXINTERNAL_RESULT(x1y2, y1, x2) LXINTERNAL_BSEQ##x2(x1y2, y1, x2, y1)
+            #define LXINTERNAL_MU(x1y2, y1, x2) template <typename T2 = T, typename RET = LXINTERNAL_T##x1y2> mat<x2, y1, RET> mult(const mat<x2, x1y2, T2> &o) const {return {LXINTERNAL_RESULT(x1y2, y1, x2)};}
+            #define LXINTERNAL_GETZ2 0
+            #define LXINTERNAL_GETZ3 z
+            #define LXINTERNAL_GETZ4 z
+            #define LXINTERNAL_GETW2 0
+            #define LXINTERNAL_GETW3 0
+            #define LXINTERNAL_GETW4 w
+            #define LXINTERNAL_VEC(x1) \
+                    template <typename T> struct vec<x1, T> \
+                    { \
+                        using type = T; \
+                        LXINTERNAL_VEC##x1##_MEMBERS \
+                        LXINTERNAL_MU(x1, 1, 1) \
+                        LXINTERNAL_MU(x1, 1, 2) \
+                        LXINTERNAL_MU(x1, 1, 3) \
+                        LXINTERNAL_MU(x1, 1, 4) \
+                             T  resize1() const {return {x};} \
+                        vec2<T> resize2() const {return {x,y};} \
+                        vec3<T> resize3() const {return {x,y,LXINTERNAL_GETZ##x1};} \
+                        vec4<T> resize4() const {return {x,y,LXINTERNAL_GETZ##x1,LXINTERNAL_GETW##x1};} \
+                    };
+            #define LXINTERNAL_VE1 x
+            #define LXINTERNAL_VE2 y
+            #define LXINTERNAL_VE3 z
+            #define LXINTERNAL_VE4 w
+            #define LXINTERNAL_DEF11 1
+            #define LXINTERNAL_DEF12 0
+            #define LXINTERNAL_DEF13 0
+            #define LXINTERNAL_DEF14 0
+            #define LXINTERNAL_DEF21 0
+            #define LXINTERNAL_DEF22 1
+            #define LXINTERNAL_DEF23 0
+            #define LXINTERNAL_DEF24 0
+            #define LXINTERNAL_DEF31 0
+            #define LXINTERNAL_DEF32 0
+            #define LXINTERNAL_DEF33 1
+            #define LXINTERNAL_DEF34 0
+            #define LXINTERNAL_DEF41 0
+            #define LXINTERNAL_DEF42 0
+            #define LXINTERNAL_DEF43 0
+            #define LXINTERNAL_DEF44 1
+            #define LXINTERNAL_COND21(a, b) a
+            #define LXINTERNAL_COND22(a, b) a
+            #define LXINTERNAL_COND23(a, b) b
+            #define LXINTERNAL_COND24(a, b) b
+            #define LXINTERNAL_COND31(a, b) a
+            #define LXINTERNAL_COND32(a, b) a
+            #define LXINTERNAL_COND33(a, b) a
+            #define LXINTERNAL_COND34(a, b) b
+            #define LXINTERNAL_COND41(a, b) a
+            #define LXINTERNAL_COND42(a, b) a
+            #define LXINTERNAL_COND43(a, b) a
+            #define LXINTERNAL_COND44(a, b) a
+            #define LXINTERNAL_MRESZS(x1, y1, xx, yy) LXINTERNAL_COND##x1##xx(LXINTERNAL_COND##y1##yy(LXINTERNAL_VE##xx . LXINTERNAL_VE##yy, LXINTERNAL_DEF##xx##yy), LXINTERNAL_DEF##xx##yy)
+            #define LXINTERNAL_MRESZV1(x1, y1, xx)                               LXINTERNAL_MRESZS(x1, y1, xx, 1)
+            #define LXINTERNAL_MRESZV2(x1, y1, xx) LXINTERNAL_MRESZV1(x1, y1, xx), LXINTERNAL_MRESZS(x1, y1, xx, 2)
+            #define LXINTERNAL_MRESZV3(x1, y1, xx) LXINTERNAL_MRESZV2(x1, y1, xx), LXINTERNAL_MRESZS(x1, y1, xx, 3)
+            #define LXINTERNAL_MRESZV4(x1, y1, xx) LXINTERNAL_MRESZV3(x1, y1, xx), LXINTERNAL_MRESZS(x1, y1, xx, 4)
+            #define LXINTERNAL_MRESZI1(x1, y1, yy)                               LXINTERNAL_MRESZV##yy(x1, y1, 1)
+            #define LXINTERNAL_MRESZI2(x1, y1, yy) LXINTERNAL_MRESZI1(x1, y1, yy), LXINTERNAL_MRESZV##yy(x1, y1, 2)
+            #define LXINTERNAL_MRESZI3(x1, y1, yy) LXINTERNAL_MRESZI2(x1, y1, yy), LXINTERNAL_MRESZV##yy(x1, y1, 3)
+            #define LXINTERNAL_MRESZI4(x1, y1, yy) LXINTERNAL_MRESZI3(x1, y1, yy), LXINTERNAL_MRESZV##yy(x1, y1, 4)
+            #define LXINTERNAL_MRESZ(x1, y1, xx, yy) mat<xx, yy, T> resize##xx##x##yy() const {return {LXINTERNAL_MRESZI##xx(x1, y1, yy)};}
+            #define LXINTERNAL_MRESZ_PACK(x1, y1, n) LXINTERNAL_MRESZ(x1, y1, n, 1) LXINTERNAL_MRESZ(x1, y1, n, 2) LXINTERNAL_MRESZ(x1, y1, n, 3) LXINTERNAL_MRESZ(x1, y1, n, 4)
+            #define LXINTERNAL_TRANSS(xx, yy) LXINTERNAL_VE##yy . LXINTERNAL_VE##xx
+            #define LXINTERNAL_TRANSV2(xx) LXINTERNAL_TRANSS(xx, 1), LXINTERNAL_TRANSS(xx, 2)
+            #define LXINTERNAL_TRANSV3(xx) LXINTERNAL_TRANSV2(xx),   LXINTERNAL_TRANSS(xx, 3)
+            #define LXINTERNAL_TRANSV4(xx) LXINTERNAL_TRANSV3(xx),   LXINTERNAL_TRANSS(xx, 4)
+            #define LXINTERNAL_TRANS2(yy) LXINTERNAL_TRANSV##yy(1), LXINTERNAL_TRANSV##yy(2)
+            #define LXINTERNAL_TRANS3(yy) LXINTERNAL_TRANS2(yy),    LXINTERNAL_TRANSV##yy(3)
+            #define LXINTERNAL_TRANS4(yy) LXINTERNAL_TRANS3(yy),    LXINTERNAL_TRANSV##yy(4)
+            #define LXINTERNAL_TRANSPOSE(xx, yy) mat<yy, xx, T> transpose() const {return {LXINTERNAL_TRANS##yy(xx)};}
+            #define LXINTERNAL_MAT(x1, y1) \
+                    template <typename T> struct vec<x1, vec<y1, T>> \
+                    { \
+                        using type = vec<y1, T>; \
+                        LXINTERNAL_VEC##x1##_MEMBERS \
+                        LXINTERNAL_MAT##x1##y1##_MEMBERS \
+                        LXINTERNAL_MU(x1, y1, 1) \
+                        LXINTERNAL_MU(x1, y1, 2) \
+                        LXINTERNAL_MU(x1, y1, 3) \
+                        LXINTERNAL_MU(x1, y1, 4) \
+                        LXINTERNAL_MRESZ_PACK(x1, y1, 1) \
+                        LXINTERNAL_MRESZ_PACK(x1, y1, 2) \
+                        LXINTERNAL_MRESZ_PACK(x1, y1, 3) \
+                        LXINTERNAL_MRESZ_PACK(x1, y1, 4) \
+                        LXINTERNAL_TRANSPOSE(x1, y1) \
+                        static mat<x1, y1, T> identity() {return mat<2, 2, T>{1, 0, 0, 1}.resize##x1##x##y1();} \
+                    };
+
+            LXINTERNAL_VEC(2)
+            LXINTERNAL_VEC(3)
+            LXINTERNAL_VEC(4)
+
+            LXINTERNAL_MAT(2,2)
+            LXINTERNAL_MAT(2,3)
+            LXINTERNAL_MAT(2,4)
+            LXINTERNAL_MAT(3,2)
+            LXINTERNAL_MAT(3,3)
+            LXINTERNAL_MAT(3,4)
+            LXINTERNAL_MAT(4,2)
+            LXINTERNAL_MAT(4,3)
+            LXINTERNAL_MAT(4,4)
+
+            template <typename T = float> struct QuaternionTemplate
+            {
+                static_assert(std::is_floating_point<T>::value, "Quaternion template parameter must be floating-point.");
+
+                vec4<T> vec;
+
+                QuaternionTemplate() : vec{0,0,0,1} {}
+                QuaternionTemplate(const vec4<T> &o) : vec(o) {}
+
+                static QuaternionTemplate from_norm_axis_and_angle(const vec3<T> &v, T angle)
+                {
+                    return QuaternionTemplate({v.x * std::sin(angle / 2.f), v.y * std::sin(angle / 2.f), v.z * std::sin(angle / 2.f), std::cos(angle / 2.f)});
+                }
+                static QuaternionTemplate from_axis_and_angle(const vec3<T> &v, T angle)
+                {
+                    return from_norm_axis_and_angle(v.norm(), angle);
+                }
+
+                QuaternionTemplate norm() const
+                {
+                    return QuaternionTemplate(vec.norm());
+                }
+
+                void normalize()
+                {
+                    vec = vec.norm();
+                }
+                QuaternionTemplate operator+(const QuaternionTemplate &o) const
+                {
+                    return QuaternionTemplate(vec + o.vec);
+                }
+                QuaternionTemplate &operator+=(const QuaternionTemplate &o)
+                {
+                    vec += o.vec;
+                    return *this;
+                }
+                QuaternionTemplate operator-(const QuaternionTemplate &o) const
+                {
+                    return QuaternionTemplate(vec - o.vec);
+                }
+                QuaternionTemplate &operator-=(const QuaternionTemplate &o)
+                {
+                    vec -= o.vec;
+                    return *this;
+                }
+                QuaternionTemplate operator-() const
+                {
+                    return QuaternionTemplate(-vec.x, -vec.y, -vec.z, vec.w);
+                }
+                QuaternionTemplate operator*(const QuaternionTemplate &o) const
+                {
+                    return QuaternionTemplate(vec.w*o.vec.x + vec.x*o.vec.w + vec.y*o.vec.z - vec.z*o.vec.y,
+                                              vec.w*o.vec.y - vec.x*o.vec.z + vec.y*o.vec.w + vec.z*o.vec.x,
+                                              vec.w*o.vec.z + vec.x*o.vec.y - vec.y*o.vec.x + vec.z*o.vec.w,
+                                              vec.w*o.vec.w - vec.x*o.vec.x - vec.y*o.vec.y - vec.z*o.vec.z);
+                }
+                QuaternionTemplate &operator*=(const QuaternionTemplate &o)
+                {
+                    vec = {vec.w*o.vec.x + vec.x*o.vec.w + vec.y*o.vec.z - vec.z*o.vec.y,
+                           vec.w*o.vec.y - vec.x*o.vec.z + vec.y*o.vec.w + vec.z*o.vec.x,
+                           vec.w*o.vec.z + vec.x*o.vec.y - vec.y*o.vec.x + vec.z*o.vec.w,
+                           vec.w*o.vec.w - vec.x*o.vec.x - vec.y*o.vec.y - vec.z*o.vec.z};
+                    return *this;
+                }
+                T dot(const QuaternionTemplate &o) const
+                {
+                    return vec.dot(o.vec);
+                }
+                T len_sqr() const
+                {
+                    return vec.len_sqr();
+                }
+                T len() const
+                {
+                    return vec.len();
+                }
+                QuaternionTemplate combine(const QuaternionTemplate &o, T fac) const
+                {
+                    return QuaternionTemplate(vec.interpolate(o.vec, fac));
+                }
+
+                bool operator==(const QuaternionTemplate &o) const
+                {
+                    return vec == o.vec;
+                }
+                bool operator!=(const QuaternionTemplate &o) const
+                {
+                    return vec != o.vec;
+                }
+
+                vec3<T> get_axis() const
+                {
+                    return vec.resize3().norm();
+                }
+                vec3<T> get_not_norm_axis() const
+                {
+                    return vec.resize3();
+                }
+                T get_angle() const
+                {
+                    return std::atan2(vec.resize3().len(), vec.w) * 2;
+                }
+
+                template <typename TT> QuaternionTemplate mult_angle(TT n) const
+                {
+                    return from_axis_and_angle(get_not_norm_axis(), get_angle() * n);
+                }
+
+                template <typename TT> vec3<TT> apply(const vec3<TT> &in) const // 24x [*|/]  17x [+|-]
+                {
+                    float newx = vec.w*in.x + vec.y*in.z - vec.z*in.y;
+                    float newy = vec.w*in.y - vec.x*in.z + vec.z*in.x;
+                    float newz = vec.w*in.z + vec.x*in.y - vec.y*in.x;
+                    float neww = vec.x*in.x + vec.y*in.y + vec.z*in.z;
+
+                    return {newx*vec.w + neww*vec.x - newy*vec.z + newz*vec.y,
+                            neww*vec.y + newx*vec.z + newy*vec.w - newz*vec.x,
+                            neww*vec.z - newx*vec.y + newy*vec.x + newz*vec.w};
+                }
+                template <typename TT> vec4<TT> apply(const vec4<TT> &in) const // 24x [*|/]  17x [+|-]
+                {
+                    float newx = vec.w*in.x + vec.y*in.z - vec.z*in.y;
+                    float newy = vec.w*in.y - vec.x*in.z + vec.z*in.x;
+                    float newz = vec.w*in.z + vec.x*in.y - vec.y*in.x;
+                    float neww = vec.x*in.x + vec.y*in.y + vec.z*in.z;
+
+                    return {newx*vec.w + neww*vec.x - newy*vec.z + newz*vec.y,
+                            neww*vec.y + newx*vec.z + newy*vec.w - newz*vec.x,
+                            neww*vec.z - newx*vec.y + newy*vec.x + newz*vec.w,
+                            in.w};
+                }
+
+                mat3<T> get_matrix_from_normalized() const // 18x [*|/]  12x [+|-]    +    mult: 9x [*|/]  6x [+|-]
+                {
+                    return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y - 2*vec.z*vec.w, 2*vec.x*vec.z + 2*vec.y*vec.w,
+                            2*vec.x*vec.y + 2*vec.z*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z, 2*vec.y*vec.z - 2*vec.x*vec.w,
+                            2*vec.x*vec.z - 2*vec.y*vec.w, 2*vec.y*vec.z + 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.y*vec.y};
+                }
+                mat3<T> normalize_and_get_matrix() // 18x [*|/]  12x [+|-]    +    mult: 9x [*|/]  6x [+|-]
+                {
+                    normalize();
+                    return get_matrix_from_normalized();
+                }
+            };
+
+            using Quaternion = QuaternionTemplate<>;
+
+
+            #undef LXINTERNAL_COMMON
+            #undef LXINTERNAL_MEMBERS
+            #undef LXINTERNAL_VEC2_MEMBERS
+            #undef LXINTERNAL_VEC3_MEMBERS
+            #undef LXINTERNAL_VEC4_MEMBERS
+            #undef LXINTERNAL_MAT22_MEMBERS
+            #undef LXINTERNAL_MAT23_MEMBERS
+            #undef LXINTERNAL_MAT24_MEMBERS
+            #undef LXINTERNAL_MAT32_MEMBERS
+            #undef LXINTERNAL_MAT33_MEMBERS
+            #undef LXINTERNAL_MAT34_MEMBERS
+            #undef LXINTERNAL_MAT42_MEMBERS
+            #undef LXINTERNAL_MAT43_MEMBERS
+            #undef LXINTERNAL_MAT44_MEMBERS
+
+            #undef LXINTERNAL_T1
+            #undef LXINTERNAL_T2
+            #undef LXINTERNAL_T3
+            #undef LXINTERNAL_T4
+            #undef LXINTERNAL_GET1
+            #undef LXINTERNAL_GET2
+            #undef LXINTERNAL_GET3
+            #undef LXINTERNAL_GET4
+            #undef LXINTERNAL_SEQ
+            #undef LXINTERNAL_SEQ1
+            #undef LXINTERNAL_SEQ2
+            #undef LXINTERNAL_SEQ3
+            #undef LXINTERNAL_SEQ4
+            #undef LXINTERNAL_ASEQ1
+            #undef LXINTERNAL_ASEQ2
+            #undef LXINTERNAL_ASEQ3
+            #undef LXINTERNAL_ASEQ4
+            #undef LXINTERNAL_BSEQ1
+            #undef LXINTERNAL_BSEQ2
+            #undef LXINTERNAL_BSEQ3
+            #undef LXINTERNAL_BSEQ4
+            #undef LXINTERNAL_GETZ2
+            #undef LXINTERNAL_GETZ3
+            #undef LXINTERNAL_GETZ4
+            #undef LXINTERNAL_GETW2
+            #undef LXINTERNAL_GETW3
+            #undef LXINTERNAL_GETW4
+            #undef LXINTERNAL_RESULT
+            #undef LXINTERNAL_MU
+            #undef LXINTERNAL_VEC
+            #undef LXINTERNAL_VE1
+            #undef LXINTERNAL_VE2
+            #undef LXINTERNAL_VE3
+            #undef LXINTERNAL_VE4
+            #undef LXINTERNAL_DEF11
+            #undef LXINTERNAL_DEF12
+            #undef LXINTERNAL_DEF13
+            #undef LXINTERNAL_DEF14
+            #undef LXINTERNAL_DEF21
+            #undef LXINTERNAL_DEF22
+            #undef LXINTERNAL_DEF23
+            #undef LXINTERNAL_DEF24
+            #undef LXINTERNAL_DEF31
+            #undef LXINTERNAL_DEF32
+            #undef LXINTERNAL_DEF33
+            #undef LXINTERNAL_DEF34
+            #undef LXINTERNAL_DEF41
+            #undef LXINTERNAL_DEF42
+            #undef LXINTERNAL_DEF43
+            #undef LXINTERNAL_DEF44
+            #undef LXINTERNAL_COND21
+            #undef LXINTERNAL_COND22
+            #undef LXINTERNAL_COND23
+            #undef LXINTERNAL_COND24
+            #undef LXINTERNAL_COND31
+            #undef LXINTERNAL_COND32
+            #undef LXINTERNAL_COND33
+            #undef LXINTERNAL_COND34
+            #undef LXINTERNAL_COND41
+            #undef LXINTERNAL_COND42
+            #undef LXINTERNAL_COND43
+            #undef LXINTERNAL_COND44
+            #undef LXINTERNAL_MRESZS
+            #undef LXINTERNAL_MRESZV1
+            #undef LXINTERNAL_MRESZV2
+            #undef LXINTERNAL_MRESZV3
+            #undef LXINTERNAL_MRESZV4
+            #undef LXINTERNAL_MRESZI1
+            #undef LXINTERNAL_MRESZI2
+            #undef LXINTERNAL_MRESZI3
+            #undef LXINTERNAL_MRESZI4
+            #undef LXINTERNAL_MRESZ
+            #undef LXINTERNAL_MRESZ_PACK
+            #undef LXINTERNAL_TRANSS
+            #undef LXINTERNAL_TRANSV2
+            #undef LXINTERNAL_TRANSV3
+            #undef LXINTERNAL_TRANSV4
+            #undef LXINTERNAL_TRANS2
+            #undef LXINTERNAL_TRANS3
+            #undef LXINTERNAL_TRANS4
+            #undef LXINTERNAL_TRANSPOSE
+            #undef LXINTERNAL_MAT
+        }
+
+        inline namespace Operators
+        {
+            #define LXINTERNAL_SEQ2(o) a.x o b.x, a.y o b.y
+            #define LXINTERNAL_SEQ3(o) LXINTERNAL_SEQ2(o), a.z o b.z
+            #define LXINTERNAL_SEQ4(o) LXINTERNAL_SEQ3(o), a.w o b.w
+            #define LXINTERNAL_SEQN2(o) a.x o b, a.y o b
+            #define LXINTERNAL_SEQN3(o) LXINTERNAL_SEQN2(o), a.z o b
+            #define LXINTERNAL_SEQN4(o) LXINTERNAL_SEQN3(o), a.w o b
+            #define LXINTERNAL_SEQU2(o) o a.x, o a.y
+            #define LXINTERNAL_SEQU3(o) LXINTERNAL_SEQU2(o), o a.z
+            #define LXINTERNAL_SEQU4(o) LXINTERNAL_SEQU3(o), o a.w
+            #define LXINTERNAL_SEQUP2(o) a.x o, a.y o
+            #define LXINTERNAL_SEQUP3(o) LXINTERNAL_SEQUP2(o), a.z o
+            #define LXINTERNAL_SEQUP4(o) LXINTERNAL_SEQUP3(o), a.w o
+            #define LXINTERNAL_OPS(o, n) template <typename T, typename T0> auto operator o (const vec##n<T> &a, const vec##n<T0> &b) -> vec<n, decltype (a.x o b.x)> {return {LXINTERNAL_SEQ##n(o)};} \
+                                         template <typename T, typename T0> auto operator o (const vec##n<T> &a, const T0 &b) -> vec<n, decltype (a.x o b)> {return {LXINTERNAL_SEQN##n(o)};} \
+                                         template <typename T, typename T0> auto operator o (const T0 &b, const vec##n<T> &a) -> vec<n, decltype (a.x o b)> {return {LXINTERNAL_SEQN##n(o)};}
+            #define LXINTERNAL_OPSA(o, n) template <typename T, typename T0> vec##n<T> &operator o (vec##n<T> &a, const vec##n<T0> &b) {LXINTERNAL_SEQ##n(o); return a;} \
+                                          template <typename T, typename T0> vec##n<T> &operator o (vec##n<T> &a, const T0 &b) {LXINTERNAL_SEQN##n(o); return a;}
+            #define LXINTERNAL_OPSU(o, n) template <typename T> auto operator o (const vec##n<T> &a) -> vec<n, decltype (o a.x)> {return {LXINTERNAL_SEQU##n(o)};}
+            #define LXINTERNAL_OPSUP(o, n) template <typename T> auto operator o (vec##n<T> &a) -> vec<n, typename std::remove_reference<decltype (o a.x)>::type> & {LXINTERNAL_SEQU##n(o); return a;} \
+                                           template <typename T> auto operator o (vec##n<T> &a, int) -> vec<n, decltype (a.x o)>{return {LXINTERNAL_SEQUP##n(o)};}
+            #define LXINTERNAL_O(o) LXINTERNAL_OPS(o, 2) LXINTERNAL_OPS(o, 3) LXINTERNAL_OPS(o, 4)
+            #define LXINTERNAL_OA(o) LXINTERNAL_OPSA(o, 2) LXINTERNAL_OPSA(o, 3) LXINTERNAL_OPSA(o, 4)
+            #define LXINTERNAL_OU(o) LXINTERNAL_OPSU(o, 2) LXINTERNAL_OPSU(o, 3) LXINTERNAL_OPSU(o, 4)
+            #define LXINTERNAL_OUP(o) LXINTERNAL_OPSUP(o, 2) LXINTERNAL_OPSUP(o, 3) LXINTERNAL_OPSUP(o, 4)
+
+            LXINTERNAL_O(+) LXINTERNAL_O(-) LXINTERNAL_O(*) LXINTERNAL_O(/) LXINTERNAL_O(%)
+            LXINTERNAL_O(^) LXINTERNAL_O(&) LXINTERNAL_O(|)
+            LXINTERNAL_O(<<) LXINTERNAL_O(>>)
+            LXINTERNAL_O(<) LXINTERNAL_O(>) LXINTERNAL_O(<=) LXINTERNAL_O(>=)
+            LXINTERNAL_O(&&) LXINTERNAL_O(||)
+
+            LXINTERNAL_OA(+=) LXINTERNAL_OA(-=) LXINTERNAL_OA(*=) LXINTERNAL_OA(/=) LXINTERNAL_OA(%=)
+            LXINTERNAL_OA(^=) LXINTERNAL_OA(&=) LXINTERNAL_OA(|=)
+            LXINTERNAL_OA(<<=) LXINTERNAL_OA(>>=)
+
+            LXINTERNAL_OU(+) LXINTERNAL_OU(-) LXINTERNAL_OU(~) LXINTERNAL_OU(!) LXINTERNAL_OUP(++) LXINTERNAL_OUP(--)
+
+            template <typename T> bool operator==(const vec2<T> &a, const vec2<T> &b) {return a.x == b.x && a.y == b.y;}
+            template <typename T> bool operator==(const vec3<T> &a, const vec3<T> &b) {return a.x == b.x && a.y == b.y && a.z == b.z;}
+            template <typename T> bool operator==(const vec4<T> &a, const vec4<T> &b) {return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;}
+            template <typename T> bool operator!=(const vec2<T> &a, const vec2<T> &b) {return a.x != b.x || a.y != b.y;}
+            template <typename T> bool operator!=(const vec3<T> &a, const vec3<T> &b) {return a.x != b.x || a.y != b.y || a.z != b.z;}
+            template <typename T> bool operator!=(const vec4<T> &a, const vec4<T> &b) {return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;}
+
+            #undef LXINTERNAL_SEQ2
+            #undef LXINTERNAL_SEQ3
+            #undef LXINTERNAL_SEQ4
+            #undef LXINTERNAL_SEQN2
+            #undef LXINTERNAL_SEQN3
+            #undef LXINTERNAL_SEQN4
+            #undef LXINTERNAL_SEQU2
+            #undef LXINTERNAL_SEQU3
+            #undef LXINTERNAL_SEQU4
+            #undef LXINTERNAL_SEQUP2
+            #undef LXINTERNAL_SEQUP3
+            #undef LXINTERNAL_SEQUP4
+            #undef LXINTERNAL_OPS
+            #undef LXINTERNAL_OPSA
+            #undef LXINTERNAL_OPSU
+            #undef LXINTERNAL_OPSUB
+            #undef LXINTERNAL_O
+            #undef LXINTERNAL_OA
+            #undef LXINTERNAL_OU
+            #undef LXINTERNAL_OUP
+
+            template <typename T> auto &operator<<(std::ostream &a, const vec2<T> &b) {return a << '[' << b.x << '|' << b.y << ']';}
+            template <typename T> auto &operator<<(std::ostream &a, const vec3<T> &b) {return a << '[' << b.x << '|' << b.y << '|' << b.z << ']';}
+            template <typename T> auto &operator<<(std::ostream &a, const vec4<T> &b) {return a << '[' << b.x << '|' << b.y << '|' << b.z << '|' << b.w << ']';}
+        }
+    }
+
+    inline namespace Other
+    {
+        template <typename T> T pi()
+        {
+            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+            static const T ret = std::atan((T)1)*4;
+            return ret;
+        }
+        template <typename T>
+        T deg_to_rad(T in)
+        {
+            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+            return in * pi<T>() / (T)180;
+        }
+        template <typename T> T rad_to_deg(T in)
+        {
+            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+            return in * (T)180 / pi<T>();
+        }
+
+        template <typename T> T ipow(T a, T b)
+        {
+            static_assert(std::is_integral<T>::value, "Non integral template parameter makes no sense for this function.");
+            T ret = 1;
+            while (b--)
+            {
+                ret *= a;
+            }
+            return ret;
+        }
+
+        template <typename T> int sign(T val)
+        {
+            return (val > 0) - (val < 0);
+        }
+
+        template <typename T> T clamp(T val, T min, T max)
+        {
+            static_assert(std::is_arithmetic<T>::value, "Non arithmetic template parameter makes no sense for this function.");
+
+            if (val < min) return min;
+            if (val > max) return max;
+            return val;
+        }
+
+        template <typename T> T smoothstep(T x)
+        {
+            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+            return 3*x*x-2*x*x*x;
+        }
+    }
+}
+
+#endif

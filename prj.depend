@@ -1,0 +1,1637 @@
+# depslib dependency file v1.0
+1467069373 source:z:\projects\c++\lx\src\glew_import.cpp
+	"os.h"
+	"../lib/glew.c.code"
+
+1447144236 z:\projects\c++\lx\lib\glew.c.code
+	"include/GL/glew.h"
+	"include/GL/wglew.h"
+	"include/GL/glxew.h"
+	<stddef.h>
+	<dlfcn.h>
+	<stdio.h>
+	<stdlib.h>
+	<stdlib.h>
+	<string.h>
+	<AvailabilityMacros.h>
+	<dlfcn.h>
+	<mach-o/dyld.h>
+
+1447144236 z:\projects\c++\lx\lib\include\gl\glew.h
+	<stddef.h>
+	<inttypes.h>
+	<stdint.h>
+	<inttypes.h>
+	<Availability.h>
+	<OpenGL/glu.h>
+	<GL/glu.h>
+
+1447144236 z:\projects\c++\lx\lib\include\gl\wglew.h
+	<windows.h>
+
+1447144236 z:\projects\c++\lx\lib\include\gl\glxew.h
+	<X11/Xlib.h>
+	<X11/Xutil.h>
+	<X11/Xmd.h>
+	<GL/glew.h>
+
+1469097517 source:z:\projects\c++\lx\src\system.cpp
+	<csignal>
+	<cstdlib>
+	<cstring>
+	<exception>
+	<fstream>
+	<iostream>
+	<list>
+	<unordered_map>
+	<string>
+	"system.h"
+	"audio.h"
+	"graphics.h"
+	"lib_zlib.h"
+	"math.h"
+	"network.h"
+	"window.h"
+	"utils.h"
+
+1462570137 z:\projects\c++\lx\src\lib_sdl.h
+	<SDL2/SDL.h>
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl.h
+	"SDL_main.h"
+	"SDL_stdinc.h"
+	"SDL_assert.h"
+	"SDL_atomic.h"
+	"SDL_audio.h"
+	"SDL_clipboard.h"
+	"SDL_cpuinfo.h"
+	"SDL_endian.h"
+	"SDL_error.h"
+	"SDL_events.h"
+	"SDL_filesystem.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_haptic.h"
+	"SDL_hints.h"
+	"SDL_loadso.h"
+	"SDL_log.h"
+	"SDL_messagebox.h"
+	"SDL_mutex.h"
+	"SDL_power.h"
+	"SDL_render.h"
+	"SDL_rwops.h"
+	"SDL_system.h"
+	"SDL_thread.h"
+	"SDL_timer.h"
+	"SDL_version.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_main.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_stdinc.h
+	"SDL_config.h"
+	<sys/types.h>
+	<stdio.h>
+	<stdlib.h>
+	<stddef.h>
+	<stdarg.h>
+	<stdlib.h>
+	<malloc.h>
+	<stddef.h>
+	<stdarg.h>
+	<memory.h>
+	<string.h>
+	<strings.h>
+	<inttypes.h>
+	<stdint.h>
+	<ctype.h>
+	<math.h>
+	<float.h>
+	<iconv.h>
+	<sal.h>
+	"begin_code.h"
+	<alloca.h>
+	<malloc.h>
+	<malloc.h>
+	<malloc.h>
+	<stdlib.h>
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_config.h
+	"SDL_platform.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_platform.h
+	"AvailabilityMacros.h"
+	"TargetConditionals.h"
+	<winapifamily.h>
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\begin_code.h
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\close_code.h
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_assert.h
+	"SDL_config.h"
+	"begin_code.h"
+	<signal.h>
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_atomic.h
+	"SDL_stdinc.h"
+	"SDL_platform.h"
+	"begin_code.h"
+	<mbarrier.h>
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_audio.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_endian.h"
+	"SDL_mutex.h"
+	"SDL_thread.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_error.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_endian.h
+	"SDL_stdinc.h"
+	<endian.h>
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_mutex.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_thread.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_atomic.h"
+	"SDL_mutex.h"
+	"begin_code.h"
+	<process.h>
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_rwops.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_clipboard.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_cpuinfo.h
+	"SDL_stdinc.h"
+	<intrin.h>
+	<intrin.h>
+	<altivec.h>
+	<mmintrin.h>
+	<mm3dnow.h>
+	<xmmintrin.h>
+	<emmintrin.h>
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_events.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_keyboard.h"
+	"SDL_mouse.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_quit.h"
+	"SDL_gesture.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_video.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_surface.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_pixels.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_rect.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_pixels.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_surface.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_blendmode.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_blendmode.h
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_keyboard.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_keycode.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_keycode.h
+	"SDL_stdinc.h"
+	"SDL_scancode.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_scancode.h
+	"SDL_stdinc.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_mouse.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_joystick.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_gamecontroller.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_rwops.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_quit.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_gesture.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_touch.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_filesystem.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_haptic.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_hints.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_loadso.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_log.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_messagebox.h
+	"SDL_stdinc.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_power.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_render.h
+	"SDL_stdinc.h"
+	"SDL_rect.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_system.h
+	"SDL_stdinc.h"
+	"SDL_keyboard.h"
+	"SDL_render.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_timer.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1451764694 z:\projects\c++\lx\lib\include\sdl2\sdl_version.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1467069090 z:\projects\c++\lx\src\lib_gl.h
+	"os.h"
+	<GL/glew.h>
+
+1462570137 z:\projects\c++\lx\src\lib_al.h
+	"os.h"
+	<AL/al.h>
+	<AL/alc.h>
+	<OpenAL/al.h>
+	<OpenAL/alc.h>
+
+1453691560 z:\projects\c++\lx\lib\include\al\al.h
+
+1453691560 z:\projects\c++\lx\lib\include\al\alc.h
+
+1451800374 z:\projects\c++\lx\lib\include\sdl2\sdl_image.h
+	"SDL.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1467980065 z:\projects\c++\lx\src\system.h
+	<cstdint>
+	<string>
+	<list>
+	<unordered_map>
+	"input_enums.h"
+	"math.h"
+	"os.h"
+
+1469118815 z:\projects\c++\lx\src\utils.h
+	<array>
+	<cstddef>
+	<cstdint>
+	<cstring>
+	<initializer_list>
+	<iomanip>
+	<iostream>
+	<iterator>
+	<memory>
+	<sstream>
+	<string>
+	<type_traits>
+	<utility>
+	<vector>
+	<type_traits>
+	"lib_sdl.h"
+	"exceptions.h"
+	"system.h"
+
+1467988429 z:\projects\c++\lx\src\math.h
+	<functional>
+	<cmath>
+	<cstdint>
+	<ostream>
+	<type_traits>
+
+1445788523 source:z:\projects\c++\lx\src\math.cpp
+	"math.h"
+
+1462570137 source:z:\projects\c++\lx\src\utils.cpp
+	"utils.h"
+
+1469321368 source:z:\projects\c++\lx\src\logic.cpp
+	"master.h"
+
+1465479696 z:\projects\c++\lx\src\logic.h
+	"lib_sdl.h"
+	"lib_sdlnet.h"
+	"lib_gl.h"
+	"lib_al.h"
+	"lib_zlib.h"
+	"lib_ogg.h"
+	"lib_vorbis.h"
+	"audio.h"
+	"exceptions.h"
+	"graphics.h"
+	"input.h"
+	"input_enums.h"
+	"math.h"
+	"network.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1468168791 source:z:\projects\c++\lx\src\window.cpp
+	"window.h"
+	"lib_gl.h"
+	"input.h"
+	"system.h"
+	"utils.h"
+
+1468168740 z:\projects\c++\lx\src\window.h
+	"lib_sdl.h"
+	"math.h"
+
+1462570137 z:\projects\c++\lx\src\lib_zlib.h
+	<zlib.h>
+
+1367159028 z:\projects\c++\lx\lib\include\zlib.h
+	"zconf.h"
+
+1467070533 source:z:\projects\c++\lx\src\input.cpp
+	<cstring>
+	<vector>
+	"input.h"
+	"system.h"
+	"window.h"
+
+1467070218 z:\projects\c++\lx\src\input.h
+	<cstdint>
+	<map>
+	<type_traits>
+	"input_enums.h"
+	"math.h"
+	"utils.h"
+
+1470530895 source:z:\projects\c++\lx\src\graphics.cpp
+	"graphics.h"
+	<cstdint>
+	<fstream>
+	"lib_sdlimg.h"
+	"lib_zlib.h"
+	"window.h"
+
+1470530736 z:\projects\c++\lx\src\graphics.h
+	<cstddef>
+	<cstring>
+	<initializer_list>
+	<type_traits>
+	<typeinfo>
+	<typeindex>
+	<utility>
+	"exceptions.h"
+	"lib_gl.h"
+	"math.h"
+	"os.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1465995456 source:z:\projects\c++\lx\src\audio.cpp
+	"audio.h"
+	<cstdio>
+	<fstream>
+	"lib_vorbis.h"
+	"lib_zlib.h"
+	"system.h"
+	"utils.h"
+
+1467926917 z:\projects\c++\lx\src\audio.h
+	<cstdint>
+	<cstring>
+	"exceptions.h"
+	"lib_al.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+
+1449847061 source:z:\projects\c++\wizard and the sun\src\audio.cpp
+	"audio.h"
+	<fstream>
+	"lib_zlib.h"
+	"system.h"
+	"utils.h"
+
+1450017141 z:\projects\c++\wizard and the sun\src\audio.h
+	<cstdint>
+	<cstring>
+	"lib_al.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+
+1447144240 z:\projects\c++\wizard and the sun\src\lib_al.h
+	"../lib/include/AL/al.h"
+	"../lib/include/AL/alc.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\al\al.h
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\al\alc.h
+
+1449998982 z:\projects\c++\wizard and the sun\src\math.h
+	<cmath>
+	<cstdint>
+	<iostream>
+	<utility>
+
+1449909804 z:\projects\c++\wizard and the sun\src\system.h
+	<cstdint>
+	<string>
+	<list>
+	<unordered_map>
+	"input.h"
+	"math.h"
+
+1449916894 z:\projects\c++\wizard and the sun\src\input.h
+	<cstdint>
+	"lib_sdl.h"
+	"math.h"
+	"window.h"
+
+1447681341 z:\projects\c++\wizard and the sun\src\lib_sdl.h
+	"../lib/include/SDL2/SDL.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl.h
+	"SDL_main.h"
+	"SDL_stdinc.h"
+	"SDL_assert.h"
+	"SDL_atomic.h"
+	"SDL_audio.h"
+	"SDL_clipboard.h"
+	"SDL_cpuinfo.h"
+	"SDL_endian.h"
+	"SDL_error.h"
+	"SDL_events.h"
+	"SDL_filesystem.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_haptic.h"
+	"SDL_hints.h"
+	"SDL_loadso.h"
+	"SDL_log.h"
+	"SDL_messagebox.h"
+	"SDL_mutex.h"
+	"SDL_power.h"
+	"SDL_render.h"
+	"SDL_rwops.h"
+	"SDL_system.h"
+	"SDL_thread.h"
+	"SDL_timer.h"
+	"SDL_version.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_main.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_stdinc.h
+	"SDL_config.h"
+	<sys/types.h>
+	<stdio.h>
+	<stdlib.h>
+	<stddef.h>
+	<stdarg.h>
+	<stdlib.h>
+	<malloc.h>
+	<stddef.h>
+	<stdarg.h>
+	<memory.h>
+	<string.h>
+	<strings.h>
+	<inttypes.h>
+	<stdint.h>
+	<ctype.h>
+	<math.h>
+	<float.h>
+	<iconv.h>
+	"begin_code.h"
+	<alloca.h>
+	<malloc.h>
+	<malloc.h>
+	<malloc.h>
+	<stdlib.h>
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_config.h
+	"SDL_platform.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_platform.h
+	"AvailabilityMacros.h"
+	"TargetConditionals.h"
+	<winapifamily.h>
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\begin_code.h
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\close_code.h
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_assert.h
+	"SDL_config.h"
+	"begin_code.h"
+	<signal.h>
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_atomic.h
+	"SDL_stdinc.h"
+	"SDL_platform.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_audio.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_endian.h"
+	"SDL_mutex.h"
+	"SDL_thread.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_error.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_endian.h
+	"SDL_stdinc.h"
+	<endian.h>
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_mutex.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_thread.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_atomic.h"
+	"SDL_mutex.h"
+	"begin_code.h"
+	<process.h>
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_rwops.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_clipboard.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_cpuinfo.h
+	"SDL_stdinc.h"
+	<intrin.h>
+	<intrin.h>
+	<altivec.h>
+	<mmintrin.h>
+	<mm3dnow.h>
+	<xmmintrin.h>
+	<emmintrin.h>
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_events.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_keyboard.h"
+	"SDL_mouse.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_quit.h"
+	"SDL_gesture.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_video.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_surface.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_pixels.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_rect.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_pixels.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_surface.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_blendmode.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_blendmode.h
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_keyboard.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_keycode.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_keycode.h
+	"SDL_stdinc.h"
+	"SDL_scancode.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_scancode.h
+	"SDL_stdinc.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_mouse.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_joystick.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_gamecontroller.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_rwops.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_quit.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_gesture.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_touch.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_filesystem.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_haptic.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_hints.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_loadso.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_log.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_messagebox.h
+	"SDL_stdinc.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_power.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_render.h
+	"SDL_stdinc.h"
+	"SDL_rect.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_system.h
+	"SDL_stdinc.h"
+	"SDL_keyboard.h"
+	"SDL_render.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_timer.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun\lib\include\sdl2\sdl_version.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1449845075 z:\projects\c++\wizard and the sun\src\window.h
+	"lib_sdl.h"
+	"math.h"
+
+1450017101 z:\projects\c++\wizard and the sun\src\utils.h
+	<cstddef>
+	<cstdint>
+	<iostream>
+	<sstream>
+	<string>
+	<type_traits>
+	<memory>
+	<utility>
+	<type_traits>
+	"lib_sdl.h"
+	"system.h"
+
+1447690971 z:\projects\c++\wizard and the sun\src\lib_zlib.h
+	"../lib/include/zlib.h"
+
+1367159028 z:\projects\c++\wizard and the sun\lib\include\zlib.h
+	"zconf.h"
+
+1447144240 source:z:\projects\c++\wizard and the sun\src\glew_import.cpp
+	"../lib/glew.c.code"
+
+1447144236 z:\projects\c++\wizard and the sun\lib\glew.c.code
+	"include/GL/glew.h"
+	"include/GL/wglew.h"
+	"include/GL/glxew.h"
+	<stddef.h>
+	<dlfcn.h>
+	<stdio.h>
+	<stdlib.h>
+	<stdlib.h>
+	<string.h>
+	<AvailabilityMacros.h>
+	<dlfcn.h>
+	<mach-o/dyld.h>
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\gl\glew.h
+	<stddef.h>
+	<inttypes.h>
+	<stdint.h>
+	<inttypes.h>
+	<Availability.h>
+	<OpenGL/glu.h>
+	<GL/glu.h>
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\gl\wglew.h
+	<windows.h>
+
+1447144236 z:\projects\c++\wizard and the sun\lib\include\gl\glxew.h
+	<X11/Xlib.h>
+	<X11/Xutil.h>
+	<X11/Xmd.h>
+	<GL/glew.h>
+
+1450017177 source:z:\projects\c++\wizard and the sun\src\graphics.cpp
+	"graphics.h"
+	<cstdint>
+	<fstream>
+	"lib_zlib.h"
+	"window.h"
+
+1450042510 z:\projects\c++\wizard and the sun\src\graphics.h
+	<cstddef>
+	<cstring>
+	<initializer_list>
+	<utility>
+	"lib_gl.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1447144240 z:\projects\c++\wizard and the sun\src\lib_gl.h
+	"../lib/include/GL/glew.h"
+
+1449916912 source:z:\projects\c++\wizard and the sun\src\input.cpp
+	<cstring>
+	<vector>
+	"input.h"
+	"utils.h"
+
+1450001914 source:z:\projects\c++\wizard and the sun\src\system.cpp
+	<csignal>
+	<cstring>
+	<exception>
+	<fstream>
+	<iostream>
+	<list>
+	<unordered_map>
+	<string>
+	"system.h"
+	"audio.h"
+	"graphics.h"
+	"lib_zlib.h"
+	"math.h"
+	"window.h"
+	"utils.h"
+
+1448292377 source:z:\projects\c++\wizard and the sun\src\utils.cpp
+	"utils.h"
+
+1450055591 source:z:\projects\c++\wizard and the sun\src\logic.cpp
+	"logic.h"
+	<fstream>
+	<random>
+	<vector>
+
+1449355360 z:\projects\c++\wizard and the sun\src\logic.h
+	"lib_sdl.h"
+	"lib_gl.h"
+	"lib_al.h"
+	"audio.h"
+	"graphics.h"
+	"input.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1449999858 source:z:\projects\c++\wizard and the sun\src\window.cpp
+	"window.h"
+	"lib_gl.h"
+	"input.h"
+	"system.h"
+	"utils.h"
+
+1450055682 source:z:\projects\c++\wizard and the sun\res.rc
+
+1449847061 source:z:\projects\c++\wizard and the sun - source\src\audio.cpp
+	"audio.h"
+	<fstream>
+	"lib_zlib.h"
+	"system.h"
+	"utils.h"
+
+1450017141 z:\projects\c++\wizard and the sun - source\src\audio.h
+	<cstdint>
+	<cstring>
+	"lib_al.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+
+1447144240 z:\projects\c++\wizard and the sun - source\src\lib_al.h
+	"../lib/include/AL/al.h"
+	"../lib/include/AL/alc.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\al\al.h
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\al\alc.h
+
+1449998982 z:\projects\c++\wizard and the sun - source\src\math.h
+	<cmath>
+	<cstdint>
+	<iostream>
+	<utility>
+
+1449909804 z:\projects\c++\wizard and the sun - source\src\system.h
+	<cstdint>
+	<string>
+	<list>
+	<unordered_map>
+	"input.h"
+	"math.h"
+
+1449916894 z:\projects\c++\wizard and the sun - source\src\input.h
+	<cstdint>
+	"lib_sdl.h"
+	"math.h"
+	"window.h"
+
+1447681341 z:\projects\c++\wizard and the sun - source\src\lib_sdl.h
+	"../lib/include/SDL2/SDL.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl.h
+	"SDL_main.h"
+	"SDL_stdinc.h"
+	"SDL_assert.h"
+	"SDL_atomic.h"
+	"SDL_audio.h"
+	"SDL_clipboard.h"
+	"SDL_cpuinfo.h"
+	"SDL_endian.h"
+	"SDL_error.h"
+	"SDL_events.h"
+	"SDL_filesystem.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_haptic.h"
+	"SDL_hints.h"
+	"SDL_loadso.h"
+	"SDL_log.h"
+	"SDL_messagebox.h"
+	"SDL_mutex.h"
+	"SDL_power.h"
+	"SDL_render.h"
+	"SDL_rwops.h"
+	"SDL_system.h"
+	"SDL_thread.h"
+	"SDL_timer.h"
+	"SDL_version.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_main.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_stdinc.h
+	"SDL_config.h"
+	<sys/types.h>
+	<stdio.h>
+	<stdlib.h>
+	<stddef.h>
+	<stdarg.h>
+	<stdlib.h>
+	<malloc.h>
+	<stddef.h>
+	<stdarg.h>
+	<memory.h>
+	<string.h>
+	<strings.h>
+	<inttypes.h>
+	<stdint.h>
+	<ctype.h>
+	<math.h>
+	<float.h>
+	<iconv.h>
+	"begin_code.h"
+	<alloca.h>
+	<malloc.h>
+	<malloc.h>
+	<malloc.h>
+	<stdlib.h>
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_config.h
+	"SDL_platform.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_platform.h
+	"AvailabilityMacros.h"
+	"TargetConditionals.h"
+	<winapifamily.h>
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\begin_code.h
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\close_code.h
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_assert.h
+	"SDL_config.h"
+	"begin_code.h"
+	<signal.h>
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_atomic.h
+	"SDL_stdinc.h"
+	"SDL_platform.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_audio.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_endian.h"
+	"SDL_mutex.h"
+	"SDL_thread.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_error.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_endian.h
+	"SDL_stdinc.h"
+	<endian.h>
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_mutex.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_thread.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_atomic.h"
+	"SDL_mutex.h"
+	"begin_code.h"
+	<process.h>
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_rwops.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_clipboard.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_cpuinfo.h
+	"SDL_stdinc.h"
+	<intrin.h>
+	<intrin.h>
+	<altivec.h>
+	<mmintrin.h>
+	<mm3dnow.h>
+	<xmmintrin.h>
+	<emmintrin.h>
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_events.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_keyboard.h"
+	"SDL_mouse.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_quit.h"
+	"SDL_gesture.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_video.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_surface.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_pixels.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_rect.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_pixels.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_surface.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_blendmode.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_blendmode.h
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_keyboard.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_keycode.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_keycode.h
+	"SDL_stdinc.h"
+	"SDL_scancode.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_scancode.h
+	"SDL_stdinc.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_mouse.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_joystick.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_gamecontroller.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_rwops.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_quit.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_gesture.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_touch.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_filesystem.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_haptic.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_hints.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_loadso.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_log.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_messagebox.h
+	"SDL_stdinc.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_power.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_render.h
+	"SDL_stdinc.h"
+	"SDL_rect.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_system.h
+	"SDL_stdinc.h"
+	"SDL_keyboard.h"
+	"SDL_render.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_timer.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1447144238 z:\projects\c++\wizard and the sun - source\lib\include\sdl2\sdl_version.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1449845075 z:\projects\c++\wizard and the sun - source\src\window.h
+	"lib_sdl.h"
+	"math.h"
+
+1450017101 z:\projects\c++\wizard and the sun - source\src\utils.h
+	<cstddef>
+	<cstdint>
+	<iostream>
+	<sstream>
+	<string>
+	<type_traits>
+	<memory>
+	<utility>
+	<type_traits>
+	"lib_sdl.h"
+	"system.h"
+
+1447690971 z:\projects\c++\wizard and the sun - source\src\lib_zlib.h
+	"../lib/include/zlib.h"
+
+1367159028 z:\projects\c++\wizard and the sun - source\lib\include\zlib.h
+	"zconf.h"
+
+1447144240 source:z:\projects\c++\wizard and the sun - source\src\glew_import.cpp
+	"../lib/glew.c.code"
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\glew.c.code
+	"include/GL/glew.h"
+	"include/GL/wglew.h"
+	"include/GL/glxew.h"
+	<stddef.h>
+	<dlfcn.h>
+	<stdio.h>
+	<stdlib.h>
+	<stdlib.h>
+	<string.h>
+	<AvailabilityMacros.h>
+	<dlfcn.h>
+	<mach-o/dyld.h>
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\gl\glew.h
+	<stddef.h>
+	<inttypes.h>
+	<stdint.h>
+	<inttypes.h>
+	<Availability.h>
+	<OpenGL/glu.h>
+	<GL/glu.h>
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\gl\wglew.h
+	<windows.h>
+
+1447144236 z:\projects\c++\wizard and the sun - source\lib\include\gl\glxew.h
+	<X11/Xlib.h>
+	<X11/Xutil.h>
+	<X11/Xmd.h>
+	<GL/glew.h>
+
+1450017177 source:z:\projects\c++\wizard and the sun - source\src\graphics.cpp
+	"graphics.h"
+	<cstdint>
+	<fstream>
+	"lib_zlib.h"
+	"window.h"
+
+1450197279 z:\projects\c++\wizard and the sun - source\src\graphics.h
+	<cstddef>
+	<cstring>
+	<initializer_list>
+	<utility>
+	"lib_gl.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1447144240 z:\projects\c++\wizard and the sun - source\src\lib_gl.h
+	"../lib/include/GL/glew.h"
+
+1449916912 source:z:\projects\c++\wizard and the sun - source\src\input.cpp
+	<cstring>
+	<vector>
+	"input.h"
+	"utils.h"
+
+1450001914 source:z:\projects\c++\wizard and the sun - source\src\system.cpp
+	<csignal>
+	<cstring>
+	<exception>
+	<fstream>
+	<iostream>
+	<list>
+	<unordered_map>
+	<string>
+	"system.h"
+	"audio.h"
+	"graphics.h"
+	"lib_zlib.h"
+	"math.h"
+	"window.h"
+	"utils.h"
+
+1448292377 source:z:\projects\c++\wizard and the sun - source\src\utils.cpp
+	"utils.h"
+
+1449999858 source:z:\projects\c++\wizard and the sun - source\src\window.cpp
+	"window.h"
+	"lib_gl.h"
+	"input.h"
+	"system.h"
+	"utils.h"
+
+1450197074 source:z:\projects\c++\wizard and the sun - source\src\logic.cpp
+	"logic.h"
+	<fstream>
+	<random>
+	<vector>
+
+1449355360 z:\projects\c++\wizard and the sun - source\src\logic.h
+	"lib_sdl.h"
+	"lib_gl.h"
+	"lib_al.h"
+	"audio.h"
+	"graphics.h"
+	"input.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1450055682 source:z:\projects\c++\wizard and the sun - source\res.rc
+
+1467069647 z:\projects\c++\lx\src\os.h
+
+1447167581 z:\projects\c++\lx\lib\include\zconf.h
+	<windows.h>
+	<limits.h>
+	<sys/types.h>
+	<stdarg.h>
+	<stddef.h>
+	<unistd.h>
+	<unixio.h>
+
+1462570137 z:\projects\c++\lx\src\lib_sdlnet.h
+	<SDL2/SDL_net.h>
+
+1451807846 z:\projects\c++\lx\lib\include\sdl2\sdl_net.h
+	<stdint.h>
+	"SDL.h"
+	"SDL_endian.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1462570137 z:\projects\c++\lx\src\network.h
+	"lib_sdlnet.h"
+
+1462570137 source:z:\projects\c++\lx\src\network.cpp
+	"network.h"
+	"utils.h"
+
+1462570137 z:\projects\c++\lx\src\lib_vorbis.h
+	<vorbis/codec.h>
+	<vorbis/vorbisenc.h>
+	<vorbis/vorbisfile.h>
+
+1453661522 z:\projects\c++\lx\lib\include\vorbis\codec.h
+	"../ogg/ogg.h"
+
+1384189306 z:\projects\c++\lx\lib\include\vorbis\vorbisenc.h
+	"codec.h"
+
+1453661672 z:\projects\c++\lx\lib\include\vorbis\vorbisfile.h
+	<stdio.h>
+	"codec.h"
+
+1453661533 z:\projects\c++\lx\lib\include\ogg\ogg.h
+	<stddef.h>
+	"os_types.h"
+
+1453761781 z:\projects\c++\lx\lib\include\ogg\os_types.h
+	<stdint.h>
+	<sys/types.h>
+	<sys/types.h>
+	<inttypes.h>
+	<sys/types.h>
+	<inttypes.h>
+	"config_types.h"
+
+1453662537 z:\projects\c++\lx\src\lib_oggvorbis.h
+	"../lib/include/ogg/ogg.h"
+	"../lib/include/vorbis/codec.h"
+	"../lib/include/vorbis/vorbisenc.h"
+	"../lib/include/vorbis/vorbisfile.h"
+
+1462570137 z:\projects\c++\lx\src\lib_ogg.h
+	<ogg/ogg.h>
+
+1453660533 z:\projects\c++\lx\lib\include\ogg\config_types.h
+	<inttypes.h>
+	<stdint.h>
+	<sys/types.h>
+
+1467987429 z:\projects\c++\lx\src\exceptions.h
+	<array>
+	<exception>
+	<map>
+	<string>
+
+1462570137 z:\projects\c++\lx\src\input_enums.h
+	"lib_sdl.h"
+
+1469097659 z:\projects\c++\lx\src\master.h
+	"lib_sdl.h"
+	"lib_sdlimg.h"
+	"lib_sdlnet.h"
+	"lib_gl.h"
+	"lib_al.h"
+	"lib_zlib.h"
+	"lib_ogg.h"
+	"lib_vorbis.h"
+	"audio.h"
+	"exceptions.h"
+	"graphics.h"
+	"input.h"
+	"input_enums.h"
+	"math.h"
+	"network.h"
+	"os.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1465832366 z:\projects\c++\lx\src\tests.h
+	"master.h"
+
+1467928936 source:z:\projects\c++\lx\src\tests.cpp
+	"tests.h"
+
+1469097254 z:\projects\c++\lx\src\lib_sdlimg.h
+	<SDL2/SDL_image.h>
+
