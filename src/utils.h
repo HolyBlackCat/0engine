@@ -68,29 +68,44 @@ namespace Utils
             extern std::stringstream ss;
             extern const std::stringstream::fmtflags stdfmt;
         }
-        template <typename ...P> std::string Jo_s(P &&... p)
+
+        // Jo() resets stringstream flags before performing concatenation.
+        // Jo_() does not.
+
+        template <typename ...P> std::string Jo_s_(P &&... p)
         {
             Internal::ss.clear();
-            Internal::ss.flags(Internal::stdfmt);
             Internal::ss.str("");
             int dummy[] {(Internal::ss << p, 0)...};
             (void)dummy;
             return Internal::ss.str();
         }
-        template <typename ...P> const char *Jo(P &&... p)
+
+        template <typename ...P> std::string Jo_s(P &&... p)
+        {
+            Internal::ss.flags(Internal::stdfmt);
+            return Jo_s_((P &&) p...);
+        }
+
+
+        template <typename ...P> const char *Jo_(P &&... p)
         {
             static constexpr int ret_buffers_c = 32;
             static std::string ret_buffers[ret_buffers_c];
             static int ret_pos = 0;
             Internal::ss.clear();
-            Internal::ss.flags(Internal::stdfmt);
             Internal::ss.str("");
-            int dummy[] {(Internal::ss << p, 0)...};
-            (void)dummy;
+            std::initializer_list<int>{(Internal::ss << p, 0)...};
             ret_buffers[ret_pos] = Internal::ss.str();
             const char *ret = ret_buffers[ret_pos].c_str();
             ret_pos = (ret_pos + 1) % ret_buffers_c;
             return ret;
+        }
+
+        template <typename ...P> const char *Jo(P &&... p)
+        {
+            Internal::ss.flags(Internal::stdfmt);
+            return Jo_((P &&) p...);
         }
 
         inline std::string FixEdges_s(const char *txt) // Removes non-printable chars and spaces from start and end of a string.
