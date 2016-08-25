@@ -393,6 +393,11 @@ namespace Utils
         }
     };
 
+    inline namespace Random
+    {
+        uint32_t Noise32(uint32_t in);
+    }
+
     class TickStabilizer
     {
         uint64_t tick_len, begin_time;
