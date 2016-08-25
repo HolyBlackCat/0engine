@@ -58,7 +58,7 @@ namespace Sys
             case ExitConditions::quit:      Exit();
             case ExitConditions::sig_abrt:
             case ExitConditions::sig_int:
-            case ExitConditions::sig_term:  Error(0); return;
+            case ExitConditions::sig_term:  Error(""); return;
             case ExitConditions::sig_ill:   Error("Signal: Illegal instruction. (Invalid machine code.)"); return;
             case ExitConditions::sig_fpe:   Error("Signal: Floating point exception. (Invalid arithmetic operation.)"); return;
             case ExitConditions::sig_segv:  Error("Signal: Segmentation fault. (Invalid memory access.)"); return;
@@ -201,19 +201,19 @@ namespace Sys
                     else
                         tmp += "(No descrition.)\n";
                 }
-                Msg(tmp.c_str());
+                Msg(tmp);
                 Exit();
             }
 
             if (Check("lxsys-opengl-show-config"))
             {
-                Msg(("Default OpenGL config: " + Config::opengl_config).c_str());
+                Msg("Default OpenGL config: " + Config::opengl_config);
                 Exit();
             }
 
             if (Check("lxsys-openal-show-config"))
             {
-                Msg(("Default OpenAL config: " + Config::openal_config).c_str());
+                Msg("Default OpenAL config: " + Config::openal_config);
                 Exit();
             }
 
@@ -223,28 +223,28 @@ namespace Sys
         unsigned int Count()       {return argc;}
         const char *const *Array() {return argv;}
         const std::unordered_map<std::string, std::string> &Map() {return map;}
-        bool Check(const char *name, const char **arg_p)
+        bool Check(StringView name, std::string **arg_p)
         {
-            auto it = map.find(name);
+            auto it = map.find(std::string(name));
             if (it == map.end())
             {
                 for (const auto &it : id_list)
-                    if (it == name)
+                    if (StringView(it) == name)
                         return 0;
                 Error(Jo("Invalid command line argument id `", name, "` was used as an argument for Sys::CommandLineArgs::Check()."));
             }
             if (arg_p)
-                *arg_p = it->second.c_str();
+                *arg_p = &it->second;
             return 1;
         }
     }
 
-    void Msg(const char *title, const char *text, MsgType type)
+    void Msg(StringView title, StringView text, MsgType type)
     {
         int arr[3] {SDL_MESSAGEBOX_INFORMATION, SDL_MESSAGEBOX_WARNING, SDL_MESSAGEBOX_ERROR};
         SDL_ShowSimpleMessageBox(arr[(int)type], title, text, 0);
     }
-    void Msg(const char *text, MsgType type)
+    void Msg(StringView text, MsgType type)
     {
         switch (type)
         {
@@ -264,7 +264,7 @@ namespace Sys
     static struct {const char *name;} code_locations_stack[code_locations_stack_size];
     static unsigned int code_locations_stack_pos = 0;
 
-    CodeLocation::CodeLocation(const char *name)
+    CodeLocation::CodeLocation(StringView name)
     {
         if (code_locations_stack_pos < code_locations_stack_size)
             code_locations_stack[code_locations_stack_pos] = {name};
@@ -324,7 +324,7 @@ namespace Sys
         HandleError(ExitConditions::quit);
     }
 
-    [[noreturn]] void Error(const char *text, const char *solution)
+    [[noreturn]] void Error(StringView text, StringView solution)
     {
         // Recursion breaker.
         static bool started = 0;
@@ -332,10 +332,10 @@ namespace Sys
         started = 1;
 
         // Removing handlers
-        std::signal(SIGSEGV, Sys::SignalHandler);
-        std::signal(SIGFPE,  Sys::SignalHandler);
-        std::signal(SIGILL,  Sys::SignalHandler);
-        std::signal(SIGABRT, Sys::SignalHandler);
+        std::signal(SIGSEGV, SIG_IGN);
+        std::signal(SIGFPE,  SIG_IGN);
+        std::signal(SIGILL,  SIG_IGN);
+        std::signal(SIGABRT, SIG_IGN);
         // SIGINT and SIGTERM are handled by SDL, they are converted to quit event.
 
         if (text)
@@ -351,7 +351,7 @@ namespace Sys
 
             std::string sol_str = "";
             if (solution && *solution)
-                sol_str += std::string("\n\nPossible solution:\n") + solution;
+                sol_str += std::string("\n\nPossible solution:\n") + +solution;
 
             Msg(Jo("Error: ", text, '\n', locs_list, sol_str, "\n\nIf you need any help, contact the developer."), MsgType::error);
         }

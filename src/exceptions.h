@@ -5,6 +5,7 @@
 #include <exception>
 #include <map>
 #include <string>
+#include "proxy.h"
 
 #define LXINTERNAL_EXCEPTION_LIST \
         ITEM_EXCEPTION(CantOpenIO,\
@@ -32,7 +33,6 @@
         ITEM_EXCEPTION(RenderingQueueOverflow,\
                        "Rendering queue overflow.",\
                        "Try to reduce an amount of rendered polygons. Lowering resoluton or quality settings may help. This is a bug, please tell the developer about it.",\
-                       ITEM_DATA("Queue name")\
                        ITEM_DATA("Queue length"))\
         ITEM_EXCEPTION(ShaderCompilationError,\
                        "Shader compilation error.",\
@@ -69,7 +69,7 @@ class Exception final : public std::exception
 
   public:
     #define ITEM_DATA(name) name,
-    #define ITEM_EXCEPTION(token, desc, solution_unused, data_names) static void token(std::array<const char *, (std::initializer_list<const char *>{data_names}.size())> args, const char *sol = 0) \
+    #define ITEM_EXCEPTION(token, desc, solution_unused, data_names) static void token(std::array<StringView, (std::initializer_list<const char *>{data_names}.size())> args, const char *sol = 0) \
     { \
         Exception ret; \
         ret.type = Enum::token; \
@@ -79,7 +79,7 @@ class Exception final : public std::exception
         const char **ptr = arr; \
         for (auto it : args) \
         { \
-            if (!it || !*it) \
+            if (it[0]) \
                 goto skip; \
             ret.data[*ptr] = it; \
             ret.description += '\n'; \
@@ -95,36 +95,37 @@ class Exception final : public std::exception
     #undef ITEM_DATA
     #undef ITEM_EXCEPTION
 
-    const char *what() const noexcept override {return description.c_str();}
-    const char *FullText() const noexcept {return what();}
-    const char *Description() const noexcept
+    const char *what() const noexcept override {return FullText().c_str();}
+    const std::string &FullText() const noexcept {return description;}
+    const std::string &Description() const noexcept
     {
-        static constexpr const char *names_table[]{
+        static const std::string names_table[]{
         #define ITEM_EXCEPTION(token, desc, solution, data_names) desc,
         LXINTERNAL_EXCEPTION_LIST
         #undef ITEM_EXCEPTION
         };
         return names_table[(unsigned int)type];
     }
-    const char *Solution() const noexcept
+    const std::string &Solution() const noexcept
     {
-        static constexpr const char *solutions_table[]{
+        static const std::string solutions_table[]{
         #define ITEM_EXCEPTION(token, desc, solution, data_names) solution,
         LXINTERNAL_EXCEPTION_LIST
         #undef ITEM_EXCEPTION
         };
         if (solution[0])
-            return solution.c_str();
+            return solution;
         else
             return solutions_table[(unsigned int)type];
     }
 
     Enum Type() const noexcept {return type;}
 
-    const char *Get(const char *name)
+    const std::string &Get(StringView name)
     {
-        auto it = data.find(name);
-        return it != data.end() ? it->second.c_str() : "";
+        auto it = data.find(std::string(name));
+        static const std::string null = "";
+        return it != data.end() ? it->second : null;
     }
 };
 

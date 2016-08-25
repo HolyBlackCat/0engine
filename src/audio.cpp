@@ -101,9 +101,9 @@ namespace Audio
 
         static constexpr int needed_openal_major = 1, needed_openal_minor = 1; // 1.1
 
-        const char *config_str;
+        std::string *config_str;
         if (Sys::CommandLineArgs::Check("lxsys-openal-config", &config_str))
-            PrepareAudioSettings(config_str, 1);
+            PrepareAudioSettings(config_str->c_str(), 1);
         else
             PrepareAudioSettings(Sys::Config::openal_config.c_str(), 0);
 
@@ -279,13 +279,13 @@ namespace Audio
     {
         Clear();
 
-        auto ParseError    = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError    = [&](StringView txt){Exception::CantParse({io.Name(), txt});};
 
         unsigned char tmp;
         bool stereo;
         bool uses_16_bits;
 
-        auto CheckByte     = [&](unsigned char byte, const char *error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
+        auto CheckByte     = [&](unsigned char byte, StringView error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
 
         uint32_t data_size, data_size_alt;
 
@@ -583,11 +583,11 @@ namespace Audio
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), txt});};
 
         unsigned char tmp;
 
-        auto CheckByte = [&](unsigned char byte, const char *error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
+        auto CheckByte = [&](unsigned char byte, StringView error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
 
         CheckByte('~', "Magic number is missing.");
         CheckByte('^', "Magic number is missing.");

@@ -41,8 +41,8 @@ namespace Graphics
 
     void ForceErrorCheck()
     {
-        static std::string glerr;
-        static bool isglerr;
+        std::string glerr;
+        bool isglerr;
         while (GLenum err = glGetError())
         {
             isglerr = 1;
@@ -63,7 +63,7 @@ namespace Graphics
             }
         }
         if (isglerr)
-            Sys::Error(glerr.c_str());
+            Sys::Error(glerr);
     }
 
     namespace Attribs
@@ -129,7 +129,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), txt});};
 
         uint8_t id_field_len, tmp;
 
@@ -265,7 +265,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), txt});};
 
         unsigned char tmp;
 
@@ -314,7 +314,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), +txt});};
         SDL_Surface *source = IMG_LoadPNG_RW((SDL_RWops *)io.RWops());
         if (!source)
             ParseError(Utils::FixEdges(IMG_GetError()));
@@ -432,7 +432,7 @@ namespace Graphics
         SDL_FreeSurface(surface);
     }
 
-    Shader::Shader(const char *name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError.
+    Shader::Shader(StringView name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError. The name is not saved.
     {
         prog = glCreateProgram();
         vsh = glCreateShader(GL_VERTEX_SHADER);
@@ -476,8 +476,8 @@ namespace Graphics
             Exception::ShaderCompilationError({name,
                                                (vstat == GL_TRUE ? "OK" : "NOT OK"),
                                                (fstat == GL_TRUE ? "OK" : "NOT OK"),
-                                               ('\n'+Utils::Strings::FixEdges_s(vlog_str.c_str())).c_str(),
-                                               ('\n'+Utils::Strings::FixEdges_s(flog_str.c_str())).c_str()});
+                                               ('\n'+Utils::FixEdges(vlog_str.c_str())),
+                                               ('\n'+Utils::FixEdges(flog_str.c_str()))});
         }
 
         int loc = 0;

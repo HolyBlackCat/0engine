@@ -135,7 +135,7 @@ namespace Graphics
 
     void ForceErrorCheck();
 
-    inline bool ExtensionSupported(const char *name)
+    inline bool ExtensionSupported(StringView name)
     {
         return (bool)SDL_GL_ExtensionSupported(name);
     }
@@ -302,11 +302,11 @@ namespace Graphics
                 Sys::Error(Jo("glGenBuffers() failed for VertexArray #", id, '!'));
             id++;
         }
-        VertexArray(Utils::ArrayViewer<T> src, StorageType acc = StorageType::draw_static) : VertexArray() // (`data` may be null) Binds VBO after construction.
+        VertexArray(ArrayView<T> src, StorageType acc = StorageType::draw_static) : VertexArray() // (`data` may be null) Binds VBO after construction.
         {
             NewData(src, acc);
         }
-        VertexArray(Utils::ArrayViewer<uint8_t> src, StorageType acc = StorageType::draw_static) : VertexArray() // (`data` may be null) Binds VBO after construction.
+        VertexArray(ArrayView<uint8_t> src, StorageType acc = StorageType::draw_static) : VertexArray() // (`data` may be null) Binds VBO after construction.
         {
             NewDataBytes(src, acc);
         }
@@ -364,13 +364,13 @@ namespace Graphics
             BindHandle<void>(0);
         }
 
-        void NewData(Utils::ArrayViewer<T> src, StorageType acc = StorageType::draw_static) // (`src` may be null) Auto binds VBO
+        void NewData(ArrayView<T> src, StorageType acc = StorageType::draw_static) // (`src` may be null) Auto binds VBO
         {
             BindStorage();
             glBufferData(GL_ARRAY_BUFFER, src.Size() * sizeof (T), src.Data(), (GLenum)acc);
         }
         WarningForMobile("This does not work on mobile platforms.")
-        void Get(Utils::ArrayProxy<T> dst, unsigned int src_pos) const // Auto binds VBO
+        void Get(ArrayProxy<T> dst, unsigned int src_pos) const // Auto binds VBO
         {
             BindStorage();
             ForPC
@@ -378,30 +378,30 @@ namespace Graphics
             glGetBufferSubData(GL_ARRAY_BUFFER, src_pos * sizeof (T), dst.Size() * sizeof (T), dst.Data());
             )
         }
-        void Set(Utils::ArrayViewer<T> src, unsigned int dst_pos) // Auto binds VBO
+        void Set(ArrayView<T> src, unsigned int dst_pos) // Auto binds VBO
         {
             BindStorage();
             glBufferSubData(GL_ARRAY_BUFFER, dst_pos * sizeof (T), src.Size() * sizeof (T), src.Data());
         }
 
-        void NewDataBytes(Utils::ArrayViewer<uint8_t> src, StorageType acc = StorageType::draw_static) // (`src` may be null) Auto binds VBO
+        void NewDataBytes(ArrayView<uint8_t> src, StorageType acc = StorageType::draw_static) // (`src` may be null) Auto binds VBO
         {
             BindStorage();
-            glBufferData(GL_ARRAY_BUFFER, src.Size(), src.Data(), (GLenum)acc);
+            glBufferData(GL_ARRAY_BUFFER, src.size(), src.data(), (GLenum)acc);
         }
         WarningForMobile("This does not work on mobile platforms.")
-        void GetBytes(Utils::ArrayProxy<uint8_t> dst, unsigned int src_pos) const // Auto binds VBO
+        void GetBytes(ArrayProxy<uint8_t> dst, unsigned int src_pos) const // Auto binds VBO
         {
             BindStorage();
             ForPC
             (
-            glGetBufferSubData(GL_ARRAY_BUFFER, src_pos, dst.Size(), dst.Data());
+            glGetBufferSubData(GL_ARRAY_BUFFER, src_pos, dst.size(), dst.data());
             )
         }
-        void SetBytes(Utils::ArrayViewer<uint8_t> src, unsigned int dst_pos) // Auto binds VBO
+        void SetBytes(ArrayView<uint8_t> src, unsigned int dst_pos) // Auto binds VBO
         {
             BindStorage();
-            glBufferSubData(GL_ARRAY_BUFFER, dst_pos, src.Size(), src.Data());
+            glBufferSubData(GL_ARRAY_BUFFER, dst_pos, src.size(), src.data());
         }
 
         void DrawPoints   (unsigned int pos, unsigned int count) const {Bind(); glDrawArrays(GL_POINTS   , pos, count);} // Auto binds VBO
@@ -428,17 +428,17 @@ namespace Graphics
         {
             size = 0;
         }
-        SizedVertexArray(Utils::ArrayViewer<T> src, StorageType acc = StorageType::draw_static) : VertexArray<T>(src, acc) // (`data` may be null) Binds VBO after construction.
+        SizedVertexArray(ArrayView<T> src, StorageType acc = StorageType::draw_static) : VertexArray<T>(src, acc) // (`data` may be null) Binds VBO after construction.
         {
             size = src.Size();
         }
 
-        void NewData(Utils::ArrayViewer<T> src, StorageType acc = StorageType::draw_static)
+        void NewData(ArrayView<T> src, StorageType acc = StorageType::draw_static)
         {
             size = src.Size();
             VertexArray<T>::NewData(src, acc);
         }
-        void NewDataBytes(Utils::ArrayViewer<uint8_t> src, StorageType acc = StorageType::draw_static) = delete;
+        void NewDataBytes(ArrayView<uint8_t> src, StorageType acc = StorageType::draw_static) = delete;
         using VertexArray<T>::DrawPoints;
         using VertexArray<T>::DrawLines;
         using VertexArray<T>::DrawTriangles;
@@ -455,14 +455,12 @@ namespace Graphics
         uint32_t size;
         uint32_t pos;
         Utils::Array<L> arr;
-        const char *name;
 
       public:
-        RenderQueue(const char *display_name, uint32_t l, StorageType acc = StorageType::draw_dynamic) : vao({(const uint8_t *)0, sizeof (L) * l}, acc) // Name MUST remain valid whlie a queue exists, you should use a string literal for that.
+        RenderQueue(uint32_t l, StorageType acc = StorageType::draw_dynamic) : vao({(const uint8_t *)0, sizeof (L) * l}, acc) // Name MUST remain valid whlie a queue exists, you should use a string literal for that.
         {
             if (l == 0)
                 Sys::Error("Invalid rendering queue size.");
-            name = display_name;
             size = l;
             pos = 0;
             arr.Alloc(l);
@@ -503,7 +501,7 @@ namespace Graphics
         L *Add(uint32_t amount)
         {
             if (pos + amount > size)
-                Exception::RenderingQueueOverflow({name, Jo(size)});
+                Exception::RenderingQueueOverflow({Jo(size)});
             L *ret = arr + pos;
             pos += amount;
             return ret;
@@ -512,14 +510,14 @@ namespace Graphics
         void Push1(const L &x)
         {
             if (pos >= size)
-                Exception::RenderingQueueOverflow({name, Jo(size)});
+                Exception::RenderingQueueOverflow({Jo(size)});
             arr[pos    ] = x;
             pos += 1;
         }
         void Push2(const L &x, const L &y)
         {
             if (pos + 1 >= size)
-                Exception::RenderingQueueOverflow({name, Jo(size)});
+                Exception::RenderingQueueOverflow({Jo(size)});
             arr[pos    ] = x;
             arr[pos + 1] = y;
             pos += 2;
@@ -527,7 +525,7 @@ namespace Graphics
         void Push3(const L &x, const L &y, const L &z)
         {
             if (pos + 2 >= size)
-                Exception::RenderingQueueOverflow({name, Jo(size)});
+                Exception::RenderingQueueOverflow({Jo(size)});
             arr[pos    ] = x;
             arr[pos + 1] = y;
             arr[pos + 2] = z;
@@ -536,7 +534,7 @@ namespace Graphics
         void Push4as3x2(const L &x, const L &y, const L &z, const L &w) // a b d  b c d
         {
             if (pos + 5 >= size)
-                Exception::RenderingQueueOverflow({name, Jo(size)});
+                Exception::RenderingQueueOverflow({Jo(size)});
             arr[pos    ] = x;
             arr[pos + 1] = y;
             arr[pos + 2] = w;
@@ -985,7 +983,7 @@ namespace Graphics
             return uniform_locs[n];
         }
       public:
-        Shader(const char *name, ShaderSource source); // Can throw ShaderCompilationError and ShaderLinkingError.
+        Shader(StringView, ShaderSource source); // Can throw ShaderCompilationError and ShaderLinkingError.
 
         Shader(const Shader &) = delete;
         Shader(Shader &&) = delete;

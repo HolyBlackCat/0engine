@@ -139,6 +139,7 @@
 		<Unit filename="src/network.cpp" />
 		<Unit filename="src/network.h" />
 		<Unit filename="src/os.h" />
+		<Unit filename="src/proxy.h" />
 		<Unit filename="src/system.cpp" />
 		<Unit filename="src/system.h" />
 		<Unit filename="src/utils.cpp" />

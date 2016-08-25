@@ -9,6 +9,7 @@
 #include "input_enums.h"
 #include "math.h"
 #include "os.h"
+#include "proxy.h"
 
 #define MarkLocation(x) ::Sys::CodeLocation CODE_LOCATION_OBJECT(x)
 
@@ -86,17 +87,17 @@ namespace Sys
         unsigned int Count();
         const char *const *Array(); // -1 th item is executable name
         const std::unordered_map<std::string, std::string> &Map(); // .first is arg id, .second is argument passed to switch or "" if there is no argument.
-        bool Check(const char *name, const char **arg_p = 0);
+        bool Check(StringView name, std::string **arg_p = 0);
     }
 
     enum class MsgType {info = 0, warning = 1, error = 2};
-    void Msg(const char *title, const char *text, MsgType type = MsgType::info);
-    void Msg(const char *text, MsgType type = MsgType::info);
+    void Msg(StringView title, StringView text, MsgType type = MsgType::info);
+    void Msg(StringView text, MsgType type = MsgType::info);
 
     class CodeLocation final
     {
       public:
-        CodeLocation(const char *name); // YOU MUST STORE POINTED MEMORY BY YOURSELF
+        CodeLocation(StringView name); // YOU MUST STORE POINTED MEMORY BY YOURSELF
         CodeLocation(const CodeLocation &) = delete;
         CodeLocation(CodeLocation &&) = delete;
         CodeLocation &operator=(const CodeLocation &) = delete;
@@ -106,7 +107,7 @@ namespace Sys
 
     [[noreturn]] void Exit();
     void RequestExit(); // This one will be handled by ErrorsHandler if it exists.
-    [[noreturn]] void Error(const char *text, const char *solution = ""); // If text == 0, the app will be closed silently.
+    [[noreturn]] void Error(StringView text, StringView solution = ""); // If text == 0, the app will be closed silently.
 
     void SetCurrentFunction(void (*ptr)());
     void (*CurrentFunction())();
