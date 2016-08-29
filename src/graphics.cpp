@@ -42,7 +42,7 @@ namespace Graphics
     void ForceErrorCheck()
     {
         std::string glerr;
-        bool isglerr;
+        bool isglerr = 0;
         while (GLenum err = glGetError())
         {
             isglerr = 1;

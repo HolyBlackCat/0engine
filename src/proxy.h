@@ -148,19 +148,19 @@ namespace Proxy
     class StringView
     {
         const char *pointer;
-        std::size_t length;
+        int length;
         std::string *buf;
 
       public:
         char operator*() const {return *pointer;}
         operator const char *() const {return pointer;}
 
-        std::size_t size_if_known() const
+        int size_if_known() const
         {
             return length;
         }
 
-        std::size_t size()
+        int size()
         {
             if (length == -1)
                 length = std::strlen(pointer);
@@ -225,7 +225,7 @@ namespace Proxy
             if (a.size_if_known() == -1 || b.size_if_known() == -1)
                 return std::strcmp(a, b);
         }
-        for (std::size_t i = 0; i < a.size(); i++)
+        for (int i = 0; i < a.size(); i++)
             if (a[i] != b[i])
                 return 0;
         return 1;
@@ -234,7 +234,7 @@ namespace Proxy
     {
         if (a.size() != b.size())
             return 1;
-        for (std::size_t i = 0; i < a.size(); i++)
+        for (int i = 0; i < a.size(); i++)
             if (a[i] != b[i])
                 return 1;
         return 0;
