@@ -89,6 +89,9 @@
 			<Add library="mingw32" />
 			<Add library="SDL2main" />
 			<Add library="SDL2" />
+			<Add library="SDL2_image" />
+			<Add library="SDL2_net" />
+			<Add library="SDL2_ttf" />
 			<Add library="m" />
 			<Add library="dinput8" />
 			<Add library="dxguid" />
@@ -105,15 +108,14 @@
 			<Add library="opengl32" />
 			<Add library="OpenAL32.dll" />
 			<Add library="zlibstatic" />
-			<Add library="SDL2_net" />
 			<Add library="ws2_32" />
 			<Add library="iphlpapi" />
 			<Add library="vorbisfile" />
 			<Add library="vorbisenc" />
 			<Add library="vorbis" />
 			<Add library="ogg" />
-			<Add library="SDL2_image" />
 			<Add library="png16" />
+			<Add library="freetype" />
 			<Add directory="lib" />
 		</Linker>
 		<Unit filename="src/audio.cpp" />
@@ -131,6 +133,7 @@
 		<Unit filename="src/lib_sdl.h" />
 		<Unit filename="src/lib_sdlimg.h" />
 		<Unit filename="src/lib_sdlnet.h" />
+		<Unit filename="src/lib_sdlttf.h" />
 		<Unit filename="src/lib_vorbis.h" />
 		<Unit filename="src/lib_zlib.h" />
 		<Unit filename="src/logic.cpp" />

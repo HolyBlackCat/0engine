@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "lib_sdlimg.h"
+#include "lib_sdlttf.h"
 #include "lib_zlib.h"
 #include "window.h"
 
@@ -12,7 +13,7 @@ namespace Graphics
     static Utils::PoolManager<int> texture_pool_2d,
                                    texture_pool_cubemap;
 
-    static bool sdl_image_init_ok = 0;
+    static bool sdl_image_init_ok = 0, sdl_ttf_init_ok = 0;
 
     static bool depth_test = 0;
 
@@ -23,11 +24,16 @@ namespace Graphics
         sdl_image_init_ok = (IMG_Init(IMG_INIT_PNG) == IMG_INIT_PNG);
         if (!sdl_image_init_ok)
             Sys::Error(Jo("SDL image plugin init failed. Error message: `", IMG_GetError(), "`."));
+        sdl_ttf_init_ok = TTF_Init() == 0;
+        if (!sdl_ttf_init_ok)
+            Sys::Error(Jo("SDL ttf plugin init failed. Error message: `", TTF_GetError(), "`."));
     }
     void Cleanup()
     {
         if (sdl_image_init_ok)
             IMG_Quit();
+        if (sdl_ttf_init_ok)
+            TTF_Quit();
     }
     void BeginFrame()
     {

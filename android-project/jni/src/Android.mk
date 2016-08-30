@@ -12,11 +12,6 @@ LOCAL_SRC_FILES := ../../prebuilt-libs/$(TARGET_ARCH_ABI)/libopenal.so
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := png-prebuilt
-LOCAL_SRC_FILES := ../../prebuilt-libs/$(TARGET_ARCH_ABI)/libpng16.so
-include $(PREBUILT_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
 LOCAL_MODULE := ogg-prebuilt
 LOCAL_SRC_FILES := ../../prebuilt-libs/$(TARGET_ARCH_ABI)/libogg.so
 include $(PREBUILT_SHARED_LIBRARY)
@@ -58,7 +53,7 @@ LOCAL_SRC_FILES := $(SDL_PATH)/src/main/android/SDL_android_main.c \
 	../../../src/window.cpp \
 
 # -- libs list --                       
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_net openal-prebuilt zlib-prebuilt png-prebuilt ogg-prebuilt vorbis-prebuilt vorbisenc-prebuilt vorbisfile-prebuilt
+LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_net SDL2_ttf openal-prebuilt zlib-prebuilt ogg-prebuilt vorbis-prebuilt vorbisenc-prebuilt vorbisfile-prebuilt
   
 LOCAL_LDLIBS := -lGLESv1_CM -lGLESv2 -llog -latomic -lm
 

@@ -3,6 +3,7 @@
 
 #include "lib_sdl.h"
 #include "lib_sdlimg.h"
+#include "lib_sdlttf.h"
 #include "lib_sdlnet.h"
 #include "lib_gl.h"
 #include "lib_al.h"
