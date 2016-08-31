@@ -801,7 +801,6 @@ namespace Utils
             rwops = o.rwops;
             name = (std::string &&)o.name;
             o.rwops = 0;
-            o.name = "";
         }
 
         IO &operator=(const IO &o) = delete;
@@ -812,7 +811,6 @@ namespace Utils
             rwops = o.rwops;
             name = (std::string &&)o.name;
             o.rwops = 0;
-            o.name = "";
             return *this;
         }
 

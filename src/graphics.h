@@ -11,6 +11,8 @@
 
 #include "exceptions.h"
 #include "lib_gl.h"
+#include "lib_sdl.h"
+#include "lib_sdlttf.h"
 #include "math.h"
 #include "os.h"
 #include "system.h"
@@ -690,6 +692,205 @@ namespace Graphics
         }
     };
 
+    class Font
+    {
+        TTF_Font *handle;
+      public:
+        Font()
+        {
+            handle = 0;
+        }
+        Font(Utils::BinaryInput &input, int ptsize, int index == 0)
+        {
+            handle = TTF_OpenFontIndexRW((SDL_RWops *)input.RWops(), 0, ptsize, index);
+            input.SeekAbs(0);
+            if (!handle)
+                Exception::CantParse({input.Name(), Jo("SDL ttf plugin is unable to parse font: ", Utils::FixEdges(TTF_GetError()))});
+        }
+        Font(Utils::BinaryInput input, int ptsize, int index == 0)
+        {
+            handle = TTF_OpenFontIndexRW((SDL_RWops *)input.RWops(), 0, ptsize, index);
+            if (!handle)
+                Exception::CantParse({input.Name(), Jo("SDL ttf plugin is unable to parse font: ", Utils::FixEdges(TTF_GetError()))});
+        }
+
+        Font(const Font &) = delete;
+        Font &operator=(const Font &) = delete;
+
+        Font(Font &&o)
+        {
+            handle = o.handle;
+            o.handle = 0;
+        }
+        Font &operator=(Font &&o)
+        {
+            handle = o.handle;
+            o.handle = 0;
+            return *this;
+        }
+
+        ~Font()
+        {
+            if (handle)
+                TTF_CloseFont(handle);
+        }
+
+        enum Style
+        {
+            // Those are bit flags and can be combined with bitwise or. `normal` is equal to 0.
+            normal        = TTF_STYLE_NORMAL,
+            bold          = TTF_STYLE_BOLD,
+            italic        = TTF_STYLE_ITALIC,
+            underline     = TTF_STYLE_UNDERLINE,
+            strikethrough = TTF_STYLE_STRIKETHROUGH,
+        };
+
+        Style GetStyle() const
+        {
+            return (Style)TTF_GetFontStyle(handle);
+        }
+        void SetStyle(Style style)
+        {
+            if (GetStyle() == style)
+                return
+            TTF_SetFontStyle(handle, style);
+        }
+
+        // Outline is a contour width measured in pixels.
+
+        int GetOutline() const
+        {
+            return TTF_GetFontOutline(handle);
+        }
+        void SetOutline(int outline)
+        {
+            if (GetOutline() == outline)
+                return;
+            TTF_SetFontOutline(handle, outline);
+        }
+
+        // Hinting is a rasterizer setting which affects the contour.
+
+        enum class Hinting
+        {
+            normal = TTF_HINTING_NORMAL,
+            light  = TTF_HINTING_LIGHT,
+            mono   = TTF_HINTING_MONO,
+            none   = TTF_HINTING_NONE,
+        };
+
+        Hinting GetHinting() const
+        {
+            return (Hinting)TTF_GetFontHinting(handle);
+        }
+        void SetHinting(Hinting hinting)
+        {
+            if (GetHinting() == hinting)
+                return;
+            TTF_SetFontHinting(handle, (int)hinting);
+        }
+
+        // Kerning means adjacent letters are more tightly packed together resulting in overlapping bounding boxes.
+
+        bool GetKerning() const
+        {
+            return TTF_GetFontKerning(handle);
+        }
+        void SetKerning(bool kerning)
+        {
+            if (GetKerning() == kerning)
+                return;
+            TTF_SetFontHinting(handle, kerning);
+        }
+
+        /*
+         * ' ##    ## ' ' ' ' ' ' ' ' ' ' ' ' ' ' \ ' ' ' ' ' ' ' \
+         *   ##    ##                             |               |
+         *    ##  ##    ##    ##                  | Ascent        |
+         *     ####     ##    ##                  |               | Height
+         *      ##      ##    ##                  |               |
+         * ---- ## ----- ####### ------ Baseline  /   \           |
+         *                    ##                      | Descent   |
+         * . . . . . .  ####### . . . . . . . . . . . / . . . . . /
+         */
+
+        int Height() const
+        {
+            // Usually equal to point size specified at font creation.
+            return TTF_FontHeight(handle);
+        }
+        int Ascent() const
+        {
+            return TTF_FontAscent(handle);
+        }
+        int Descent() const
+        {
+            return TTF_FontDescent(handle);
+        }
+
+        int LineSkip() const // Expected spacing between lines.
+        {
+            return TTF_FontLineSkip(handle);
+        }
+
+        bool Monospaced() const // True if every glyph has a same width
+        {
+            return TTF_FontFaceIsFixedWidth(handle);
+        }
+
+        bool HasGlyph(uint16_t glyph) const
+        {
+            return TTF_GlyphIsProvided(handle, glyph);
+        }
+
+        /*
+         *  Y
+         *  |
+         *  | minX   maxX
+         *  |..o.......o...  maxY
+         *  |  : #### #:  :
+         *  |  :##  ## :  :
+         *  |  :##   ##:  :  advance (horisontal)
+         *  |  : ##### :  : /
+         *  |  :##     :  :/
+         *  0----#####----o----X  (baseline)
+         *  :  :#    ##:  :
+         *  :  :###### :  :
+         *  '''o'''''''o'''  minY
+         */
+
+        void GlyphMetrics(uint16_t glyph, int *minx, int *maxx, int *miny, int *maxy, int *advance) const // Pointer args may be null.
+        {
+            TTF_GlyphMetrics(handle, glyph, minx, maxx, miny, maxy, advance);
+        }
+        int GlyphAdvance(uint16_t glyph) const
+        {
+            int ret;
+            GlyphMetrics(glyph, 0, 0, 0, 0, &ret);
+            return ret;
+        }
+        ivec2 GlyphOffset(uint16_t glyph) const // Minimal X and Y.
+        {
+            ivec2 ret;
+            GlyphMetrics(glyph, &ret.x, 0, &ret.y, 0, 0);
+            return ret;
+        }
+        ivec2 GlyphLimit(uint16_t glyph) const // Maximal X and Y.
+        {
+            ivec2 ret;
+            GlyphMetrics(glyph, 0, &ret.x, 0, &ret.y, 0);
+            return ret;
+        }
+        ivec2 GlyphSize(uint16_t glyph) const
+        {
+            ivec2 min, max;
+            GlyphMetrics(glyph, &min.x, &max.x, &min.y, &max.y, 0);
+            return max - min;
+        }
+
+        #error make glyph renderer into ImageData (at specific position) using SDL_BlitSurface()
+        #error maybe do strings renderer with the same principle
+    };
 
     enum class Format : GLenum {};
 
