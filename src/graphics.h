@@ -137,7 +137,7 @@ namespace Graphics
 
     void ForceErrorCheck();
 
-    inline bool ExtensionSupported(StringView name)
+    inline bool ExtensionSupported(const char *name)
     {
         return (bool)SDL_GL_ExtensionSupported(name);
     }
@@ -653,6 +653,11 @@ namespace Graphics
             size = {0,0};
             data.Free();
         }
+        void Fill(u8vec4 color)
+        {
+            for (u8vec4 &it : data)
+                it = color;
+        }
         void *Data()
         {
             return data;
@@ -692,40 +697,54 @@ namespace Graphics
         }
     };
 
+    class Surface
+    {
+        // This is an abstraction over SDL_Surface.
+    };
+
     class Font
     {
         TTF_Font *handle;
+        Utils::BinaryInput stream;
+
       public:
+        void Open(Utils::BinaryInput input, int ptsize, int index = 0) // Warning: The file will be used while the font object is alive and opened.
+        {
+            stream = (Utils::BinaryInput &&) input;
+            handle = TTF_OpenFontIndexRW((SDL_RWops *)stream.RWops(), 0, ptsize, index);
+            if (!handle)
+                Exception::CantParse({stream.Name(), Jo("SDL ttf plugin is unable to parse font: ", Utils::FixEdges(TTF_GetError()))});
+        }
+        void Close()
+        {
+            stream.Close();
+        }
+
         Font()
         {
             handle = 0;
         }
-        Font(Utils::BinaryInput &input, int ptsize, int index == 0)
+
+        Font(Utils::BinaryInput input, int ptsize, int index = 0)
         {
-            handle = TTF_OpenFontIndexRW((SDL_RWops *)input.RWops(), 0, ptsize, index);
-            input.SeekAbs(0);
-            if (!handle)
-                Exception::CantParse({input.Name(), Jo("SDL ttf plugin is unable to parse font: ", Utils::FixEdges(TTF_GetError()))});
-        }
-        Font(Utils::BinaryInput input, int ptsize, int index == 0)
-        {
-            handle = TTF_OpenFontIndexRW((SDL_RWops *)input.RWops(), 0, ptsize, index);
-            if (!handle)
-                Exception::CantParse({input.Name(), Jo("SDL ttf plugin is unable to parse font: ", Utils::FixEdges(TTF_GetError()))});
+            Open((Utils::BinaryInput &&) input, ptsize, index);
         }
 
         Font(const Font &) = delete;
         Font &operator=(const Font &) = delete;
 
-        Font(Font &&o)
+        Font(Font &&o) : stream((Utils::BinaryInput &&) o.stream)
         {
             handle = o.handle;
             o.handle = 0;
         }
         Font &operator=(Font &&o)
         {
+            if (&o == this)
+                return *this;
             handle = o.handle;
             o.handle = 0;
+            stream = (Utils::BinaryInput &&) o.stream;
             return *this;
         }
 
@@ -859,37 +878,102 @@ namespace Graphics
          *  '''o'''''''o'''  minY
          */
 
-        void GlyphMetrics(uint16_t glyph, int *minx, int *maxx, int *miny, int *maxy, int *advance) const // Pointer args may be null.
+        void GlyphRawMetrics(uint16_t glyph, int *minx, int *maxx, int *miny, int *maxy, int *advance) const // Pointer args may be null.
         {
             TTF_GlyphMetrics(handle, glyph, minx, maxx, miny, maxy, advance);
         }
         int GlyphAdvance(uint16_t glyph) const
         {
             int ret;
-            GlyphMetrics(glyph, 0, 0, 0, 0, &ret);
+            GlyphRawMetrics(glyph, 0, 0, 0, 0, &ret);
             return ret;
         }
         ivec2 GlyphOffset(uint16_t glyph) const // Minimal X and Y.
         {
             ivec2 ret;
-            GlyphMetrics(glyph, &ret.x, 0, &ret.y, 0, 0);
+            GlyphRawMetrics(glyph, &ret.x, 0, 0, &ret.y, 0);
+            ret.y = -ret.y;
             return ret;
         }
         ivec2 GlyphLimit(uint16_t glyph) const // Maximal X and Y.
         {
             ivec2 ret;
-            GlyphMetrics(glyph, 0, &ret.x, 0, &ret.y, 0);
+            GlyphRawMetrics(glyph, 0, &ret.x, &ret.y, 0, 0);
+            ret.y = -ret.y;
             return ret;
         }
         ivec2 GlyphSize(uint16_t glyph) const
         {
             ivec2 min, max;
-            GlyphMetrics(glyph, &min.x, &max.x, &min.y, &max.y, 0);
+            GlyphRawMetrics(glyph, &min.x, &max.x, &min.y, &max.y, 0);
             return max - min;
         }
 
-        #error make glyph renderer into ImageData (at specific position) using SDL_BlitSurface()
-        #error maybe do strings renderer with the same principle
+        const char *Name() const
+        {
+            const char *ret = TTF_FontFaceFamilyName(handle);
+            return ret ? ret : "";
+        }
+        const char *StyleName() const
+        {
+            const char *ret = TTF_FontFaceStyleName(handle);
+            return ret ? ret : "";
+        }
+
+        enum class Quality {fast, fancy};
+
+        void RenderGlyphs(ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
+        {
+            SDL_Surface *surface;
+            if (Utils::big_endian)
+                surface = SDL_CreateRGBSurfaceFrom(img.Data(), img.Size().x, img.Size().y, 32, img.Size().x*4, 0xff << 8*3, 0xff << 8*2, 0xff << 8*1, 0xff << 8*0);
+            else
+                surface = SDL_CreateRGBSurfaceFrom(img.Data(), img.Size().x, img.Size().y, 32, img.Size().x*4, 0xff << 8*0, 0xff << 8*1, 0xff << 8*2, 0xff << 8*3);
+            if (!surface)
+                Sys::Error("Can't create a temporary surface for the font renderer.");
+
+            SDL_Surface *glyph_surface;
+
+            ivec2 pixel_pos(0,0);
+
+            for (uint16_t it : glyphs)
+            {
+                if (!HasGlyph(it))
+                    continue;
+                glyph_surface = (quality == Quality::fancy ? TTF_RenderGlyph_Blended : TTF_RenderGlyph_Solid)(handle, it, {color.r, color.g, color.b, color.a});
+                if (!glyph_surface)
+                    continue;
+                while (pixel_pos.x + glyph_surface->w > dstsz.x)
+                {
+                    pixel_pos.x = 0;
+                    pixel_pos.y += Height();
+                    if (pixel_pos.y + Height() > dstsz.y)
+                    {
+                        SDL_FreeSurface(surface);
+                        SDL_FreeSurface(glyph_surface);
+                        Exception::FontAtlasOverflow({Name(), Jo(dstsz)});
+                    }
+                }
+                SDL_SetSurfaceBlendMode(glyph_surface, SDL_BLENDMODE_NONE);
+                if (quality == Quality::fast)
+                {
+                    SDL_SetColorKey(glyph_surface, 0, 0);
+                    glyph_surface->format->palette->colors[0] = {0,0,0,0};
+                }
+                SDL_Rect dst_rect{dst.x + pixel_pos.x, dst.y + pixel_pos.y, glyph_surface->w, glyph_surface->h};
+                if (SDL_BlitSurface(glyph_surface, 0, surface, &dst_rect))
+                {
+                    SDL_FreeSurface(surface);
+                    SDL_FreeSurface(glyph_surface);
+                    Sys::Error(Jo("Can't blit glyph #", it, " for font ", Name(), '.'));
+                }
+                pixel_pos.x += glyph_surface->w;
+                SDL_FreeSurface(glyph_surface);
+            }
+            SDL_FreeSurface(surface);
+        }
+
+        #error Save glyph positions in func above. Also add string renderer.
     };
 
     enum class Format : GLenum {};
@@ -1184,7 +1268,7 @@ namespace Graphics
             return uniform_locs[n];
         }
       public:
-        Shader(StringView, ShaderSource source); // Can throw ShaderCompilationError and ShaderLinkingError.
+        Shader(const char *name, ShaderSource source); // Can throw ShaderCompilationError and ShaderLinkingError.
 
         Shader(const Shader &) = delete;
         Shader(Shader &&) = delete;

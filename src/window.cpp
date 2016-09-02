@@ -82,10 +82,9 @@ namespace Window
                 Sys::Error("Unable to parse OpenGL config.");
         };
 
-        std::string *buf;
-        if (Sys::CommandLineArgs::Check("lxsys-display-num", &buf))
+        const char *display_num_str;
+        if (Sys::CommandLineArgs::Check("lxsys-display-num", &display_num_str))
         {
-            const char *display_num_str = buf->c_str();
             if (*display_num_str == 0 || *display_num_str < '0' || *display_num_str > '9')
                 Fail();
             display_num = 0;
@@ -229,15 +228,14 @@ namespace Window
             Input::Init();
         }
 
-        std::string *gl_cfg_str;
+        const char *gl_cfg_str;
         if (Sys::CommandLineArgs::Check("lxsys-opengl-config", &gl_cfg_str))
         {
-            PrepareVideoSettings(gl_cfg_str->c_str(), 1);
+            PrepareVideoSettings(gl_cfg_str, 1);
         }
         else
         {
-            gl_cfg_str = &Sys::Config::opengl_config;
-            PrepareVideoSettings(gl_cfg_str->c_str(), 0);
+            PrepareVideoSettings(Sys::Config::opengl_config.c_str(), 0);
         }
 
         int flags = SDL_WINDOW_OPENGL;
@@ -301,14 +299,14 @@ namespace Window
                                   size.x, size.y,
                                   flags);
         if (!handle)
-            Sys::Error(Jo("Window creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", SDL_GetError(), "`."), std::string(err_solution));
+            Sys::Error(Jo("Window creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", SDL_GetError(), "`."), err_solution);
 
         if (!OnMobile && Sys::Config::window_min_size.any())
             SDL_SetWindowMinimumSize(handle, Sys::Config::window_min_size.x, Sys::Config::window_min_size.y);
 
         context_handle = SDL_GL_CreateContext(handle);
         if (!context_handle)
-            Sys::Error(Jo("OpenGL context creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", SDL_GetError(), "`."), std::string(err_solution));
+            Sys::Error(Jo("OpenGL context creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", SDL_GetError(), "`."), err_solution);
 
         #if OnWindows || defined(ASSUME_ANDROID)
         glewExperimental = 1;

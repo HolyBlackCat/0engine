@@ -201,19 +201,19 @@ namespace Sys
                     else
                         tmp += "(No descrition.)\n";
                 }
-                Msg(tmp);
+                Msg(tmp.c_str());
                 Exit();
             }
 
             if (Check("lxsys-opengl-show-config"))
             {
-                Msg("Default OpenGL config: " + Config::opengl_config);
+                Msg(("Default OpenGL config: " + Config::opengl_config).c_str());
                 Exit();
             }
 
             if (Check("lxsys-openal-show-config"))
             {
-                Msg("Default OpenAL config: " + Config::openal_config);
+                Msg(("Default OpenAL config: " + Config::openal_config).c_str());
                 Exit();
             }
 
@@ -223,28 +223,28 @@ namespace Sys
         unsigned int Count()       {return argc;}
         const char *const *Array() {return argv;}
         const std::unordered_map<std::string, std::string> &Map() {return map;}
-        bool Check(StringView name, std::string **arg_p)
+        bool Check(const char *name, const char **arg_p)
         {
             auto it = map.find(std::string(name));
             if (it == map.end())
             {
                 for (const auto &it : id_list)
-                    if (StringView(it) == name)
+                    if (it == name)
                         return 0;
                 Error(Jo("Invalid command line argument id `", name, "` was used as an argument for Sys::CommandLineArgs::Check()."));
             }
             if (arg_p)
-                *arg_p = &it->second;
+                *arg_p = it->second.c_str();
             return 1;
         }
     }
 
-    void Msg(StringView title, StringView text, MsgType type)
+    void Msg(const char *title, const char *text, MsgType type)
     {
         int arr[3] {SDL_MESSAGEBOX_INFORMATION, SDL_MESSAGEBOX_WARNING, SDL_MESSAGEBOX_ERROR};
         SDL_ShowSimpleMessageBox(arr[(int)type], title, text, 0);
     }
-    void Msg(StringView text, MsgType type)
+    void Msg(const char *text, MsgType type)
     {
         switch (type)
         {
@@ -264,7 +264,7 @@ namespace Sys
     static struct {const char *name;} code_locations_stack[code_locations_stack_size];
     static unsigned int code_locations_stack_pos = 0;
 
-    CodeLocation::CodeLocation(StringView name)
+    CodeLocation::CodeLocation(const char *name)
     {
         if (code_locations_stack_pos < code_locations_stack_size)
             code_locations_stack[code_locations_stack_pos] = {name};
@@ -324,7 +324,7 @@ namespace Sys
         HandleError(ExitConditions::quit);
     }
 
-    [[noreturn]] void Error(StringView text, StringView solution)
+    [[noreturn]] void Error(const char *text, const char *solution)
     {
         // Recursion breaker.
         static bool started = 0;

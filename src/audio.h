@@ -121,9 +121,9 @@ namespace Audio
         static SoundData FromCompressed       (Utils::BinaryInput io) {SoundData ret; ret.LoadCompressed       (io.Move()); return ret;}
         static SoundData FromCompressed_Mono  (Utils::BinaryInput io) {SoundData ret; ret.LoadCompressed_Mono  (io.Move()); return ret;}
         static SoundData FromCompressed_Stereo(Utils::BinaryInput io) {SoundData ret; ret.LoadCompressed_Stereo(io.Move()); return ret;}
-        static SoundData FromOGG              (StringView fname, bool load_as_8bit = 0) {SoundData ret; ret.LoadOGG       (fname, load_as_8bit); return ret;}
-        static SoundData FromOGG_Mono         (StringView fname, bool load_as_8bit = 0) {SoundData ret; ret.LoadOGG_Mono  (fname, load_as_8bit); return ret;}
-        static SoundData FromOGG_Stereo       (StringView fname, bool load_as_8bit = 0) {SoundData ret; ret.LoadOGG_Stereo(fname, load_as_8bit); return ret;}
+        static SoundData FromOGG              (const char *fname, bool load_as_8bit = 0) {SoundData ret; ret.LoadOGG       (fname, load_as_8bit); return ret;}
+        static SoundData FromOGG_Mono         (const char *fname, bool load_as_8bit = 0) {SoundData ret; ret.LoadOGG_Mono  (fname, load_as_8bit); return ret;}
+        static SoundData FromOGG_Stereo       (const char *fname, bool load_as_8bit = 0) {SoundData ret; ret.LoadOGG_Stereo(fname, load_as_8bit); return ret;}
 
 
         void Empty(uint32_t new_size, SoundFormat new_format)

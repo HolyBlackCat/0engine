@@ -69,7 +69,7 @@ namespace Graphics
             }
         }
         if (isglerr)
-            Sys::Error(glerr);
+            Sys::Error(glerr.c_str());
     }
 
     namespace Attribs
@@ -135,22 +135,22 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
 
         uint8_t id_field_len, tmp;
 
-        io.ReadEx(id_field_len);                                                                                              // 00
-        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported.");                               // 01
-        io.ReadEx(tmp); if (tmp != 0x02) ParseError("File must uncompressed 32 bpp TrueColor image (type check failure).");   // 02 - Sic! 0x02 instead of 0x00.
-        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (1).");                           // 03
-        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (2).");                           // 04
-        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (3).");                           // 05
-        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (4).");                           // 06
-        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (5).");                           // 07
-        io.SeekRel(4);                                                                                                        // 08
-                                                                                                                              // 09
-                                                                                                                              // 0a
-                                                                                                                              // 0b
+        io.ReadEx(id_field_len);                                                                                             // 00
+        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported.");                              // 01
+        io.ReadEx(tmp); if (tmp != 0x02) ParseError("File must uncompressed 32 bpp TrueColor image (type check failure).");  // 02 - Sic! 0x02 instead of 0x00.
+        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (1).");                          // 03
+        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (2).");                          // 04
+        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (3).");                          // 05
+        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (4).");                          // 06
+        io.ReadEx(tmp); if (tmp != 0x00) ParseError("Files with colormaps are not supported (5).");                          // 07
+        io.SeekRel(4);                                                                                                       // 08
+                                                                                                                             // 09
+                                                                                                                             // 0a
+                                                                                                                             // 0b
         io.ReadEx(tmp); size.x = tmp;                                                                                        // 0c
         io.ReadEx(tmp); size.x |= tmp << 8;                                                                                  // 0d
         io.ReadEx(tmp); size.y = tmp;                                                                                        // 0e
@@ -271,7 +271,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
 
         unsigned char tmp;
 
@@ -320,7 +320,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](StringView txt){Exception::CantParse({io.Name(), +txt});};
+        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), +txt});};
         SDL_Surface *source = IMG_LoadPNG_RW((SDL_RWops *)io.RWops());
         if (!source)
             ParseError(Utils::FixEdges(IMG_GetError()));
@@ -438,7 +438,7 @@ namespace Graphics
         SDL_FreeSurface(surface);
     }
 
-    Shader::Shader(StringView name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError. The name is not saved.
+    Shader::Shader(const char *name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError. The name is not saved.
     {
         prog = glCreateProgram();
         vsh = glCreateShader(GL_VERTEX_SHADER);

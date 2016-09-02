@@ -20,7 +20,6 @@
 
 #include "lib_sdl.h"
 #include "exceptions.h"
-#include "proxy.h"
 #include "system.h"
 
 #define ExecuteThisOnce() do {static bool flag = 0; if (flag) ::Sys::Error(Jo("At function ", __func__, ": Statement at " __FILE__ ":", __LINE__, " was illegally executed twice.")); flag = 1;} while (0)
@@ -274,31 +273,31 @@ namespace Utils
         // Jo() resets stringstream flags before performing concatenation.
         // Jo_() does not.
 
-        template <typename ...P> Proxy::StringReferenceInterface Jo_(P &&... p)
+        template <typename ...P> const char *Jo_(P &&... p)
         {
-            static Ring<std::string> buf(16);
+            static Ring<std::string> buf(32);
             Internal::ss.clear();
             Internal::ss.str("");
             std::initializer_list<int>{(Internal::ss << p, 0)...};
             *buf = Internal::ss.str();
-            return buf.Rotate();
+            return buf.Rotate().c_str();
         }
 
-        template <typename ...P> Proxy::StringReferenceInterface Jo(P &&... p)
+        template <typename ...P> const char *Jo(P &&... p)
         {
             Internal::ss.flags(Internal::stdfmt);
             return Jo_((P &&) p...);
         }
 
-        inline Proxy::StringReferenceInterface FixEdges(const char *txt) // Removes non-printable chars and spaces from start and end of a string.
+        inline const char *FixEdges(const char *txt) // Removes non-printable chars and spaces from start and end of a string.
         {
-            static Ring<std::string> buf(16);
+            static Ring<std::string> buf(32);
             while ((unsigned char)*txt <= ' ' || *txt == 127)
             {
                 if (!*txt)
                 {
                     *buf = "";
-                    return buf.Rotate();
+                    return buf.Rotate().c_str();
                 }
                 txt++;
             }
@@ -312,7 +311,7 @@ namespace Utils
             end++;
 
             *buf = std::string(txt, end);
-            return buf.Rotate();
+            return buf.Rotate().c_str();
         }
     }
 
@@ -807,6 +806,8 @@ namespace Utils
 
         IO &operator=(IO &&o)
         {
+            if (&o == this)
+                return *this;
             Close();
             rwops = o.rwops;
             name = (std::string &&)o.name;
@@ -822,32 +823,118 @@ namespace Utils
 
     struct TextInput : IO
     {
-        TextInput(Proxy::StringView fname) : IO(IO::FromTextFile(fname, IO::Mode::read)) {}
+        TextInput() {}
+        TextInput(const char *fname) : IO(IO::FromTextFile(fname, IO::Mode::read)) {}
         TextInput(const void *mem, int size) : IO(IO::FromConstMemory(mem, size)) {}
         TextInput &&Move() {return (TextInput &&)*this;}
     };
     struct BinaryInput : IO
     {
-        BinaryInput(Proxy::StringView fname) : IO(IO::FromBinaryFile(fname, IO::Mode::read)) {}
+        BinaryInput() {}
+        BinaryInput(const char *fname) : IO(IO::FromBinaryFile(fname, IO::Mode::read)) {}
         BinaryInput(const void *mem, int size) : IO(IO::FromConstMemory(mem, size)) {}
         BinaryInput &&Move() {return (BinaryInput &&)*this;}
     };
     struct TextOutput : IO
     {
-        TextOutput(Proxy::StringView fname) : IO(IO::FromTextFile(fname, IO::Mode::write)) {}
+        TextOutput() {}
+        TextOutput(const char *fname) : IO(IO::FromTextFile(fname, IO::Mode::write)) {}
         TextOutput(void *mem, int size) : IO(IO::FromMemory(mem, size)) {}
         TextOutput &&Move() {return (TextOutput &&)*this;}
     };
     struct BinaryOutput : IO
     {
-        BinaryOutput(Proxy::StringView fname) : IO(IO::FromBinaryFile(fname, IO::Mode::write)) {}
+        BinaryOutput() {}
+        BinaryOutput(const char *fname) : IO(IO::FromBinaryFile(fname, IO::Mode::write)) {}
         BinaryOutput(void *mem, int size) : IO(IO::FromMemory(mem, size)) {}
         BinaryOutput &&Move() {return (BinaryOutput &&)*this;}
     };
+
+    inline namespace Proxy
+    {
+        template <typename T> class ArrayProxy
+        {
+            T *first;
+            std::size_t length;
+
+          public:
+            using type = typename std::remove_const<T>::type;
+            static constexpr bool readonly = std::is_const<T>::value;
+
+            T &operator*() const {return *first;}
+            operator T *() const {return first;}
+
+            T *begin() const {return first;}
+            T *end() const {return first+length;}
+
+            typename std::conditional<readonly, const void *, void *>::type data() const {return first;}
+            std::size_t size() const {return length;}
+
+            ArrayProxy() // Null.
+            {
+                first = 0;
+                length = 0;
+            }
+            ArrayProxy(T &ptr) // From a single object.
+            {
+                first = &ptr;
+                length = 1;
+            }
+            ArrayProxy(T *a, T *b) // From a pair of pointers.
+            {
+                first = a;
+                length = b - a;
+            }
+            ArrayProxy(T *ptr, std::size_t len) // From a pointer and a length.
+            {
+                first = ptr;
+                length = len;
+            }
+            template <typename TT, typename = decltype(std::begin(std::declval<TT&&>()))> ArrayProxy(TT && o) // From an array or a container which uses pointers as iterators. Use this with caution on temporary containers.
+            {
+                static_assert(std::is_pointer<decltype(std::begin(o))>::value, "Underlying container must use pointers as iterators or must use contiguous storage.");
+                static_assert(readonly || (!std::is_const<std::remove_pointer_t<decltype(std::begin(o))>>::value), "Attempt to bind read-write proxy to a const object.");
+                first = std::begin(o);
+                length = std::end(o) - std::begin(o);
+            }
+            ArrayProxy(std::initializer_list<type> list) // From std::initializer_list (which is always const). Use this with caution on temporary lists.
+            {
+                first = list.begin();
+                length = list.size();
+            }
+            template <std::size_t S> ArrayProxy(std::array<type, S> &arr) // From std::array.
+            {
+                // This function may be redundant on some systems, but this is not guaranteed.
+                first = &*arr.begin();
+                length = &*arr.end() - &*arr.begin();
+            }
+            template <std::size_t S> ArrayProxy(const std::array<type, S> &arr) // From const std::array. Use this with caution on temporary arrays.
+            {
+                // This function may be redundant on some systems, but this is not guaranteed.
+                static_assert(readonly, "Attempt to bind read-write proxy to a const object.");
+                first = &*arr.begin();
+                length = &*arr.end() - &*arr.begin();
+            }
+            ArrayProxy(std::vector<type> &arr) // From std::vector.
+            {
+                first = &*arr.begin();
+                length = &*arr.end() - &*arr.begin();
+            }
+            ArrayProxy(const std::vector<type> &arr) // From const std::vector. Use this with caution on temporary vectors.
+            {
+                static_assert(readonly, "Attempt to bind read-write proxy to a const object.");
+                first = &*arr.begin();
+                length = &*arr.end() - &*arr.begin();
+            }
+        };
+
+        template <typename T> using ArrayView = ArrayProxy<const T>;
+    }
 }
 
 using Utils::Jo;
 using Utils::Jo_;
+using namespace Utils::Proxy;
 
 #endif
 
