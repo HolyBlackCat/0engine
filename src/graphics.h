@@ -697,9 +697,71 @@ namespace Graphics
         }
     };
 
-    class Surface
+    class Font;
+
+    class FontData
     {
-        // This is an abstraction over SDL_Surface.
+        friend class Font;
+
+        struct Glyph
+        {
+            ivec2 pos, size;
+            ivec2 offset;
+            int advance;
+        };
+
+        static constexpr int total_glyph_count = 0x10000; // This must be equal to the range of uint16_t.
+        static constexpr int sub_buffer_count = 1024;
+        static constexpr int sub_buffer_size = total_glyph_count / sub_buffer_count;
+
+        Utils::Buffer<Utils::Buffer<Glyph>> glyph_map;
+        int height, ascent, descent, line_skip;
+        Font *font_ptr;
+
+        void Alloc(Font *font, int he, int asc, int lsk)
+        {
+            glyph_map.Alloc(sub_buffer_count);
+            font_ptr = font;
+            height = he;
+            ascent = asc;
+            descent = he - asc;
+            line_skip = lsk;
+        }
+
+        void AddGlyph(uint16_t glyph, ivec2 pos, ivec2 size, ivec2 offset, int advance)
+        {
+            int sub_buffer = glyph / sub_buffer_size;
+            if (!glyph_map[sub_buffer])
+            {
+                glyph_map[sub_buffer].Alloc(sub_buffer_size);
+                for (int i = 0; i < sub_buffer_size; i++)
+                    glyph_map[sub_buffer][i] = Glyph{};
+            }
+            glyph_map[sub_buffer][glyph % sub_buffer_size] = {pos, size, offset, advance};
+        }
+      public:
+
+        ivec2 Pos(uint16_t glyph) const
+        {
+            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].pos;
+        }
+        ivec2 Size(uint16_t glyph) const
+        {
+            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].size;
+        }
+        ivec2 Offset(uint16_t glyph) const
+        {
+            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].offset;
+        }
+        int Advance(uint16_t glyph) const // Horisontal offset to the next glyph.
+        {
+            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].advance;
+        }
+        int Kerning(uint16_t a, uint16_t b) const; // This function relies on the original Font object which created the current instance.
+        int Height() const {return height;}
+        int Ascent() const {return ascent;}
+        int Descent() const {return descent;}
+        int LineSkip() const {return line_skip;} // This is an Y offset between lines. Height of the font is already added to it. Using this is not mandratory.
     };
 
     class Font
@@ -718,6 +780,7 @@ namespace Graphics
         void Close()
         {
             stream.Close();
+            handle = 0;
         }
 
         Font()
@@ -844,10 +907,11 @@ namespace Graphics
         }
         int Descent() const
         {
-            return TTF_FontDescent(handle);
+            // FontDescent(handle);
+            return Height() - Ascent();
         }
 
-        int LineSkip() const // Expected spacing between lines.
+        int LineSkip() const // Expected spacing between lines including glyph height. Using this is not mandratory.
         {
             return TTF_FontLineSkip(handle);
         }
@@ -882,24 +946,24 @@ namespace Graphics
         {
             TTF_GlyphMetrics(handle, glyph, minx, maxx, miny, maxy, advance);
         }
-        int GlyphAdvance(uint16_t glyph) const
+        int GlyphAdvance(uint16_t glyph) const // Horisontal offset to the next glyph. Current glyph width is already added to it. Using this is not mandratory.
         {
             int ret;
             GlyphRawMetrics(glyph, 0, 0, 0, 0, &ret);
             return ret;
         }
-        ivec2 GlyphOffset(uint16_t glyph) const // Minimal X and Y.
+        ivec2 GlyphOffset(uint16_t glyph) const // Minimal X and Y related to the baseline.
         {
             ivec2 ret;
             GlyphRawMetrics(glyph, &ret.x, 0, 0, &ret.y, 0);
             ret.y = -ret.y;
             return ret;
         }
-        ivec2 GlyphLimit(uint16_t glyph) const // Maximal X and Y.
+        ivec2 GlyphRectOffset(uint16_t glyph) const // Minimal X and Y related to the bounding box.
         {
             ivec2 ret;
-            GlyphRawMetrics(glyph, 0, &ret.x, &ret.y, 0, 0);
-            ret.y = -ret.y;
+            GlyphRawMetrics(glyph, &ret.x, 0, 0, &ret.y, 0);
+            ret.y = Ascent()-ret.y;
             return ret;
         }
         ivec2 GlyphSize(uint16_t glyph) const
@@ -907,6 +971,10 @@ namespace Graphics
             ivec2 min, max;
             GlyphRawMetrics(glyph, &min.x, &max.x, &min.y, &max.y, 0);
             return max - min;
+        }
+        int GlyphKerning(uint16_t a, uint16_t b) const
+        {
+            return TTF_GetFontKerningSizeGlyphs(handle, a, b);
         }
 
         const char *Name() const
@@ -922,7 +990,7 @@ namespace Graphics
 
         enum class Quality {fast, fancy};
 
-        void RenderGlyphs(ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
+        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
         {
             SDL_Surface *surface;
             if (Utils::big_endian)
@@ -932,9 +1000,28 @@ namespace Graphics
             if (!surface)
                 Sys::Error("Can't create a temporary surface for the font renderer.");
 
+            font_data.Alloc(this, Height(), Ascent(), LineSkip());
+
             SDL_Surface *glyph_surface;
 
             ivec2 pixel_pos(0,0);
+
+            int asc = Ascent();
+
+            int column_h = 1; // 1 instead of 0 to avoid a stupid bug when no single glyph can fit into a destination rect.
+
+            /*
+             * Corner points:
+             * img.At(dst + ivec2(dstsz.x-2, 0)) = {  0,  0,  0,255};
+             * img.At(dst + ivec2(dstsz.x-1, 0)) = {255,255,255,255};
+             * img.At(dst + ivec2(dstsz.x-1, 1)) = {  0,  0,  0,255};
+             * img.At(dst + ivec2(0, dstsz.y-2)) = {  0,  0,  0,255};
+             * img.At(dst + ivec2(0, dstsz.y-1)) = {255,255,255,255};
+             * img.At(dst + ivec2(1, dstsz.y-1)) = {  0,  0,  0,255};
+             * img.At(dst + dstsz + ivec2(-1,-2)) = {  0,  0,  0,255};
+             * img.At(dst + dstsz + ivec2(-2,-1)) = {  0,  0,  0,255};
+             * img.At(dst + dstsz + ivec2(-1,-1)) = {255,255,255,255};
+             */
 
             for (uint16_t it : glyphs)
             {
@@ -943,37 +1030,50 @@ namespace Graphics
                 glyph_surface = (quality == Quality::fancy ? TTF_RenderGlyph_Blended : TTF_RenderGlyph_Solid)(handle, it, {color.r, color.g, color.b, color.a});
                 if (!glyph_surface)
                     continue;
-                while (pixel_pos.x + glyph_surface->w > dstsz.x)
-                {
-                    pixel_pos.x = 0;
-                    pixel_pos.y += Height();
-                    if (pixel_pos.y + Height() > dstsz.y)
-                    {
-                        SDL_FreeSurface(surface);
-                        SDL_FreeSurface(glyph_surface);
-                        Exception::FontAtlasOverflow({Name(), Jo(dstsz)});
-                    }
-                }
                 SDL_SetSurfaceBlendMode(glyph_surface, SDL_BLENDMODE_NONE);
                 if (quality == Quality::fast)
                 {
                     SDL_SetColorKey(glyph_surface, 0, 0);
                     glyph_surface->format->palette->colors[0] = {0,0,0,0};
                 }
-                SDL_Rect dst_rect{dst.x + pixel_pos.x, dst.y + pixel_pos.y, glyph_surface->w, glyph_surface->h};
-                if (SDL_BlitSurface(glyph_surface, 0, surface, &dst_rect))
+
+                int minx, maxx, miny, maxy, advance;
+                GlyphRawMetrics(it, &minx, &maxx, &miny, &maxy, &advance);
+                ivec2 tex_sz(maxx-minx, maxy-miny);
+
+                while (pixel_pos.y + tex_sz.y > dstsz.y)
+                {
+                    pixel_pos.y = 0;
+                    pixel_pos.x += column_h;
+                    column_h = 1; // 1 instead of 0 to avoid a stupid bug when no single glyph can fit into a destination rect.
+                }
+
+                ivec2 tex_pos = dst + pixel_pos;
+
+                if (column_h < tex_sz.x)
+                    column_h = tex_sz.x;
+
+                if (pixel_pos.x + column_h > dstsz.x)
+                {
+                    SDL_FreeSurface(surface);
+                    SDL_FreeSurface(glyph_surface);
+                    Exception::FontAtlasOverflow({Name(), Jo(dstsz)});
+                }
+
+                font_data.AddGlyph(it, tex_pos, tex_sz, {minx, -maxy}, advance);
+                SDL_Rect src_rect{minx, asc-maxy, tex_sz.x, tex_sz.y};
+                SDL_Rect dst_rect{tex_pos.x, tex_pos.y, tex_sz.x, tex_sz.y};
+                if (SDL_BlitSurface(glyph_surface, &src_rect, surface, &dst_rect))
                 {
                     SDL_FreeSurface(surface);
                     SDL_FreeSurface(glyph_surface);
                     Sys::Error(Jo("Can't blit glyph #", it, " for font ", Name(), '.'));
                 }
-                pixel_pos.x += glyph_surface->w;
+                pixel_pos.y += tex_sz.y;
                 SDL_FreeSurface(glyph_surface);
             }
             SDL_FreeSurface(surface);
         }
-
-        #error Save glyph positions in func above. Also add string renderer.
     };
 
     enum class Format : GLenum {};

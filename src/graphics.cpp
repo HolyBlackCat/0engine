@@ -438,6 +438,14 @@ namespace Graphics
         SDL_FreeSurface(surface);
     }
 
+
+    int FontData::Kerning(uint16_t a, uint16_t b) const // This function relies on the original Font object which created the current instance.
+    {
+        // This was moved into .cpp to avoid a circular dependency.
+        return font_ptr->GlyphKerning(a, b);
+    }
+
+
     Shader::Shader(const char *name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError. The name is not saved.
     {
         prog = glCreateProgram();

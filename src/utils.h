@@ -178,9 +178,15 @@ namespace Utils
         {
             data = 0;
         }
-        Buffer(std::size_t size) : Buffer()
+        Buffer(std::size_t size)
         {
-            Alloc(size);
+            data = new T[size];
+        }
+        Buffer(std::initializer_list<T> list)
+        {
+            data = new T[list.size()];
+            for (std::size_t i = 0; i < list.size(); i++)
+                (*this)[i] = list.begin()[i];
         }
 
         Buffer(Buffer &&o)
