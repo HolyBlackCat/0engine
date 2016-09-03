@@ -757,7 +757,7 @@ namespace Graphics
         {
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].advance;
         }
-        int Kerning(uint16_t a, uint16_t b) const; // This function relies on the original Font object which created the current instance.
+        int Kerning(uint16_t a, uint16_t b) const; // This function relies on the original Font object which created the current instance. It must be alive and opened.
         int Height() const {return height;}
         int Ascent() const {return ascent;}
         int Descent() const {return descent;}
@@ -772,15 +772,20 @@ namespace Graphics
       public:
         void Open(Utils::BinaryInput input, int ptsize, int index = 0) // Warning: The file will be used while the font object is alive and opened.
         {
+            Close();
             stream = (Utils::BinaryInput &&) input;
             handle = TTF_OpenFontIndexRW((SDL_RWops *)stream.RWops(), 0, ptsize, index);
             if (!handle)
-                Exception::CantParse({stream.Name(), Jo("SDL ttf plugin is unable to parse font: ", Utils::FixEdges(TTF_GetError()))});
+                Exception::CantParse({stream.Name(), Jo("SDL ttf plugin is unable to parse font: ", FixEdges(TTF_GetError()))});
         }
         void Close()
         {
-            stream.Close();
-            handle = 0;
+            if (handle)
+            {
+                TTF_CloseFont(handle);
+                handle = 0;
+                stream.Close();
+            }
         }
 
         Font()
@@ -788,10 +793,12 @@ namespace Graphics
             handle = 0;
         }
 
-        Font(Utils::BinaryInput input, int ptsize, int index = 0)
+        Font(Utils::BinaryInput input, int ptsize, int index = 0) : Font()
         {
             Open((Utils::BinaryInput &&) input, ptsize, index);
         }
+
+
 
         Font(const Font &) = delete;
         Font &operator=(const Font &) = delete;
@@ -990,6 +997,7 @@ namespace Graphics
 
         enum class Quality {fast, fancy};
 
+        // Uses UTF-16 for glyphs.
         void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
         {
             SDL_Surface *surface;
@@ -1073,6 +1081,20 @@ namespace Graphics
                 SDL_FreeSurface(glyph_surface);
             }
             SDL_FreeSurface(surface);
+        }
+
+        // Uses UTF-8 for glyphs.
+        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<char> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
+        {
+            std::size_t len = u8strlen(glyphs);
+            std::cout << len;
+            Utils::Buffer<uint16_t> arr(len);
+            const char *ptr = glyphs;
+            for (std::size_t i = 0; i < len; i++)
+            {
+                arr[i] = u8decode(ptr, &ptr);
+            }
+            RenderGlyphs(font_data, img, dst, dstsz, {arr, len}, quality, color);
         }
     };
 

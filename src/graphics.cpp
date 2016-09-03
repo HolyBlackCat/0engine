@@ -323,7 +323,7 @@ namespace Graphics
         auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), +txt});};
         SDL_Surface *source = IMG_LoadPNG_RW((SDL_RWops *)io.RWops());
         if (!source)
-            ParseError(Utils::FixEdges(IMG_GetError()));
+            ParseError(FixEdges(IMG_GetError()));
         SDL_Surface *converted = SDL_ConvertSurfaceFormat(source, Utils::big_endian ? SDL_PIXELFORMAT_RGBA8888 : SDL_PIXELFORMAT_ABGR8888, 0);
         SDL_FreeSurface(source);
         if (!converted)
@@ -490,8 +490,8 @@ namespace Graphics
             Exception::ShaderCompilationError({name,
                                                (vstat == GL_TRUE ? "OK" : "NOT OK"),
                                                (fstat == GL_TRUE ? "OK" : "NOT OK"),
-                                               ('\n'+Utils::FixEdges(vlog_str.c_str())),
-                                               ('\n'+Utils::FixEdges(flog_str.c_str()))});
+                                               ('\n'+FixEdges(vlog_str.c_str())),
+                                               ('\n'+FixEdges(flog_str.c_str()))});
         }
 
         int loc = 0;

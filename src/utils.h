@@ -319,6 +319,89 @@ namespace Utils
             *buf = std::string(txt, end);
             return buf.Rotate().c_str();
         }
+
+        namespace Encodings
+        {
+            inline namespace UTF8
+            {
+                inline bool u8firstbyte(const char *ptr) // Check if a pointed byte is a first byte of a symbol.
+                {
+                    return !(*ptr & 0x80) || (*ptr & 0xc0) == 0xc0;
+                }
+
+                inline std::size_t u8strlen(const char *ptr)
+                {
+                    std::size_t ret = 0;
+                    while (*ptr)
+                    {
+                        if (u8firstbyte(ptr))
+                            ret++;
+                        ptr++;
+                    }
+                    return ret;
+                }
+
+                inline const char *u8next(const char *ptr)
+                {
+                    while (*ptr)
+                    {
+                        ptr++;
+                        if (u8firstbyte(ptr))
+                            break;
+                    }
+                    return ptr;
+                }
+
+                constexpr uint16_t u8invalidchar = 0xffff;
+
+                inline uint16_t u8decode(const char *ptr, const char **next = 0) // 0xffff is returned if the value is out of range.
+                {
+                    static constexpr uint8_t bits[5]{0b10000000,
+                                                     0b11000000,
+                                                     0b11100000,
+                                                     0b11110000,
+                                                     0b11111000};
+                    static constexpr uint8_t inv_bits[5]{0b01111111,
+                                                         0b00111111,
+                                                         0b00011111,
+                                                         0b00001111,
+                                                         0b00000111};
+
+                    if ((*ptr & bits[0]) == 0)
+                    {
+                        if (next) *next = ptr + 1;
+                        return *ptr & inv_bits[0];
+                    }
+
+                    uint16_t ret;
+                    for (int i = 1; i < 4; i++)
+                    {
+                        if ((*ptr & bits[i+1]) == bits[i])
+                        {
+                            ret = *ptr & inv_bits[i+1];
+                            for (int j = 0; j < i; j++)
+                            {
+                                ptr++;
+                                if (!*ptr)
+                                {
+                                    if (next) *next = ptr;
+                                    return u8invalidchar;
+                                }
+                                ret = (ret << 6) | (*ptr & inv_bits[1]);
+                            }
+                            if (next) *next = ptr + 1;
+                            return ret;
+                        }
+                    }
+
+                    if (next) *next = u8next(ptr);
+
+                    return u8invalidchar;
+                }
+            }
+
+            const uint16_t *cp1251();
+        }
     }
 
     template <typename ID = uint32_t, typename Index = ID> class PoolManager
@@ -896,7 +979,8 @@ namespace Utils
                 first = ptr;
                 length = len;
             }
-            template <typename TT, typename = decltype(std::begin(std::declval<TT&&>()))> ArrayProxy(TT && o) // From an array or a container which uses pointers as iterators. Use this with caution on temporary containers.
+            template <typename TT, typename = std::enable_if_t<std::is_same<std::remove_const_t<T>, std::remove_const_t<std::remove_reference_t<decltype(*std::begin(std::declval<TT&&>()))>>>::value>>
+            ArrayProxy(TT && o) // From an array or a container which uses pointers as iterators. Use this with caution on temporary containers.
             {
                 static_assert(std::is_pointer<decltype(std::begin(o))>::value, "Underlying container must use pointers as iterators or must use contiguous storage.");
                 static_assert(readonly || (!std::is_const<std::remove_pointer_t<decltype(std::begin(o))>>::value), "Attempt to bind read-write proxy to a const object.");
@@ -940,6 +1024,8 @@ namespace Utils
 
 using Utils::Jo;
 using Utils::Jo_;
+using Utils::FixEdges;
+using namespace Utils::Strings::Encodings::UTF8;
 using namespace Utils::Proxy;
 
 #endif
