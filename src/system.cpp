@@ -42,32 +42,29 @@ namespace Sys
     static bool sdl_init_ok = 0;
     static uint64_t desired_tick_len;
 
-    static bool (*errors_handler)(bool can_cancel_termination, ExitConditions err) = 0;
-    void SetErrorsHandler(bool (*ptr)(bool can_cancel_termination, ExitConditions err))
-    {
-        errors_handler = ptr;
-    }
+    static ExitRequestType::Enum exit_requested = ExitRequestType::no,
+                                 exit_request_by_signal_handler = ExitRequestType::no;
 
-    static void HandleError(ExitConditions err)
+    enum class ErrorType
     {
-        bool can_cancel_exit = (err == ExitConditions::quit || err == ExitConditions::sig_int || err == ExitConditions::sig_abrt || err == ExitConditions::sig_term);
-        if (errors_handler && errors_handler(can_cancel_exit, err) && can_cancel_exit) // do not reorder this
-            return;
+        sig_segv, sig_ill, sig_fpe,
+        terminate, unexpected,
+        unknown,
+    };
+
+    static void HandleError(ErrorType err)
+    {
         switch (err)
         {
-            case ExitConditions::quit:      Exit();
-            case ExitConditions::sig_abrt:
-            case ExitConditions::sig_int:
-            case ExitConditions::sig_term:  Error(""); return;
-            case ExitConditions::sig_ill:   Error("Signal: Illegal instruction. (Invalid machine code.)"); return;
-            case ExitConditions::sig_fpe:   Error("Signal: Floating point exception. (Invalid arithmetic operation.)"); return;
-            case ExitConditions::sig_segv:  Error("Signal: Segmentation fault. (Invalid memory access.)"); return;
-            case ExitConditions::terminate: try {throw;} catch (Exception &e)      {Error(Jo("Unhandled exception: ", e.FullText()), e.Solution());}
+            case ErrorType::sig_ill:   Error("Signal: Illegal instruction. (Invalid machine code.)"); return;
+            case ErrorType::sig_fpe:   Error("Signal: Floating point exception. (Invalid arithmetic operation.)"); return;
+            case ErrorType::sig_segv:  Error("Signal: Segmentation fault. (Invalid memory access.)"); return;
+            case ErrorType::terminate: try {throw;} catch (Exception &e)      {Error(Jo("Unhandled exception: ", e.what()));}
                                                          catch (std::exception &e) {Error(Jo("Unhandled exception: what() == \"", e.what(), "\"."));}
                                                          catch (const char *e)     {Error(Jo("Unhandled exception: \"", e, "\"."));}
                                                          catch (...)               {Error(Jo("Unhandled exception: Unknown."));}
                                                          Error("The terminate function was called but no unhandled exception was found."); return;
-            case ExitConditions::unexpected: try {throw;} catch (Exception &e)      {Error(Jo("Unhandled unexpected exception: ", e.FullText()), e.Solution());}
+            case ErrorType::unexpected: try {throw;} catch (Exception &e)      {Error(Jo("Unhandled unexpected exception: ", e.what()));}
                                                           catch (std::exception &e) {Error(Jo("Unhandled unexpected exception: what() == \"", e.what(), "\"."));}
                                                           catch (const char *e)     {Error(Jo("Unhandled unexpected exception: \"", e, "\"."));}
                                                           catch (...)               {Error(Jo("Unhandled unexpected exception: Unknown."));}
@@ -76,23 +73,30 @@ namespace Sys
         }
     }
 
+
+
     static void SignalHandler(int id)
     {
-        Sys::ExitConditions errcode;
         switch (id)
         {
-            case SIGSEGV: errcode = Sys::ExitConditions::sig_segv; break;
-            case SIGFPE:  errcode = Sys::ExitConditions::sig_fpe;  break;
-            case SIGILL:  errcode = Sys::ExitConditions::sig_ill;  break;
-            case SIGINT:  errcode = Sys::ExitConditions::sig_int;  break;
-            case SIGTERM: errcode = Sys::ExitConditions::sig_term; break;
-            case SIGABRT: errcode = Sys::ExitConditions::sig_abrt; break;
-            default:      errcode = Sys::ExitConditions::unknown;  break;
+            case SIGSEGV: Sys::HandleError(Sys::ErrorType::sig_segv); break;
+            case SIGFPE:  Sys::HandleError(Sys::ErrorType::sig_fpe);  break;
+            case SIGILL:  Sys::HandleError(Sys::ErrorType::sig_ill);  break;
+            case SIGINT:  exit_request_by_signal_handler = ExitRequestType::signal_interrupt;   break;
+            case SIGTERM: exit_request_by_signal_handler = ExitRequestType::signal_termination; break;
+            case SIGABRT: exit_request_by_signal_handler = ExitRequestType::signal_abort;       break;
+            default:      Sys::HandleError(Sys::ErrorType::unknown);  break;
         }
-        Sys::HandleError(errcode);
     }
 
     const char *ExecutableFileName() {return argv[-1];}
+
+    ExitRequestType::Enum ExitRequested() // Clears the flag when called. If the app gets exit request, you have one tick to handle it or the app will close itself.
+    {
+        ExitRequestType::Enum ret = exit_requested;
+        exit_requested = ExitRequestType::no;
+        return ret;
+    }
 
     namespace CommandLineArgs
     {
@@ -175,7 +179,7 @@ namespace Sys
                         pos++;
                     }
                 }
-                Error(Jo("Invalid command line switch `", argv[i], "`."), "Use `--help` to get a list of all valid switches and remove any illegal ones.");
+                Error(Jo("Invalid command line switch `", argv[i], "`."));
               next_arg:
                 ;
             }
@@ -201,19 +205,19 @@ namespace Sys
                     else
                         tmp += "(No descrition.)\n";
                 }
-                Msg(tmp.c_str());
+                Message(tmp.c_str());
                 Exit();
             }
 
             if (Check("lxsys-opengl-show-config"))
             {
-                Msg(("Default OpenGL config: " + Config::opengl_config).c_str());
+                Message(("Default OpenGL config: " + Config::opengl_config).c_str());
                 Exit();
             }
 
             if (Check("lxsys-openal-show-config"))
             {
-                Msg(("Default OpenAL config: " + Config::openal_config).c_str());
+                Message(("Default OpenAL config: " + Config::openal_config).c_str());
                 Exit();
             }
 
@@ -239,30 +243,30 @@ namespace Sys
         }
     }
 
-    void Msg(const char *title, const char *text, MsgType type)
+    void Message(const char *title, const char *text, MessageType type)
     {
         int arr[3] {SDL_MESSAGEBOX_INFORMATION, SDL_MESSAGEBOX_WARNING, SDL_MESSAGEBOX_ERROR};
         SDL_ShowSimpleMessageBox(arr[(int)type], title, text, 0);
     }
-    void Msg(const char *text, MsgType type)
+    void Message(const char *text, MessageType type)
     {
         switch (type)
         {
-          case MsgType::info:
-            Msg(Jo(Config::app_name, Config::msg_def_title_postfix_info), text, type);
+          case MessageType::info:
+            Message(Jo(Config::app_name, Config::msg_def_title_postfix_info), text, type);
             break;
-          case MsgType::warning:
-            Msg(Jo(Config::app_name, Config::msg_def_title_postfix_warn), text, type);
+          case MessageType::warning:
+            Message(Jo(Config::app_name, Config::msg_def_title_postfix_warn), text, type);
             break;
-          case MsgType::error:
-            Msg(Jo(Config::app_name, Config::msg_def_title_postfix_error), text, type);
+          case MessageType::error:
+            Message(Jo(Config::app_name, Config::msg_def_title_postfix_error), text, type);
             break;
         }
     }
 
-    static constexpr unsigned int code_locations_stack_size = 24;
+    static constexpr int code_locations_stack_size = 24;
     static struct {const char *name;} code_locations_stack[code_locations_stack_size];
-    static unsigned int code_locations_stack_pos = 0;
+    static int code_locations_stack_pos = 0;
 
     CodeLocation::CodeLocation(const char *name)
     {
@@ -273,7 +277,7 @@ namespace Sys
     CodeLocation::~CodeLocation()
     {
         if (code_locations_stack_pos == 0)
-            Error("Code locations stack underflow. (Memory corruption or invalid lifetime management of CodeLocation.)");
+            Error("Code locations stack underflow.");
         code_locations_stack_pos--;
     }
 
@@ -321,39 +325,46 @@ namespace Sys
 
     void RequestExit()
     {
-        HandleError(ExitConditions::quit);
+        if (exit_requested)
+            return;
+        exit_requested = ExitRequestType::self;
     }
 
-    [[noreturn]] void Error(const char *text, const char *solution)
+    [[noreturn]] void Error(const char *text)
     {
         // Recursion breaker.
         static bool started = 0;
-        if (started) goto ret; // This is a replacement for return to get rid of the warning.
+        if (started) goto ret;
         started = 1;
 
         // Removing handlers
-        std::signal(SIGSEGV, SIG_IGN);
-        std::signal(SIGFPE,  SIG_IGN);
-        std::signal(SIGILL,  SIG_IGN);
-        std::signal(SIGABRT, SIG_IGN);
-        // SIGINT and SIGTERM are handled by SDL, they are converted to quit event.
+        std::signal(SIGSEGV, SIG_DFL);
+        std::signal(SIGFPE,  SIG_DFL);
+        std::signal(SIGILL,  SIG_DFL);
+        std::signal(SIGABRT, SIG_DFL);
+        std::signal(SIGINT,  SIG_DFL);
+        std::signal(SIGTERM, SIG_DFL);
 
         if (text)
         {
-            std::string locs_list("\n    at <global>");
-            for (unsigned int i = 0; i < code_locations_stack_pos && i < code_locations_stack_size; i++)
+            std::string locs_list;
+
+            if (code_locations_stack_pos == 0)
             {
-                locs_list += "\n    at ";
-                locs_list += code_locations_stack[i].name;
+                locs_list = "\n    at <global>";
             }
-            if (code_locations_stack_pos > code_locations_stack_size)
-                locs_list += Jo("\n    ...\n    (", (code_locations_stack_pos - code_locations_stack_size), " more level", (code_locations_stack_pos - code_locations_stack_size == 1 ? "" : "s"), " skipped)");
+            else
+            {
+                if (code_locations_stack_pos >= code_locations_stack_size)
+                    locs_list = "\n    at ...";
+                for (int i = std::min(code_locations_stack_pos, code_locations_stack_size)-1; i >= 0; i--)
+                {
+                    locs_list += "\n    at ";
+                    locs_list += code_locations_stack[i].name;
+                }
+            }
 
-            std::string sol_str = "";
-            if (solution && *solution)
-                sol_str += std::string("\n\nPossible solution:\n") + +solution;
-
-            Msg(Jo("Error: ", text, '\n', locs_list, sol_str, "\n\nIf you need any help, contact the developer."), MsgType::error);
+            Message(Jo("Error: ", text, '\n', locs_list), MessageType::error);
         }
 
         Exit();
@@ -513,9 +524,21 @@ namespace Sys
         else
             frames_since_last_second++;
 
-        tick_counter++;
-
         Window::Tick();
+
+        if (exit_requested)
+            Exit();
+
+        if (Window::GotExitRequestAtThisTick())
+            exit_requested = ExitRequestType::normal;
+
+        if (exit_request_by_signal_handler)
+        {
+            exit_requested = exit_request_by_signal_handler;
+            exit_request_by_signal_handler = ExitRequestType::no;
+        }
+
+        tick_counter++;
     }
 }
 
@@ -542,10 +565,11 @@ int main(int argc, char **argv)
     std::signal(SIGFPE,  Sys::SignalHandler);
     std::signal(SIGILL,  Sys::SignalHandler);
     std::signal(SIGABRT, Sys::SignalHandler);
-    // SIGINT and SIGTERM are handled by SDL, they are converted to quit event.
+    std::signal(SIGINT,  Sys::SignalHandler);
+    std::signal(SIGTERM, Sys::SignalHandler);
 
-    std::set_terminate([]{Sys::HandleError(Sys::ExitConditions::terminate);});
-    std::set_unexpected([]{Sys::HandleError(Sys::ExitConditions::unexpected);});
+    std::set_terminate([]{Sys::HandleError(Sys::ErrorType::terminate);});
+    std::set_unexpected([]{Sys::HandleError(Sys::ErrorType::unexpected);});
 
     Sys::AppInit();
     {

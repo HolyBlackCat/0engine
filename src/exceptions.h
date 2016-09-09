@@ -9,33 +9,27 @@
 #define LXINTERNAL_EXCEPTION_LIST \
         ITEM_EXCEPTION(CantOpenIO,\
                        "Unable to open IO stream.",\
-                       "",\
                        ITEM_DATA("Object")\
                        ITEM_DATA("Message"))\
         ITEM_EXCEPTION(CantPerformIO,\
                        "IO failure.",\
-                       "",\
                        ITEM_DATA("Object")\
                        ITEM_DATA("Action")\
                        ITEM_DATA("Message"))\
         ITEM_EXCEPTION(CantParse,\
                        "Data parsing failed.",\
-                       "Fix the data.",\
                        ITEM_DATA("Source")\
                        ITEM_DATA("Error"))\
-        ITEM_EXCEPTION(UnexpectedFileContent,\
-                       "Unexpected file content.",\
-                       "Fix the file.",\
-                       ITEM_DATA("File name")\
+        ITEM_EXCEPTION(BadData,\
+                       "Bad data.",\
+                       ITEM_DATA("Source name")\
                        ITEM_DATA("Expected content")\
                        ITEM_DATA("Current content"))\
         ITEM_EXCEPTION(RenderingQueueOverflow,\
                        "Rendering queue overflow.",\
-                       "Try to reduce an amount of rendered polygons. Lowering resoluton or quality settings may help. This is a bug, please tell the developer about it.",\
                        ITEM_DATA("Queue length"))\
         ITEM_EXCEPTION(ShaderCompilationError,\
                        "Shader compilation error.",\
-                       "It is probably a bug, please tell the developer about it. Updating videocard drivers may help. If you're skilled enough, you can try to fix the shader yourself.",\
                        ITEM_DATA("Shader name")\
                        ITEM_DATA("Vertex shader status")\
                        ITEM_DATA("Fragment shader status")\
@@ -43,16 +37,13 @@
                        ITEM_DATA("Fragment shader log"))\
         ITEM_EXCEPTION(ShaderLinkingError,\
                        "Shader linking error.",\
-                       "It is probably a bug, please tell the developer about it. Updating videocard drivers may help. If you're skilled enough, you can try to fix the shader yourself.",\
                        ITEM_DATA("Shader name")\
                        ITEM_DATA("Log"))\
         ITEM_EXCEPTION(BadCubeMapImage,\
                        "Attempt to use incorrectly sized image as a cubemap side.",\
-                       "",\
                        ITEM_DATA("Size"))\
         ITEM_EXCEPTION(FontAtlasOverflow,\
                        "Not enough space in a font atlas to store all requested glyphs.",\
-                       "",\
                        ITEM_DATA("Font")\
                        ITEM_DATA("Atlas size"))\
 
@@ -60,25 +51,24 @@ class Exception final : public std::exception
 {
   public:
     enum class Enum : unsigned int {
-    #define ITEM_EXCEPTION(token, desc, solution, data_names) token,
+    #define ITEM_EXCEPTION(token, desc, data_names) token,
     LXINTERNAL_EXCEPTION_LIST
     #undef ITEM_EXCEPTION
     };
   private:
     Enum type;
-    std::string description, solution;
+    std::string description;
     std::map<std::string, std::string> data;
 
     Exception() {};
 
   public:
     #define ITEM_DATA(name) name,
-    #define ITEM_EXCEPTION(token, desc, solution_unused, data_names) static void token(std::array<const char *, (std::initializer_list<const char *>{data_names}.size())> args, const char *sol = 0) \
+    #define ITEM_EXCEPTION(token, desc_unused, data_names) static void token(std::array<const char *, (std::initializer_list<const char *>{data_names}.size())> args) \
     { \
         Exception ret; \
         ret.type = Enum::token; \
-        ret.solution = (sol && *sol ? sol : ""); \
-        ret.description = ret.Description(); \
+        ret.description = ret.desc(); \
         const char *arr[] {data_names}; \
         const char **ptr = arr; \
         for (auto it : args) \
@@ -99,33 +89,20 @@ class Exception final : public std::exception
     #undef ITEM_DATA
     #undef ITEM_EXCEPTION
 
-    const char *what() const noexcept override {return FullText();}
-    const char *FullText() const noexcept {return description.c_str();}
-    const char *Description() const noexcept
+    const char *what() const noexcept override {return description.c_str();}
+    const char *desc() const noexcept
     {
         static const std::string names_table[]{
-        #define ITEM_EXCEPTION(token, desc, solution, data_names) desc,
+        #define ITEM_EXCEPTION(token, desc, data_names) desc,
         LXINTERNAL_EXCEPTION_LIST
         #undef ITEM_EXCEPTION
         };
         return names_table[(unsigned int)type].c_str();
     }
-    const char *Solution() const noexcept
-    {
-        static const char *solutions_table[]{
-        #define ITEM_EXCEPTION(token, desc, solution, data_names) solution,
-        LXINTERNAL_EXCEPTION_LIST
-        #undef ITEM_EXCEPTION
-        };
-        if (solution[0])
-            return solution.c_str();
-        else
-            return solutions_table[(unsigned int)type];
-    }
 
     Enum Type() const noexcept {return type;}
 
-    const std::string &Get(const char *name)
+    const std::string &get(const char *name)
     {
         auto it = data.find(std::string(name));
         static const std::string null = "";
@@ -134,5 +111,23 @@ class Exception final : public std::exception
 };
 
 #undef LXINTERNAL_EXCEPTION_LIST
+
+namespace Exceptions
+{
+    #error Запилить создание экзепшонов дефайном типа бля("текст", поле, поле), запилить наружный метод для соединения строк бла(№__ВА_АРГС__, __ВА_АРГС__), чтобы парсил первый арг. Результат в ретурн what()
+    class Any : public std::exception
+    {
+      protected:
+        std::string what_buf, details_buf;
+      public:
+        const char *what() const noexcept override = 0;
+        virtual ~Any() {}
+    };
+
+    class IO
+    {
+        const char *what() const noexcept override {return }
+    };
+}
 
 #endif

@@ -43,14 +43,11 @@ namespace Audio
     static Utils::PoolManager<int> mono_manager;
     static Utils::PoolManager<int> stereo_manager;
 
-    static void PrepareAudioSettings(const char *txt, bool custom)
+    static void PrepareAudioSettings(const char *txt)
     {
         static auto Fail = [=]
         {
-            if (custom)
-                Sys::Error("Unable to parse OpenAL config.", "Fix command line switches. Use `--help` to get more information.");
-            else
-                Sys::Error("Unable to parse OpenAL config.");
+            Sys::Error("Unable to parse OpenAL config.");
         };
         static auto IsDigit = [&]()->bool{return *txt >= '0' && *txt <= '9';};
         static auto GetDigit = [&]()->int{return *txt - '0';};
@@ -103,9 +100,9 @@ namespace Audio
 
         const char *config_str;
         if (Sys::CommandLineArgs::Check("lxsys-openal-config", &config_str))
-            PrepareAudioSettings(config_str, 1);
+            PrepareAudioSettings(config_str);
         else
-            PrepareAudioSettings(Sys::Config::openal_config.c_str(), 0);
+            PrepareAudioSettings(Sys::Config::openal_config.c_str());
 
         device = alcOpenDevice(0);
         if (!device)
@@ -113,7 +110,7 @@ namespace Audio
             if (Sys::CommandLineArgs::Check("lxsys-ignore-al-init-fail"))
                 return;
             else
-                Sys::Error("No valid audio device found.", "Try to change OpenAL settings using a command line switch. Use `--help` to get a list of them.");
+                Sys::Error("No valid audio device found.");
         }
 
         ALCint openal_major, openal_minor;
@@ -121,16 +118,13 @@ namespace Audio
         alcGetIntegerv(device, ALC_MINOR_VERSION, 1, &openal_minor);
 
         if (openal_major < needed_openal_major || (openal_major == needed_openal_major && openal_minor < needed_openal_minor))
-            Sys::Error(Jo("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'),
-                       "Check if OpenAL32.dll is in the same folder as the executable and if it has correct version.\n"
-                       "If you found any problems, reinstall the application. If it doesn't help, manually add the .dll.\n"
-                       "Also, getting a new driver may help, especially if you got this error without having the .dll.");
+            Sys::Error(Jo("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'));
 
         const ALCint config_array[] = {ALC_FREQUENCY, freq, ALC_MONO_SOURCES, mono_srcs, ALC_STEREO_SOURCES, stereo_srcs, 0};
 
         context = alcCreateContext(device, config_array);
         if (!context)
-            Sys::Error("Found a valid audio device, but can't create OpenAL context.", "Try to change OpenAL settings using a command line switch. Use `--help` to get a list of them.");
+            Sys::Error("Found a valid audio device, but can't create OpenAL context.");
 
         if (!alcMakeContextCurrent(context))
             Sys::Error("Audio context switching failed.");

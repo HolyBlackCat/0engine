@@ -35,6 +35,8 @@ namespace Window
     static bool fullscreen; // This serves as a config variable and also is updated at runtime.
     static bool maximized;  // Same as above.
 
+    static bool got_exit_request_at_this_tick = 0;
+
     namespace OpenGL
     {
         int Major() {return gl_major;}
@@ -42,7 +44,7 @@ namespace Window
         bool ES()   {return gl_profile == GlProfile::embedded;}
     }
 
-    static void PrepareVideoSettings(const char *txt, bool custom)
+    static void PrepareVideoSettings(const char *txt)
     {
         resizable = Sys::Config::window_resizable;
         fullscreen = Sys::Config::window_fullscreen_at_startup;
@@ -76,10 +78,7 @@ namespace Window
 
         static auto Fail = [=]
         {
-            if (custom)
-                Sys::Error("Unable to parse OpenGL config.", "Fix command line switches. Use `--help` to get more information.");
-            else
-                Sys::Error("Unable to parse OpenGL config.");
+            Sys::Error("Unable to parse OpenGL config.");
         };
 
         const char *display_num_str;
@@ -231,11 +230,11 @@ namespace Window
         const char *gl_cfg_str;
         if (Sys::CommandLineArgs::Check("lxsys-opengl-config", &gl_cfg_str))
         {
-            PrepareVideoSettings(gl_cfg_str, 1);
+            PrepareVideoSettings(gl_cfg_str);
         }
         else
         {
-            PrepareVideoSettings(Sys::Config::opengl_config.c_str(), 0);
+            PrepareVideoSettings(Sys::Config::opengl_config.c_str());
         }
 
         int flags = SDL_WINDOW_OPENGL;
@@ -299,14 +298,14 @@ namespace Window
                                   size.x, size.y,
                                   flags);
         if (!handle)
-            Sys::Error(Jo("Window creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", SDL_GetError(), "`."), err_solution);
+            Sys::Error(Jo("Window creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", Utils::FixEdges(SDL_GetError()), "`.\n", err_solution));
 
         if (!OnMobile && Sys::Config::window_min_size.any())
             SDL_SetWindowMinimumSize(handle, Sys::Config::window_min_size.x, Sys::Config::window_min_size.y);
 
         context_handle = SDL_GL_CreateContext(handle);
         if (!context_handle)
-            Sys::Error(Jo("OpenGL context creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", SDL_GetError(), "`."), err_solution);
+            Sys::Error(Jo("OpenGL context creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", Utils::FixEdges(SDL_GetError()), "`.\n", err_solution));
 
         #if OnWindows || defined(ASSUME_ANDROID)
         glewExperimental = 1;
@@ -369,9 +368,16 @@ namespace Window
             SDL_DestroyWindow(handle);
     }
 
+    bool GotExitRequestAtThisTick()
+    {
+        return got_exit_request_at_this_tick;
+    }
+
     void Tick()
     {
         Input::PreEventsTick();
+
+        got_exit_request_at_this_tick = 0;
 
         SDL_Event event;
         while (SDL_PollEvent(&event))
@@ -379,7 +385,7 @@ namespace Window
             switch (event.type)
             {
               case SDL_QUIT:
-                Sys::RequestExit();
+                got_exit_request_at_this_tick = 1;
                 break;
               case SDL_KEYDOWN:
                 if (event.key.repeat == 0)

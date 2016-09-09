@@ -11,6 +11,7 @@ namespace Window
     void Cleanup();
     void Tick();
     void Update();
+    bool GotExitRequestAtThisTick();
     #endif
     SDL_Window *Handle();
     SDL_GLContext ContextHandle();

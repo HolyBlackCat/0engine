@@ -739,7 +739,7 @@ namespace Utils
                       '\0'};
             rwops = SDL_RWFromFile(fname, m);
             if (!rwops)
-                Exception::CantOpenIO({name.c_str(), FixEdges(SDL_GetError())}, +Jo((mode == Mode::read ? "Ensure that file exists. " : ""), "Check file permissions for ", (mode == Mode::read ? "reading" : (mode == Mode::write || mode == Mode::append ? "writing" : "reading and writing"))));
+                Exception::CantOpenIO({name.c_str(), FixEdges(SDL_GetError())});
         }
 
         void OpenTextFile(const char *name, Mode mode)
@@ -828,7 +828,7 @@ namespace Utils
         template <typename T> void ReadEx(T *dst, std::size_t count) const
         {
             if (Read<T>(dst, count) != count)
-                Exception::CantPerformIO({name.c_str(), "Reading", FixEdges(SDL_GetError())}, "Ensure data integrity.");
+                Exception::CantPerformIO({name.c_str(), "Reading", FixEdges(SDL_GetError())});
         }
         template <typename T> void WriteEx(const T *src, std::size_t count) const
         {

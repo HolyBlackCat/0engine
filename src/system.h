@@ -67,19 +67,22 @@ namespace Sys
     uint64_t FrameCounter();
     uint64_t TickCounter();
 
-    enum class ExitConditions
-    {
-        quit,
-        sig_segv, sig_ill, sig_fpe,
-        sig_abrt, sig_term, sig_int,
-        terminate, unexpected,
-        unknown,
-    };
-
-    // If non-zero, the argument is called when something tries to close the application. If can_cancel_termination == 1, then if you return 1 your app will not be closed.
-    void SetErrorsHandler(bool (*ptr)(bool can_cancel_termination, ExitConditions err));
-
     const char *ExecutableFileName();
+
+    namespace ExitRequestType
+    {
+        enum Enum
+        {
+            no,
+            normal,
+            self,
+            signal_abort,
+            signal_interrupt,
+            signal_termination,
+        };
+    }
+
+    ExitRequestType::Enum ExitRequested(); // Clears the flag when called. If the app gets exit request, you have one tick to handle it or the app will close itself.
 
     namespace CommandLineArgs
     {
@@ -89,9 +92,9 @@ namespace Sys
         bool Check(const char *name, const char **arg_p = 0);
     }
 
-    enum class MsgType {info = 0, warning = 1, error = 2};
-    void Msg(const char *title, const char *text, MsgType type = MsgType::info);
-    void Msg(const char *text, MsgType type = MsgType::info);
+    enum class MessageType {info = 0, warning = 1, error = 2};
+    void Message(const char *title, const char *text, MessageType type = MessageType::info);
+    void Message(const char *text, MessageType type = MessageType::info);
 
     class CodeLocation final
     {
@@ -106,7 +109,7 @@ namespace Sys
 
     [[noreturn]] void Exit();
     void RequestExit(); // This one will be handled by ErrorsHandler if it exists.
-    [[noreturn]] void Error(const char *text, const char *solution = ""); // If text == 0, the app will be closed silently.
+    [[noreturn]] void Error(const char *text); // If text == 0, the app will be closed silently.
 
     void SetCurrentFunction(void (*ptr)());
     void (*CurrentFunction())();
