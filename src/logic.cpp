@@ -16,6 +16,8 @@ void Boot()
 {
     MarkLocation("Boot");
 
+    #error use new exceptions!
+
     while (1)
     {
         Sys::BeginFrame();

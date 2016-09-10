@@ -59,16 +59,16 @@ namespace Sys
             case ErrorType::sig_ill:   Error("Signal: Illegal instruction. (Invalid machine code.)"); return;
             case ErrorType::sig_fpe:   Error("Signal: Floating point exception. (Invalid arithmetic operation.)"); return;
             case ErrorType::sig_segv:  Error("Signal: Segmentation fault. (Invalid memory access.)"); return;
-            case ErrorType::terminate: try {throw;} catch (Exception &e)      {Error(Jo("Unhandled exception: ", e.what()));}
-                                                         catch (std::exception &e) {Error(Jo("Unhandled exception: what() == \"", e.what(), "\"."));}
-                                                         catch (const char *e)     {Error(Jo("Unhandled exception: \"", e, "\"."));}
-                                                         catch (...)               {Error(Jo("Unhandled exception: Unknown."));}
-                                                         Error("The terminate function was called but no unhandled exception was found."); return;
-            case ErrorType::unexpected: try {throw;} catch (Exception &e)      {Error(Jo("Unhandled unexpected exception: ", e.what()));}
-                                                          catch (std::exception &e) {Error(Jo("Unhandled unexpected exception: what() == \"", e.what(), "\"."));}
-                                                          catch (const char *e)     {Error(Jo("Unhandled unexpected exception: \"", e, "\"."));}
-                                                          catch (...)               {Error(Jo("Unhandled unexpected exception: Unknown."));}
-                                                          Error("The unexpected exception handler was called but no unhandled exception was found."); return;
+            case ErrorType::terminate: try {throw;} catch (Exception &e)      {Error(Jo("Exception: ", e.what()));}
+                                                    catch (std::exception &e) {Error(Jo("Exception: ", e.what()));}
+                                                    catch (const char *e)     {Error(Jo("Exception: \"", e, "\"."));}
+                                                    catch (...)               {Error(Jo("Exception: Unknown."));}
+                                                    Error("The terminate function was called but no unhandled exception was found."); return;
+            case ErrorType::unexpected: try {throw;} catch (Exception &e)     {Error(Jo("Unexpected exception: ", e.what()));}
+                                                    catch (std::exception &e) {Error(Jo("Unexpected exception: ", e.what()));}
+                                                    catch (const char *e)     {Error(Jo("Unexpected exception: \"", e, "\"."));}
+                                                    catch (...)               {Error(Jo("Unexpected exception: Unknown."));}
+                                                    Error("The unexpected exception handler was called but no unhandled exception was found."); return;
             default: Error("Unknown. (An unknown error was passed to error handler.)"); return;
         }
     }
