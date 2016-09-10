@@ -61,6 +61,21 @@
 					<Add option="-g" />
 				</Compiler>
 			</Target>
+			<Target title="Profile">
+				<Option output="bin/app" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/" />
+				<Option object_output="obj/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-pg" />
+				</Compiler>
+				<Linker>
+					<Add option="-pg -lgmon" />
+				</Linker>
+			</Target>
 			<Target title="Development (Android)">
 				<Option output="bin/app" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="bin/" />

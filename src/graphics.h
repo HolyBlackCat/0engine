@@ -503,7 +503,7 @@ namespace Graphics
         L *Add(uint32_t amount)
         {
             if (pos + amount > size)
-                Exception::RenderingQueueOverflow({Jo(size)});
+                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
             L *ret = arr + pos;
             pos += amount;
             return ret;
@@ -512,14 +512,14 @@ namespace Graphics
         void Push1(const L &x)
         {
             if (pos >= size)
-                Exception::RenderingQueueOverflow({Jo(size)});
+                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
             arr[pos    ] = x;
             pos += 1;
         }
         void Push2(const L &x, const L &y)
         {
             if (pos + 1 >= size)
-                Exception::RenderingQueueOverflow({Jo(size)});
+                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
             arr[pos    ] = x;
             arr[pos + 1] = y;
             pos += 2;
@@ -527,7 +527,7 @@ namespace Graphics
         void Push3(const L &x, const L &y, const L &z)
         {
             if (pos + 2 >= size)
-                Exception::RenderingQueueOverflow({Jo(size)});
+                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
             arr[pos    ] = x;
             arr[pos + 1] = y;
             arr[pos + 2] = z;
@@ -536,7 +536,7 @@ namespace Graphics
         void Push4as3x2(const L &x, const L &y, const L &z, const L &w) // a b d  b c d
         {
             if (pos + 5 >= size)
-                Exception::RenderingQueueOverflow({Jo(size)});
+                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
             arr[pos    ] = x;
             arr[pos + 1] = y;
             arr[pos + 2] = w;
@@ -776,7 +776,7 @@ namespace Graphics
             stream = (Utils::BinaryInput &&) input;
             handle = TTF_OpenFontIndexRW((SDL_RWops *)stream.RWops(), 0, ptsize, index);
             if (!handle)
-                Exception::CantParse({stream.Name(), Jo("SDL ttf plugin is unable to parse font: ", FixEdges(TTF_GetError()))});
+                Exceptions::IO::CantParse(stream.Name(), Jo("SDL ttf plugin is unable to parse font: ", FixEdges(TTF_GetError())));
         }
         void Close()
         {
@@ -1065,7 +1065,7 @@ namespace Graphics
                 {
                     SDL_FreeSurface(surface);
                     SDL_FreeSurface(glyph_surface);
-                    Exception::FontAtlasOverflow({Name(), Jo(dstsz)});
+                    Exceptions::Graphics::FontAtlasOverflow(Name(), Jo(dstsz));
                 }
 
                 font_data.AddGlyph(it, tex_pos, tex_sz, {minx, -maxy}, advance);
@@ -1272,7 +1272,7 @@ namespace Graphics
             Activate();
             size = data.Size();
             if (size.x != size.y)
-                Exception::BadCubeMapImage({Jo(size)});
+                Exceptions::Graphics::BadCubeMapImage(Jo(size));
             glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
         }
         void SetData(Side side, int new_size, void *ptr = 0)
@@ -1301,7 +1301,7 @@ namespace Graphics
                     if (i != 0) err += ", ";
                     err += Jo("+-"[i%2], "xyz"[i/2], " = ", sides[i].Size());
                 }
-                Exception::BadCubeMapImage({err.c_str()});
+                Exceptions::Graphics::BadCubeMapImage(err.c_str());
             }
             size = sides[0].Size();
             for (int i = 0; i < 6; i++)

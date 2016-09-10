@@ -577,7 +577,7 @@ namespace Utils
             name += Jo(" of size ", size, " opened for reading/writing");
             rwops = SDL_RWFromMem(mem, size);
             if (!rwops)
-                Exception::CantOpenIO({name.c_str(), FixEdges(SDL_GetError())});
+                Exceptions::IO::CantOpen(name.c_str(), FixEdges(SDL_GetError()));
         }
         void OpenConstMemory(const void *mem, int size)
         {
@@ -587,7 +587,7 @@ namespace Utils
             name += Jo(" of size ", size, " opened for reading");
             rwops = SDL_RWFromConstMem(mem, size);
             if (!rwops)
-                Exception::CantOpenIO({name.c_str()});
+                Exceptions::IO::CantOpen(name.c_str(), FixEdges(SDL_GetError()));
         }
         void OpenFile(const char *fname, Type type, Mode mode)
         {
@@ -739,7 +739,7 @@ namespace Utils
                       '\0'};
             rwops = SDL_RWFromFile(fname, m);
             if (!rwops)
-                Exception::CantOpenIO({name.c_str(), FixEdges(SDL_GetError())});
+                Exceptions::IO::CantOpen(name.c_str(), FixEdges(SDL_GetError()));
         }
 
         void OpenTextFile(const char *name, Mode mode)
@@ -828,12 +828,12 @@ namespace Utils
         template <typename T> void ReadEx(T *dst, std::size_t count) const
         {
             if (Read<T>(dst, count) != count)
-                Exception::CantPerformIO({name.c_str(), "Reading", FixEdges(SDL_GetError())});
+                Exceptions::IO::BadOperation(name.c_str(), "Reading", FixEdges(SDL_GetError()));
         }
         template <typename T> void WriteEx(const T *src, std::size_t count) const
         {
             if (Write<T>(src, count) != count)
-                Exception::CantPerformIO({name.c_str(), "Writing", FixEdges(SDL_GetError())});
+                Exceptions::IO::BadOperation(name.c_str(), "Writing", FixEdges(SDL_GetError()));
         }
 
         // For singular objects.

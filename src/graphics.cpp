@@ -135,7 +135,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         uint8_t id_field_len, tmp;
 
@@ -271,7 +271,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         unsigned char tmp;
 
@@ -320,7 +320,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), +txt});};
+        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
         SDL_Surface *source = IMG_LoadPNG_RW((SDL_RWops *)io.RWops());
         if (!source)
             ParseError(FixEdges(IMG_GetError()));
@@ -487,11 +487,11 @@ namespace Graphics
                 flog_str = flog;
             }
 
-            Exception::ShaderCompilationError({name,
-                                               (vstat == GL_TRUE ? "OK" : "NOT OK"),
-                                               (fstat == GL_TRUE ? "OK" : "NOT OK"),
-                                               ('\n'+FixEdges(vlog_str.c_str())),
-                                               ('\n'+FixEdges(flog_str.c_str()))});
+            Exceptions::Graphics::ShaderCompilationError(name,
+                                                                   (vstat == GL_TRUE ? "OK" : "NOT OK"),
+                                                                   (fstat == GL_TRUE ? "OK" : "NOT OK"),
+                                                                   ('\n'+FixEdges(vlog_str.c_str())),
+                                                                   ('\n'+FixEdges(flog_str.c_str())));
         }
 
         int loc = 0;
@@ -515,7 +515,7 @@ namespace Graphics
                 log_str = log;
             }
 
-            Exception::ShaderLinkingError({name, ('\n'+log_str).c_str()});
+            Exceptions::Graphics::ShaderLinkingError(name, ('\n'+log_str).c_str());
         }
 
         loc = 0;

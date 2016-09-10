@@ -273,13 +273,13 @@ namespace Audio
     {
         Clear();
 
-        auto ParseError    = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         unsigned char tmp;
         bool stereo;
         bool uses_16_bits;
 
-        auto CheckByte     = [&](unsigned char byte, const char *error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
+        auto CheckByte = [&](unsigned char byte, const char *error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
 
         uint32_t data_size, data_size_alt;
 
@@ -417,22 +417,22 @@ namespace Audio
           case 0:
             break;
           case OV_EREAD:
-            Exception::CantParse({io.Name(), "Unable to read data from the stream."});
+            Exceptions::IO::CantParse(io.Name(), "Unable to read data from the stream.");
             break;
           case OV_ENOTVORBIS:
-            Exception::CantParse({io.Name(), "This is not vorbis audio."});
+            Exceptions::IO::CantParse(io.Name(), "This is not vorbis audio.");
             break;
           case OV_EVERSION:
-            Exception::CantParse({io.Name(), "Vorbis version mismatch."});
+            Exceptions::IO::CantParse(io.Name(), "Vorbis version mismatch.");
             break;
           case OV_EBADHEADER:
-            Exception::CantParse({io.Name(), "Invalid header."});
+            Exceptions::IO::CantParse(io.Name(), "Invalid header.");
             break;
           case OV_EFAULT:
-            Exception::CantParse({io.Name(), "Internal vorbis error."});
+            Exceptions::IO::CantParse(io.Name(), "Internal vorbis error.");
             break;
           default:
-            Exception::CantParse({io.Name(), "Unknown vorbis error."});
+            Exceptions::IO::CantParse(io.Name(), "Unknown vorbis error.");
             break;
         }
         // IMPORTANT: Below this line you must do `ov_clear(&ogg_file);` before returning or throwing anything.
@@ -442,7 +442,7 @@ namespace Audio
         if (samples > 0xffffffffu)
         {
             ov_clear(&ogg_file);
-            Exception::CantParse({io.Name(), "The file is too big."});
+            Exceptions::IO::CantParse(io.Name(), "The file is too big.");
         }
 
         freq = info->rate;
@@ -463,7 +463,7 @@ namespace Audio
             break;
           default:
             ov_clear(&ogg_file);
-            Exception::CantParse({io.Name(), Jo("The file must be mono or stereo, but this one has ", info->channels, " channels.")});
+            Exceptions::IO::CantParse(io.Name(), Jo("The file must be mono or stereo, but this one has ", info->channels, " channels."));
             break;
         }
 
@@ -480,7 +480,7 @@ namespace Audio
             if (val == 0)
             {
                 ov_clear(&ogg_file);
-                Exception::CantParse({io.Name(), "Unexpected end of the stream."});
+                Exceptions::IO::CantParse(io.Name(), "Unexpected end of the stream.");
             }
             if (bitstream != current_bitstream)
             {
@@ -489,27 +489,27 @@ namespace Audio
                 if (local_info->channels != info->channels)
                 {
                     ov_clear(&ogg_file);
-                    Exception::CantParse({io.Name(), Jo("The amount of channels have changed from ", info->channels, " to ", local_info->channels, ". Dynamic amount of channels is not supported.")});
+                    Exceptions::IO::CantParse(io.Name(), Jo("The amount of channels have changed from ", info->channels, " to ", local_info->channels, ". Dynamic amount of channels is not supported."));
                 }
                 if (local_info->rate != info->rate)
                 {
                     ov_clear(&ogg_file);
-                    Exception::CantParse({io.Name(), Jo("The sampling rate have changed from ", info->rate, " to ", local_info->rate, ". Dynamic sampling rate is not supported.")});
+                    Exceptions::IO::CantParse(io.Name(), Jo("The sampling rate have changed from ", info->rate, " to ", local_info->rate, ". Dynamic sampling rate is not supported."));
                 }
             }
             switch (val)
             {
               case OV_HOLE:
                 ov_clear(&ogg_file);
-                Exception::CantParse({io.Name(), "The file data is corrupted."});
+                Exceptions::IO::CantParse(io.Name(), "The file data is corrupted.");
                 break;
               case OV_EBADLINK:
                 ov_clear(&ogg_file);
-                Exception::CantParse({io.Name(), "Bad link."});
+                Exceptions::IO::CantParse(io.Name(), "Bad link.");
                 break;
               case OV_EINVAL:
                 ov_clear(&ogg_file);
-                Exception::CantParse({io.Name(), "Invalid header."});
+                Exceptions::IO::CantParse(io.Name(), "Invalid header.");
                 break;
               default:
                 buf += val;
@@ -577,7 +577,7 @@ namespace Audio
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exception::CantParse({io.Name(), txt});};
+        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         unsigned char tmp;
 

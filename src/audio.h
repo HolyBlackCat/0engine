@@ -82,37 +82,37 @@ namespace Audio
         {
             LoadWAV(io.Move());
             if (Stereo())
-                Exception::BadData({io.Name(), "Mono sound", "Stereo sound"});
+                Exceptions::IO::BadData(io.Name(), "Mono sound", "Stereo sound");
         }
         void LoadCompressed_Mono(Utils::BinaryInput io)
         {
             LoadCompressed(io.Move());
             if (Stereo())
-                Exception::BadData({io.Name(), "Mono sound", "Stereo sound"});
+                Exceptions::IO::BadData(io.Name(), "Mono sound", "Stereo sound");
         }
         void LoadOGG_Mono(Utils::BinaryInput io, bool load_as_8bit = 0)
         {
             LoadOGG(io.Move(), load_as_8bit);
             if (Stereo())
-                Exception::BadData({io.Name(), "Mono sound", "Stereo sound"});
+                Exceptions::IO::BadData(io.Name(), "Mono sound", "Stereo sound");
         }
         void LoadWAV_Stereo(Utils::BinaryInput io)
         {
             LoadWAV(io.Move());
             if (Mono())
-                Exception::BadData({io.Name(), "Stereo sound", "Mono sound"});
+                Exceptions::IO::BadData(io.Name(), "Stereo sound", "Mono sound");
         }
         void LoadCompressed_Stereo(Utils::BinaryInput io)
         {
             LoadCompressed(io.Move());
             if (Mono())
-                Exception::BadData({io.Name(), "Stereo sound", "Mono sound"});
+                Exceptions::IO::BadData(io.Name(), "Stereo sound", "Mono sound");
         }
         void LoadOGG_Stereo(Utils::BinaryInput io, bool load_as_8bit = 0)
         {
             LoadOGG(io.Move(), load_as_8bit);
             if (Mono())
-                Exception::BadData({io.Name(), "Stereo sound", "Mono sound"});
+                Exceptions::IO::BadData(io.Name(), "Stereo sound", "Mono sound");
         }
 
         static SoundData FromWAV              (Utils::BinaryInput io) {SoundData ret; ret.LoadWAV              (io.Move()); return ret;}
