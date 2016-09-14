@@ -43,7 +43,8 @@ namespace Sys
     static uint64_t desired_tick_len;
 
     static ExitRequestType::Enum exit_requested = ExitRequestType::no,
-                                 exit_request_by_signal_handler = ExitRequestType::no;
+                                 exit_request_by_signal_handler = ExitRequestType::no,
+                                 exit_request_by_user = ExitRequestType::no;
 
     enum class ErrorType
     {
@@ -323,9 +324,7 @@ namespace Sys
 
     void RequestExit()
     {
-        if (exit_requested)
-            return;
-        exit_requested = ExitRequestType::self;
+        exit_request_by_user = ExitRequestType::self;
     }
 
     [[noreturn]] void Error(const char *text)
@@ -392,6 +391,7 @@ namespace Sys
 
         { // SDL
             MarkLocation("SDL");
+            SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
             if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | Config::additional_sdl_init_flags)) // Returns non-zero int on failure.
             {
                 const char *p = SDL_GetError();
@@ -529,6 +529,12 @@ namespace Sys
 
         if (Window::GotExitRequestAtThisTick())
             exit_requested = ExitRequestType::normal;
+
+        if (exit_request_by_user)
+        {
+            exit_requested = exit_request_by_user;
+            exit_request_by_user = ExitRequestType::no;
+        }
 
         if (exit_request_by_signal_handler)
         {

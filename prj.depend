@@ -35,7 +35,7 @@
 	<X11/Xmd.h>
 	<GL/glew.h>
 
-1473536059 source:z:\projects\c++\lx\src\system.cpp
+1473882035 source:z:\projects\c++\lx\src\system.cpp
 	<csignal>
 	<cstdlib>
 	<cstring>
@@ -439,8 +439,9 @@
 1472942334 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1473538871 source:z:\projects\c++\lx\src\logic.cpp
+1473882174 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
+	<csignal>
 
 1465479696 z:\projects\c++\lx\src\logic.h
 	"lib_sdl.h"
