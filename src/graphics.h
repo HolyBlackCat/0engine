@@ -41,13 +41,16 @@
 namespace Graphics
 {
     #ifdef LXINTERNAL_GRAPHICS_H_SPECIAL_ACCESS
-    void Init();
+    void Initialize();
     void Cleanup();
     void BeginFrame();
     void EndFrame();
     #endif
 
-    // Here and below 01 means that colors are in [0;1] range. Otherwise it's [0;255].
+    namespace Init
+    {
+        void MaxTextureCount(int);
+    }
 
     namespace Blend
     {
@@ -105,6 +108,8 @@ namespace Graphics
             inline void FuncNormal_Pre     () {Func(one, one_minus_src_a);} // Src and output are premultiplited
         }
     }
+
+    // Here and below 01 means that colors are in [0;1] range. Otherwise it's [0;255].
 
     void Depth(bool on);
     inline void Culling(bool on) {(on ? glEnable : glDisable)(GL_CULL_FACE);}

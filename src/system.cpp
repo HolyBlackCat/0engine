@@ -1,6 +1,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -24,18 +25,17 @@
 #include "window.h"
 #include "utils.h"
 
-#define LXINTERNAL_LOCALCONFIG_DEFAULT_FPS    60
-
 void PreInit(); // You can't use most engine features here. You may only read args and exit (with or without error) from here.
 
 namespace Sys
 {
+    /*
     namespace Config
     {
         #define LXINTERNAL_CONFIG(a, b, ...) a b(__VA_ARGS__)
         LXINTERNAL_CONFIG_VARS_SEQ
         #undef LXINTERNAL_CONFIG
-    }
+    }*/
 
     static unsigned int argc;
     static char **argv;
@@ -45,6 +45,38 @@ namespace Sys
     static ExitRequestType::Enum exit_requested = ExitRequestType::no,
                                  exit_request_by_signal_handler = ExitRequestType::no,
                                  exit_request_by_user = ExitRequestType::no;
+
+    namespace Config
+    {
+        static std::string app_name = "LX Engine",
+                           msg_title_info = "",
+                           msg_title_warning = "",
+                           msg_title_error = "";
+        static bool no_cleanup = OnWindows || OnAndroid;
+        static int extra_sdl_init_flags = 0;
+
+        void ApplicationName(const char *name)
+        {
+            app_name = name;
+        }
+
+        void MessageNames(const char *info, const char *warning, const char *error)
+        {
+            msg_title_info = info;
+            msg_title_warning = warning;
+            msg_title_error = error;
+        }
+
+        void NoCleanup(bool nc)
+        {
+            no_cleanup = nc;
+        }
+
+        void ExtraInitFlagsForSDL(int flags)
+        {
+            extra_sdl_init_flags = flags;
+        }
+    }
 
     enum class ErrorType
     {
@@ -73,7 +105,6 @@ namespace Sys
     }
 
 
-
     static void SignalHandler(int id)
     {
         switch (id)
@@ -88,7 +119,7 @@ namespace Sys
         }
     }
 
-    const char *ExecutableFileName() {return argv[-1];}
+    const char *FileName() {return argv[-1];}
 
     ExitRequestType::Enum ExitRequested() // Clears the flag when called. If the app gets exit request, you have one tick to handle it or the app will close itself.
     {
@@ -97,12 +128,12 @@ namespace Sys
         return ret;
     }
 
-    namespace CommandLineArgs
+    /*namespace CommandLineArgs
     {
         static std::unordered_map<std::string, std::string> map;
         static std::list<std::string> id_list;
 
-        static void Init()
+        static void Initialize()
         {
             ExecuteThisOnce();
 
@@ -132,8 +163,8 @@ namespace Sys
             AddArg("lxsys-openal-show-config",  "--show-openal-config",         "Show default OpenAL config.");
             AddArg("lxsys-openal-config",       "--openal-config=",             "Overwrite OpenAL settings. Example: `44100,31+4`. Format: <frequency>`,`<mono sources>`+`<stereo sources>", "mode");
             AddArg("lxsys-opengl-show-config",  "--show-opengl-config",         "Show default OpenGL config.");
-            AddArg("lxsys-opengl-config",       "--opengl-config=",             "Overwrite OpenGL settings. Example: `3.3C_1_0000*`. Format:\n      <major>`.`<minor>{`*`(core)|`C`(compat)|`E`(embedded)|`x`(none or don't care)}(profile)"
-                                                                        "\n      {`_`(don't care)|`H`(hardware)|`S`(sofware)}<msaa>{`_`(don't care)|`F`(forward compat)}<redbits><greenbits><bluebits><alphabits>(0 if you don't care)"
+            AddArg("lxsys-opengl-config",       "--opengl-config=",             "Overwrite OpenGL settings. Example: `3.3C_1_0000*`. Format:\n      <major>`.`<minor>{`*`(core)|`C`(compatibility)|`E`(embedded)|`x`(none or don't care)}(profile)"
+                                                                        "\n      {`_`(don't care)|`H`(hardware)|`S`(sofware)}<msaa>{`_`(don't care)|`F`(forward compatibility)}<redbits><greenbits><bluebits><alphabits>(0 if you don't care)"
                                                                         "\n      {`_`(don't care)|`-`(no vsync)|`+`(vsync)|`*`(late swap tearing (vsync when last frame was not missed) or just vsync if LST is not supported)}", "mode");
             AddArg("lxsys-display-num",         "--display-num=",               "Force a specific display to use.", "display");
             AddArg("lxsys-no-maximize",         "--no-maximize",                "Don't maximize window at startup.");
@@ -240,6 +271,153 @@ namespace Sys
                 *arg_p = it->second.c_str();
             return 1;
         }
+    }*/
+
+    namespace Args
+    {
+        int Count()
+        {
+            return argc;
+        }
+        const char *const *Array()
+        {
+            return argv;
+        }
+
+        // Variables
+
+        namespace Internal
+        {
+            #define ARG(name, type) static bool name;
+            LXINTERNAL_BUILTIN_ARGS_LIST
+            #undef ARG
+
+            namespace Values
+            {
+                #define ARG_void(name)
+                #define ARG_uint(name) static int name;
+                #define ARG(name, type) ARG_##type(name)
+                LXINTERNAL_BUILTIN_ARGS_LIST
+                #undef ARG_void
+                #undef ARG_uint
+                #undef ARG
+            }
+        }
+
+        // Functions
+
+        #define ARG(name, type) bool name() {return Internal::name;}
+        LXINTERNAL_BUILTIN_ARGS_LIST
+        #undef ARG
+
+        namespace Values
+        {
+            #define ARG_void(name)
+            #define ARG_uint(name) int name() {return Internal::Values::name;}
+            #define ARG(name, type) ARG_##type(name)
+            LXINTERNAL_BUILTIN_ARGS_LIST
+            #undef ARG_void
+            #undef ARG_uint
+            #undef ARG
+        }
+
+        static void Initialize()
+        {
+            ExecuteThisOnce();
+
+            constexpr auto CheckVoidArg = [](const char *name, const char *str) -> bool
+            {
+                if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
+
+                while (1)
+                {
+                    if (*name != *str)
+                    {
+                        if (!(*name == '_' && *str == '-'))
+                            return 0;
+                    }
+                    if (*name == '\0')
+                        return 1;
+
+                    name++;
+                    str++;
+                }
+            };
+
+            constexpr auto CheckUintArg = [](const char *name, const char *str, int *out) -> bool
+            {
+                const char *str_copy = str;
+
+                if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
+
+                while (1)
+                {
+                    if (*name != *str)
+                    {
+                        if (*name == '\0')
+                        {
+                            if (*str == '=')
+                            {
+                                str++;
+                                if (!*str)
+                                    Error(Jo("Following command line parameter must have an argument: ", str_copy));
+                                *out = std::strtol(str, (char **)&str, 10);
+                                if (*str != '\0')
+                                    Error(Jo("Unable to parse the argument for the following command line parameter: ", str_copy));
+                                if (*out < 0)
+                                    Error(Jo("Following command line parameter must have a non-negative argument: ", str_copy));
+                                return 1;
+                            }
+                            else
+                                return 0;
+                        }
+                        else if (!(*name == '_' && *str == '-'))
+                            return 0;
+                    }
+                    if (!*name)
+                        Error(Jo("Following command line parameter must have an argument: ", str_copy));
+
+                    name++;
+                    str++;
+                }
+            };
+
+            for (int i = 0; i < Count(); i++)
+            {
+                #define ARG_void(name) CheckVoidArg(#name, Array()[i])
+                #define ARG_uint(name) CheckUintArg(#name, Array()[i], &Internal::Values::name)
+                #define ARG(name, type) if (ARG_##type(name)) {Internal::name = 1; continue;}
+                LXINTERNAL_BUILTIN_ARGS_LIST
+                #undef ARG_void
+                #undef ARG_uint
+                #undef ARG
+                Error(Jo("Invalid command line argument: ", Array()[i], "\nUse --help to get a list of all available arguments."));
+            }
+
+            if (help())
+            {
+                std::string buf = "Available options:\n";
+                #define ARG_void
+                #define ARG_uint "=<..>"
+                #define ARG(name, type) \
+                    buf += "--"; \
+                    for (char it : #name) \
+                    { \
+                        switch (it) \
+                        { \
+                            case '\0': buf += ARG_##type "\n"; break; \
+                            case '_': buf += '-'; break; \
+                            default: buf += it; break; \
+                        } \
+                    }
+                LXINTERNAL_BUILTIN_ARGS_LIST
+                #undef ARG_void
+                #undef ARG_uint
+                #undef ARG
+                Message(buf.c_str());
+                Exit();
+            }
+        }
     }
 
     void Message(const char *title, const char *text, MessageType type)
@@ -252,13 +430,13 @@ namespace Sys
         switch (type)
         {
           case MessageType::info:
-            Message(Jo(Config::app_name, Config::msg_def_title_postfix_info), text, type);
+            Message(Config::msg_title_info[0] ? Config::msg_title_info.c_str() : Config::app_name.c_str(), text, type);
             break;
           case MessageType::warning:
-            Message(Jo(Config::app_name, Config::msg_def_title_postfix_warn), text, type);
+            Message(Config::msg_title_warning[0] ? Config::msg_title_warning.c_str() : Jo(Config::app_name, " - Warning"), text, type);
             break;
           case MessageType::error:
-            Message(Jo(Config::app_name, Config::msg_def_title_postfix_error), text, type);
+            Message(Config::msg_title_error[0] ? Config::msg_title_error.c_str() : Jo(Config::app_name, " - Error"), text, type);
             break;
         }
     }
@@ -374,29 +552,31 @@ namespace Sys
         ExecuteThisOnce();
         MarkLocation("Init");
 
-        SetFps(LXINTERNAL_LOCALCONFIG_DEFAULT_FPS);
+        constexpr int default_fps = 60;
+
+        SetFps(default_fps);
 
         ::PreInit();
 
         #if OnMobile && !ASSUME_ANDROID
-        Sys::Config::window_fullscreen_at_startup = 0;
-        Sys::Config::window_maximize_at_startup = 1;
+        Sys::Config::window_fullscreen_at_startup = 1;
+        Sys::Config::window_maximize_at_startup = 0;
         Sys::Config::window_fullscreen_toggle_key = 0;
         #endif
 
         { // Args
             MarkLocation("Args");
-            CommandLineArgs::Init();
+            Args::Initialize();
         }
 
         { // SDL
             MarkLocation("SDL");
             SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
-            if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | Config::additional_sdl_init_flags)) // Returns non-zero int on failure.
+            if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | Config::extra_sdl_init_flags)) // Returns non-zero int on failure.
             {
                 const char *p = SDL_GetError();
                 if (!p || !*p)
-                    Error("SDL init failed. Error message: <none>.");
+                    Error("SDL init failed.");
                 else
                     Error(Jo("SDL init failed. Error message: `", p, "`."));
             }
@@ -405,22 +585,22 @@ namespace Sys
 
         { // Window
             MarkLocation("Window");
-            Window::Init();
+            Window::Initialize();
         }
 
         { // Graphics
             MarkLocation("Graphics");
-            Graphics::Init();
+            Graphics::Initialize();
         }
 
         { // Audio
             MarkLocation("Audio");
-            Audio::Init();
+            Audio::Initialize();
         }
 
         { // Network
             MarkLocation("Network");
-            Network::Init();
+            Network::Initialize();
         }
     }
 
@@ -450,22 +630,27 @@ namespace Sys
         return new_second;
     }
 
-    unsigned int fps = 0, frames_since_last_second = 0;
+    int fps = 0, tps = 0;
+    uint64_t frame_counter_at_prev_sec = 0, tick_counter_at_prev_sec = 0;
 
-    unsigned int Fps()
-    {
-        return fps;
-    }
+    int Fps() {return fps;}
+    int Tps() {return tps;}
 
-    static uint64_t tick_begin;
 
-    uint64_t TickTime() {return tick_begin;}
+    static uint64_t frame_start_time, frame_delta_ticks;
+    static double frame_delta_secs;
 
-    static uint64_t delta_ticks;
-    static double delta_secs;
+    uint64_t FrameStartTime()       {return frame_start_time;}
+    double FrameDelta()             {return frame_delta_secs; }
+    uint64_t FrameDeltaClockTicks() {return frame_delta_ticks;}
 
-    double Delta()        {return delta_secs; }
-    uint64_t DeltaTicks() {return delta_ticks;}
+    static uint64_t tick_start_time, tick_delta_ticks;
+    static double tick_delta_secs;
+
+    uint64_t TickStartTime()       {return tick_start_time;}
+    double TickDelta()             {return tick_delta_secs; }
+    uint64_t TickDeltaClockTicks() {return tick_delta_ticks;}
+
 
     static uint64_t frame_counter, tick_counter;
 
@@ -474,7 +659,7 @@ namespace Sys
 
     void BeginFrame()
     {
-        tick_begin = Utils::Clock::Time(); // sic
+        frame_start_time = Utils::Clock::Time(); // sic
 
         MarkLocation("Frame start");
 
@@ -489,26 +674,28 @@ namespace Sys
         Graphics::EndFrame();
         Audio::Tick();
 
-        if (Window::SwapMode() == Window::SwapModes::no_vsync)
+        if (Window::SwapMode() == Window::ContextSwapMode::no_vsync)
         {
             uint64_t tick_end = Utils::Clock::Time();
-            if (tick_end - tick_begin < desired_tick_len)
-                Utils::Clock::WaitTicks(desired_tick_len - (tick_end - tick_begin));
+            if (tick_end - frame_start_time < desired_tick_len)
+                Utils::Clock::WaitTicks(desired_tick_len - (tick_end - frame_start_time));
         }
 
-        frame_counter++;
+        frame_delta_ticks = Utils::Clock::Time() - frame_start_time;
+        frame_delta_secs = Utils::Clock::TicksToSecs(frame_delta_ticks);
 
-        delta_ticks = Utils::Clock::Time() - tick_begin;
-        delta_secs = Utils::Clock::TicksToSecs(delta_ticks);
+        frame_counter++;
     }
 
-    void Tick()
+    void StartTick()
     {
         MarkLocation("Tick");
 
-        if (tick_begin / Utils::Clock::Tps() != last_second)
+        tick_start_time = Utils::Clock::Time();
+
+        if (tick_start_time / Utils::Clock::Tps() != last_second)
         {
-            last_second = tick_begin / Utils::Clock::Tps();
+            last_second = tick_start_time / Utils::Clock::Tps();
             new_second = 1;
         }
         else
@@ -516,11 +703,11 @@ namespace Sys
 
         if (new_second)
         {
-            fps = frames_since_last_second;
-            frames_since_last_second = 1;
+            fps = frame_counter - frame_counter_at_prev_sec;
+            tps = tick_counter - tick_counter_at_prev_sec;
+            frame_counter_at_prev_sec = frame_counter;
+            tick_counter_at_prev_sec = tick_counter;
         }
-        else
-            frames_since_last_second++;
 
         Window::Tick();
 

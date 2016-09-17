@@ -6,7 +6,7 @@
 namespace Network
 {
     #ifdef LXINTERNAL_NETWORK_H_SPECIAL_ACCESS
-    void Init();
+    void Initialize();
     void Cleanup();
     #endif
 }

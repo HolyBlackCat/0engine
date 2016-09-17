@@ -17,10 +17,17 @@ namespace Graphics
 
     static bool depth_test = 0;
 
-    void Init()
+    namespace Init
     {
-        texture_pool_2d     .Resize(Sys::Config::opengl_max_texture_count);
-        texture_pool_cubemap.Resize(Sys::Config::opengl_max_texture_count);
+        static int max_texture_count = 48;
+
+        void MaxTextureCount(int c) {max_texture_count = c;}
+    }
+
+    void Initialize()
+    {
+        texture_pool_2d     .Resize(Init::max_texture_count);
+        texture_pool_cubemap.Resize(Init::max_texture_count);
         sdl_image_init_ok = (IMG_Init(IMG_INIT_PNG) == IMG_INIT_PNG);
         if (!sdl_image_init_ok)
             Sys::Error(Jo("SDL image plugin init failed. Error message: `", IMG_GetError(), "`."));

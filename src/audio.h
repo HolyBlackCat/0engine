@@ -13,10 +13,24 @@
 namespace Audio
 {
     #ifdef LXINTERNAL_AUDIO_H_SPECIAL_ACCESS
-    void Init();
+    void Initialize();
     void Cleanup();
     void Tick();
     #endif
+
+    namespace Init
+    {
+        void Frequency(int);
+        void MonoSources(int);
+        void StereoSources(int);
+    }
+
+    namespace Config
+    {
+        void ReferenceDistance(float);
+        void MaxDistance(float);
+        void RolloffFactor(float);
+    }
 
     void ForceErrorCheck();
 

@@ -16,6 +16,15 @@ namespace Sys
 {
     namespace Config
     {
+        void ApplicationName(const char *name);
+        void MessageNames(const char *info, const char *warning, const char *error);
+        void NoCleanup(bool nc);
+        void ExtraInitFlagsForSDL(int flags);
+    }
+
+    #if 0
+    namespace Config
+    {
         struct ArgData
         {
             const char *id, *text;
@@ -38,9 +47,9 @@ namespace Sys
             LXINTERNAL_CONFIG( bool               ,   window_maximize_at_startup     ,   0                                        ); /* Forced to be 1 on mobile (it would have no effect anyway). */\
             LXINTERNAL_CONFIG( int                ,   window_display_num             ,   0                                        ); \
             LXINTERNAL_CONFIG( Input::KeyID       ,   window_fullscreen_toggle_key   ,   Input::Key_F<12>()                       ); /* # Set this to 0 to disable switching. Does not work on mobile. */\
-            LXINTERNAL_CONFIG( std::string        ,   opengl_config                  ,   ForWindows("3.3C_1_8888*") ForMac("3.2*_1_8888*") ForMobile("2.0E_1_8888*") ); /* See system.cpp:System::CommandLineArgs::Init() for description. */\
+            LXINTERNAL_CONFIG( std::string        ,   opengl_config                  ,   ForWindows("3.3C_1_8888*") ForMac("3.2*_1_8888*") ForMobile("2.0E_1_8888*") ); /* See system.cpp:System::CommandLineArgs::Initialize() for description. */\
             LXINTERNAL_CONFIG( unsigned int       ,   opengl_max_texture_count       ,   48                                       ); /* Values larger than 48 may be not supported on some systems. */\
-            LXINTERNAL_CONFIG( std::string        ,   openal_config                  ,   ForPC("44100,63+7") ForMobile("44100,31+7")); /* See system.cpp:System::CommandLineArgs::Init() for description. */\
+            LXINTERNAL_CONFIG( std::string        ,   openal_config                  ,   ForPC("44100,63+7") ForMobile("44100,31+7")); /* See system.cpp:System::CommandLineArgs::Initialize() for description. */\
             LXINTERNAL_CONFIG( float              ,   openal_default_ref_distance    ,   1                                        ); /* # Distance at which sound volume is 100%. */\
             LXINTERNAL_CONFIG( float              ,   openal_default_max_distance    ,   100                                      ); /* # If distance to a sound is larger that this, sound volume no longer decreases. */\
             LXINTERNAL_CONFIG( float              ,   openal_default_rolloff_factor  ,   1                                        ); /* # How fast sound gets more quiet when distance gets larger. */\
@@ -52,22 +61,27 @@ namespace Sys
         LXINTERNAL_CONFIG_VARS_SEQ
         #undef LXINTERNAL_CONFIG
     }
+    #endif
 
     void SetFps(double fps); // It makes sense only when vsync is disabled. Default is 60. This function can be called at any time, even inside of PreInit().
 
-    double Delta(); // Length of last tick in seconds.
-    uint64_t DeltaTicks(); // Same, but measured in clock ticks.
+    double FrameDelta(); // Length of last frame in seconds.
+    uint64_t FrameDeltaClockTicks(); // Same, but measured in clock ticks.
+    double TickDelta(); // Length of last tick in seconds.
+    uint64_t TickDeltaClockTicks(); // Same, but measured in clock ticks.
 
     bool NewSecond(); // Returns 1 once every second.
 
-    unsigned int Fps(); // This is updated once every second.
+    int Fps(); // These are updated once every second.
+    int Tps();
 
-    uint64_t TickTime(); // Returns time point at which a current tick started.
+    uint64_t FrameStartTime(); // Returns time point at which a current frame started.
+    uint64_t TickStartTime(); // Returns time point at which a current frame started.
 
     uint64_t FrameCounter();
     uint64_t TickCounter();
 
-    const char *ExecutableFileName();
+    const char *FileName();
 
     namespace ExitRequestType
     {
@@ -84,12 +98,41 @@ namespace Sys
 
     ExitRequestType::Enum ExitRequested(); // Clears the flag when called. If the app gets exit request, you have one tick to handle it or the app will close itself.
 
+    /*
     namespace CommandLineArgs
     {
         unsigned int Count();
         const char *const *Array(); // -1 th item is executable name
         const std::unordered_map<std::string, std::string> &Map(); // .first is arg id, .second is argument passed to switch or "" if there is no argument.
         bool Check(const char *name, const char **arg_p = 0);
+    }*/
+
+    namespace Args
+    {
+        int Count();
+        const char *const *Array(); // -1 th item is the executable name.
+
+        #define LXINTERNAL_BUILTIN_ARGS_LIST \
+            ARG( help                       , void ) \
+            ARG( display_num                , uint ) \
+            ARG( ignore_openal_init_failure , void ) \
+
+        // Functions
+
+        #define ARG(name, type) bool name();
+        LXINTERNAL_BUILTIN_ARGS_LIST
+        #undef ARG
+
+        namespace Values
+        {
+            #define ARG_void(name)
+            #define ARG_uint(name) int name();
+            #define ARG(name, type) ARG_##type(name)
+            LXINTERNAL_BUILTIN_ARGS_LIST
+            #undef ARG_void
+            #undef ARG_uint
+            #undef ARG
+        }
     }
 
     enum class MessageType {info = 0, warning = 1, error = 2};
@@ -107,8 +150,8 @@ namespace Sys
         ~CodeLocation();
     };
 
+    void RequestExit();
     [[noreturn]] void Exit();
-    void RequestExit(); // This one will be handled by ErrorsHandler if it exists.
     [[noreturn]] void Error(const char *text); // If text == 0, the app will be closed silently.
 
     void SetCurrentFunction(void (*ptr)());
@@ -116,7 +159,7 @@ namespace Sys
 
     void BeginFrame();
     void EndFrame();
-    void Tick();
+    void StartTick();
 }
 
 #endif

@@ -12,7 +12,7 @@
 namespace Input
 {
     #ifdef LXINTERNAL_INPUT_H_SPECIAL_ACCESS
-    void Init();
+    void Initialize();
     void Cleanup();
     void ResetKeyboardBuffer(); // This is for when keyboard layout changes.
     void MoveKeyDown(KeyID id);
@@ -24,7 +24,10 @@ namespace Input
     void PostEventsTick();
     #endif
 
-
+    namespace Init
+    {
+        void SeparateMouseAndTouch(bool);
+    }
                                 //                   time -> -> -> -> -> -> -> -> -> ->
     bool KeyDown    (KeyID id); // 1 if pressed or down   0 1 1 1 0 0 | 0 1 0 0 | 0 0 0 //
     bool KeyPressed (KeyID id); // 1 if pressed           0 1 0 0 0 0 | 0 1 0 0 | 0 1 0 // ID 0 = dummy.

@@ -27,6 +27,12 @@ namespace Input
     static bool mouse_movement_needed;
     static ivec2 mouse_movement_dst;
 
+    namespace Init
+    {
+        bool separate_mouse_and_touch = 0;
+        void SeparateMouseAndTouch(bool s) {separate_mouse_and_touch = s;}
+    }
+
     static void SetBit(uint32_t *p, unsigned int pos)
     {
         p[pos/32] |= 1 << (pos % 32);
@@ -64,7 +70,7 @@ namespace Input
         }
     }
 
-    void Init()
+    void Initialize()
     {
         ExecuteThisOnce();
 
@@ -74,7 +80,7 @@ namespace Input
         if (mouse_mapping_func)
             mouse_pos = mouse_mapping_func(mouse_pos);
 
-        SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, Sys::Config::input_separate_mouse_and_touch ? "1" : "0");
+        SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, Init::separate_mouse_and_touch ? "1" : "0");
     }
     void Cleanup()
     {

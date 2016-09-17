@@ -14,37 +14,113 @@ namespace Window
 {
     static SDL_Window *handle = 0;
     static SDL_GLContext context_handle = 0;
-    static ivec2 size;
+    static ivec2 size, min_size;
+    static bool fullscreen, maximized;
+    static bool resizable;
 
     static bool resize_needed = 0;
     static ivec2 new_size;
 
-    enum class GlProfile    {core, compat, embedded, dont_care};
-    enum class GlAccMode    {dont_care, hard, soft};
-    enum class GlCompatMode {dont_care, frw_compat};
-
-    static int gl_major, gl_minor;
-    static GlProfile gl_profile;
-    static GlAccMode gl_acc;
-    static int gl_msaa;
-    static GlCompatMode gl_compat;
-    static uvec4 gl_bits;
-    static int gl_vsync; // -1 = late swap tearing, -2 = don't care. This can be queried at runtime.
-    static unsigned int display_num;
-    static bool resizable;
-    static bool fullscreen; // This serves as a config variable and also is updated at runtime.
-    static bool maximized;  // Same as above.
+    static ContextSwapMode swap_mode;
 
     static bool got_exit_request_at_this_tick = 0;
 
-    namespace OpenGL
+    namespace Init
     {
-        int Major() {return gl_major;}
-        int Minor() {return gl_minor;}
-        bool ES()   {return gl_profile == GlProfile::embedded;}
+        static std::string name = "LX";
+        static ivec2 size(800,600), min_size(800,600);
+        static bool resizable = 0;
+        static bool fullscreen = 0;
+        static bool maximize = 0;
+
+        void Name(const char *txt)
+        {
+            name = txt;
+        }
+        void Size(ivec2 sz)
+        {
+            size = sz;
+        }
+        void MinimalSize(ivec2 sz)
+        {
+            min_size = sz;
+        }
+        void Resizable(bool r)
+        {
+            resizable = r;
+        }
+        void Fullscreen(bool f)
+        {
+            fullscreen = f;
+        }
+        void Maximize(bool m)
+        {
+            maximize = m;
+        }
+
+        namespace OpenGL
+        {
+            ForWindows(static int major = 3, minor = 3;)
+            ForMac    (static int major = 3, minor = 2;)
+            ForMobile (static int major = 2, minor = 0;)
+            ForWindows(static ContextProfile profile = ContextProfile::compatibility;)
+            ForMac    (static ContextProfile profile = ContextProfile::dont_care;)
+            ForMobile (static ContextProfile profile = ContextProfile::es;)
+            static ContextAcceleration acceleration = ContextAcceleration::dont_care;
+            static int msaa = 0;
+            static ContextCompatibility compatibility = ContextCompatibility::dont_care;
+            static ivec4 color_bits = {8,8,8,0};
+            static ContextSwapMode swap = ContextSwapMode::late_swap_tearing;
+
+            void Version(int maj, int min)
+            {
+                major = maj;
+                minor = min;
+            }
+            void Profile(ContextProfile p)
+            {
+                profile = p;
+            }
+            void Acceleration(ContextAcceleration a)
+            {
+                acceleration = a;
+            }
+            void MSAA(int aa)
+            {
+                msaa = aa;
+            }
+            void Compatibility(ContextCompatibility c)
+            {
+                compatibility = c;
+            }
+            void ColorBits(ivec4 bits)
+            {
+                color_bits = bits;
+            }
+            void Vsync(ContextSwapMode s)
+            {
+                swap = s;
+            }
+        }
     }
 
-    static void PrepareVideoSettings(const char *txt)
+    namespace Config
+    {
+        static Input::KeyID fullscreen_switch_key = ForPC(Input::Key_F<12>()) ForMobile(0);
+        void FullscreenSwitchKey(Input::KeyID id)
+        {
+            fullscreen_switch_key = id;
+        }
+    }
+
+    namespace OpenGL
+    {
+        int Major() {return Init::OpenGL::major;}
+        int Minor() {return Init::OpenGL::minor;}
+        bool ES()   {return Init::OpenGL::profile == ContextProfile::embedded;}
+    }
+
+    /*static void PrepareVideoSettings(const char *txt)
     {
         resizable = Sys::Config::window_resizable;
         fullscreen = Sys::Config::window_fullscreen_at_startup;
@@ -128,7 +204,7 @@ namespace Window
             gl_profile = GlProfile::core;
             break;
           case 'C':
-            gl_profile = GlProfile::compat;
+            gl_profile = GlProfile::compatibility;
             break;
           case 'E':
             gl_profile = GlProfile::embedded;
@@ -216,96 +292,152 @@ namespace Window
 
         if (*txt)
             Fail();
-    }
+    }*/
 
-    void Init()
+    void Initialize()
     {
         ExecuteThisOnce();
 
         { // Input
             MarkLocation("Input");
-            Input::Init();
-        }
-
-        const char *gl_cfg_str;
-        if (Sys::CommandLineArgs::Check("lxsys-opengl-config", &gl_cfg_str))
-        {
-            PrepareVideoSettings(gl_cfg_str);
-        }
-        else
-        {
-            PrepareVideoSettings(Sys::Config::opengl_config.c_str());
+            Input::Initialize();
         }
 
         int flags = SDL_WINDOW_OPENGL;
-        if (resizable)
-            flags += SDL_WINDOW_RESIZABLE;
-        if (fullscreen)
-            flags += SDL_WINDOW_FULLSCREEN;
-        if (maximized)
-            flags += SDL_WINDOW_MAXIMIZED;
+        if (Init::resizable)
+            flags |= SDL_WINDOW_RESIZABLE;
+        if (Init::fullscreen)
+            flags |= SDL_WINDOW_FULLSCREEN;
+        if (Init::maximize)
+            flags |= SDL_WINDOW_MAXIMIZED;
 
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_major);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_minor);
-        switch (gl_profile)
+        fullscreen = Init::fullscreen;
+        maximized = Init::maximize;
+        resizable = Init::resizable;
+
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, Init::OpenGL::major);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, Init::OpenGL::minor);
+
+        switch (Init::OpenGL::profile)
         {
-          case GlProfile::core:
+          case ContextProfile::core:
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
             break;
-          case GlProfile::compat:
+          case ContextProfile::compatibility:
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
             break;
-          case GlProfile::embedded:
+          case ContextProfile::embedded:
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
             break;
-          case GlProfile::dont_care:
+          case ContextProfile::dont_care:
             break;
         }
-        switch (gl_acc)
+        switch (Init::OpenGL::acceleration)
         {
-          case GlAccMode::hard:
+          case ContextAcceleration::hard:
             SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
             break;
-          case GlAccMode::soft:
+          case ContextAcceleration::soft:
             SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 0);
             break;
-          case GlAccMode::dont_care:
+          case ContextAcceleration::dont_care:
             break;
         }
-        if (gl_msaa != 1)
+        if (Init::OpenGL::msaa > 1)
         {
             SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, gl_msaa);
+            SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, Init::OpenGL::msaa);
         }
-        if (gl_compat == GlCompatMode::frw_compat)
+        if (Init::OpenGL::compatibility == ContextCompatibility::forward)
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-        if (gl_bits.r) SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   gl_bits.r);
-        if (gl_bits.g) SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, gl_bits.g);
-        if (gl_bits.b) SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  gl_bits.b);
-        if (gl_bits.a) SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, gl_bits.a);
+        if (Init::OpenGL::color_bits.r) SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   Init::OpenGL::color_bits.r);
+        if (Init::OpenGL::color_bits.g) SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, Init::OpenGL::color_bits.g);
+        if (Init::OpenGL::color_bits.b) SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  Init::OpenGL::color_bits.b);
+        if (Init::OpenGL::color_bits.a) SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, Init::OpenGL::color_bits.a);
 
-        if (resizable && fullscreen)
-            size = Window::DisplaySize() - 64;
+        int display;
+        if (Sys::Args::display_num())
+            display = Sys::Args::Values::display_num();
         else
-            size = Sys::Config::window_size;
+            display = 0;
 
-        static constexpr const char *err_solution = "Update your video drivers or mess with GL setting using command line arguments. (Use `--help` to get a list of them.)\n"
-                                                    "If you're using a laptop or have multiple videocards, go to your video driver settings and force it to use best available video card.\n"
-                                                    "If all else fails, buy a new videocard or give up.";
 
-        handle = SDL_CreateWindow(Sys::Config::window_name.c_str(),
-                                  SDL_WINDOWPOS_CENTERED_DISPLAY(display_num), SDL_WINDOWPOS_CENTERED_DISPLAY(display_num),
+        if (Init::resizable && Init::fullscreen)
+            size = Window::DisplaySize(display) - 64;
+        else
+            size = Init::size;
+
+        min_size = Init::min_size;
+
+        auto WindowError = [](const char *base_txt) -> const char *
+        {
+            const char *profile;
+            switch (Init::OpenGL::profile)
+            {
+                case ContextProfile::core:          profile = " Core profile"; break;
+                case ContextProfile::compatibility: profile = " Compatibility profile"; break;
+                case ContextProfile::embedded:      profile = " ES"; break;
+                default: profile = ""; break;
+            }
+
+            const char *acc;
+            switch (Init::OpenGL::acceleration)
+            {
+                case ContextAcceleration::hard: acc = " (hardware)"; break;
+                case ContextAcceleration::soft: acc = " (software)"; break;
+                default: acc = ""; break;
+            }
+
+            const char *forward;
+            if (Init::OpenGL::compatibility == ContextCompatibility::forward)
+                forward = " (forward compatible)";
+            else
+                forward = "";
+
+            const char *msaa;
+            if (Init::OpenGL::msaa > 1)
+                msaa = Jo(" with ", Init::OpenGL::msaa, "x MSAA");
+            else
+                msaa = "";
+
+            const char *color_bits;
+            if (Init::OpenGL::color_bits != ivec4(0,0,0,0))
+                color_bits = Jo(" with ", Init::OpenGL::color_bits, " bits per color plane");
+            else
+                color_bits = "";
+
+            const char *sync;
+            switch (Init::OpenGL::swap)
+            {
+                case ContextSwapMode::vsync:             sync = " with vsync enabled"; break;
+                case ContextSwapMode::no_vsync:          sync = " with vsync disabled"; break;
+                case ContextSwapMode::late_swap_tearing: sync = " with late swap tearing"; break;
+                default: sync = ""; break;
+            }
+
+
+            Sys::Error(Jo(base_txt, " Probably your system, video card or video driver does not support required the OpenGL version or settings.\n"
+                          "Following settings were used:\n"
+                          "OpenGL ", Init::OpenGL::major, '.', Init::OpenGL::minor, profile, acc, forward, msaa, color_bits, sync, ".\n"
+                          "Error message: `", Utils::FixEdges(SDL_GetError()), "`.\n"
+                          "Update your video drivers or mess with GL setting using command line arguments. (Use `--help` to get a list of them.)\n"
+                          "If you're using a laptop or have multiple videocards, go to your video driver settings and force it to use best available video card.\n"
+                          "If all else fails, buy a new videocard or give up."));
+        };
+
+        handle = SDL_CreateWindow(Init::name.c_str(),
+                                  SDL_WINDOWPOS_CENTERED_DISPLAY(display), SDL_WINDOWPOS_CENTERED_DISPLAY(display),
                                   size.x, size.y,
                                   flags);
         if (!handle)
-            Sys::Error(Jo("Window creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", Utils::FixEdges(SDL_GetError()), "`.\n", err_solution));
+            WindowError("Window creation failed.");
 
-        if (!OnMobile && Sys::Config::window_min_size.any())
-            SDL_SetWindowMinimumSize(handle, Sys::Config::window_min_size.x, Sys::Config::window_min_size.y);
+        if (!OnMobile && Init::min_size.any())
+            SDL_SetWindowMinimumSize(handle, Init::min_size.x, Init::min_size.y);
 
         context_handle = SDL_GL_CreateContext(handle);
         if (!context_handle)
-            Sys::Error(Jo("OpenGL context creation failed. Probably your system, video card or video driver does not support OpenGL ", gl_cfg_str, ". Message: `", Utils::FixEdges(SDL_GetError()), "`.\n", err_solution));
+            WindowError("OpenGL context creation failed.");
 
         #if OnWindows || defined(ASSUME_ANDROID)
         glewExperimental = 1;
@@ -323,25 +455,27 @@ namespace Window
             Sys::Error("This device does not support shader compilation.");
         #endif
 
-        switch (gl_vsync)
+        swap_mode = Init::OpenGL::swap;
+        switch (swap_mode)
         {
-          case 0:
+          case ContextSwapMode::no_vsync:
             if (SDL_GL_SetSwapInterval(0) != 0)
-                SDL_GL_SetSwapInterval(gl_vsync = 1);
+                SDL_GL_SetSwapInterval(1), swap_mode = ContextSwapMode::vsync;
             break;
-          case 1:
+          case ContextSwapMode::vsync:
             if (SDL_GL_SetSwapInterval(1) != 0)
-                SDL_GL_SetSwapInterval(gl_vsync = 0);
+                SDL_GL_SetSwapInterval(0), swap_mode = ContextSwapMode::no_vsync;
             break;
-          case -1:
+          case ContextSwapMode::late_swap_tearing:
             if (SDL_GL_SetSwapInterval(-1) != 0)
-                if (SDL_GL_SetSwapInterval(gl_vsync = 1) != 0)
-                    SDL_GL_SetSwapInterval(gl_vsync = 0);
+            {
+                swap_mode = ContextSwapMode::vsync;
+                if (SDL_GL_SetSwapInterval(1) != 0)
+                    SDL_GL_SetSwapInterval(0), swap_mode = ContextSwapMode::no_vsync;
+            }
             break;
           default:
-            gl_vsync = SDL_GL_GetSwapInterval();
-            if (gl_vsync != 0 && gl_vsync != 1)
-                gl_vsync = 0;
+            swap_mode = (ContextSwapMode)SDL_GL_GetSwapInterval();
             break;
         }
 
@@ -435,11 +569,11 @@ namespace Window
 
         Input::PostEventsTick();
 
-        if (Input::KeyPressed(Sys::Config::window_fullscreen_toggle_key))
+        if (Input::KeyPressed(Config::fullscreen_switch_key))
         {
             Fullscreen(!fullscreen);
-            if (fullscreen == 0 && Sys::Config::window_min_size.any())
-                SDL_SetWindowMinimumSize(handle, Sys::Config::window_min_size.x, Sys::Config::window_min_size.y);
+            if (fullscreen == 0 && min_size.any())
+                SDL_SetWindowMinimumSize(handle, min_size.x, min_size.y);
         }
     }
 
@@ -525,8 +659,8 @@ namespace Window
         return SDL_GetWindowDisplayIndex(handle);
     }
 
-    SwapModes SwapMode()
+    ContextSwapMode SwapMode()
     {
-        return (SwapModes)gl_vsync;
+        return (ContextSwapMode)swap_mode;
     }
 }

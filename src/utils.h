@@ -530,7 +530,7 @@ namespace Utils
             tick_limit = max_tick_queued;
         }
 
-        bool Tick(uint64_t cur_time = Sys::TickTime()) // Use it like this: `while (_.Tick()) {Your tick code}`
+        bool Tick(uint64_t cur_time = Sys::FrameStartTime()) // Use it like this: `while (_.Tick()) {Your tick code}`
         {
             if (cur_time - begin_time > tick_len)
             {
@@ -544,12 +544,12 @@ namespace Utils
             }
             return 0;
         }
-        bool TickNeeded(uint64_t cur_time = Sys::TickTime()) // Only checks if tick is needed without performing it.
+        bool TickNeeded(uint64_t cur_time = Sys::FrameStartTime()) // Only checks if tick is needed without performing it.
         {
             return cur_time - begin_time > tick_len;
         }
 
-        double Time(uint64_t cur_time = Sys::TickTime()) // Returns time since last tick, measured in ticks. Useful for rendering moving things when FPS is higher than tickrate.
+        double Time(uint64_t cur_time = Sys::FrameStartTime()) // Returns time since last tick, measured in ticks. Useful for rendering moving things when FPS is higher than tickrate.
         {
             return double(cur_time - begin_time) / tick_len;
         }

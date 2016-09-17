@@ -5,7 +5,7 @@
 namespace Network
 {
     static bool network_init_ok = 0;
-    void Init()
+    void Initialize()
     {
         ExecuteThisOnce();
         if (SDLNet_Init())

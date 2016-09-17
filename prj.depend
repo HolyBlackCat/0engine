@@ -35,10 +35,11 @@
 	<X11/Xmd.h>
 	<GL/glew.h>
 
-1473882035 source:z:\projects\c++\lx\src\system.cpp
+1474147549 source:z:\projects\c++\lx\src\system.cpp
 	<csignal>
 	<cstdlib>
 	<cstring>
+	<algorithm>
 	<exception>
 	<fstream>
 	<iostream>
@@ -397,7 +398,7 @@
 	"begin_code.h"
 	"close_code.h"
 
-1473435846 z:\projects\c++\lx\src\system.h
+1474138885 z:\projects\c++\lx\src\system.h
 	<cstdint>
 	<string>
 	<list>
@@ -406,7 +407,7 @@
 	"math.h"
 	"os.h"
 
-1473536354 z:\projects\c++\lx\src\utils.h
+1474148420 z:\projects\c++\lx\src\utils.h
 	<array>
 	<cstddef>
 	<cstdint>
@@ -439,9 +440,8 @@
 1472942334 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1473882174 source:z:\projects\c++\lx\src\logic.cpp
+1474148498 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
-	<csignal>
 
 1465479696 z:\projects\c++\lx\src\logic.h
 	"lib_sdl.h"
@@ -462,15 +462,16 @@
 	"utils.h"
 	"window.h"
 
-1473436080 source:z:\projects\c++\lx\src\window.cpp
+1474148795 source:z:\projects\c++\lx\src\window.cpp
 	"window.h"
 	"lib_gl.h"
 	"input.h"
 	"system.h"
 	"utils.h"
 
-1473436013 z:\projects\c++\lx\src\window.h
+1474147674 z:\projects\c++\lx\src\window.h
 	"lib_sdl.h"
+	"input.h"
 	"math.h"
 
 1462570137 z:\projects\c++\lx\src\lib_zlib.h
@@ -479,14 +480,14 @@
 1367159028 z:\projects\c++\lx\lib\include\zlib.h
 	"zconf.h"
 
-1467070533 source:z:\projects\c++\lx\src\input.cpp
+1474129720 source:z:\projects\c++\lx\src\input.cpp
 	<cstring>
 	<vector>
 	"input.h"
 	"system.h"
 	"window.h"
 
-1467070218 z:\projects\c++\lx\src\input.h
+1474129384 z:\projects\c++\lx\src\input.h
 	<cstdint>
 	<map>
 	<type_traits>
@@ -494,7 +495,7 @@
 	"math.h"
 	"utils.h"
 
-1473539031 source:z:\projects\c++\lx\src\graphics.cpp
+1474127359 source:z:\projects\c++\lx\src\graphics.cpp
 	"graphics.h"
 	<cstdint>
 	<fstream>
@@ -503,7 +504,7 @@
 	"lib_zlib.h"
 	"window.h"
 
-1473536354 z:\projects\c++\lx\src\graphics.h
+1474129133 z:\projects\c++\lx\src\graphics.h
 	<cstddef>
 	<cstring>
 	<initializer_list>
@@ -521,7 +522,7 @@
 	"utils.h"
 	"window.h"
 
-1473536354 source:z:\projects\c++\lx\src\audio.cpp
+1474127185 source:z:\projects\c++\lx\src\audio.cpp
 	"audio.h"
 	<cstdio>
 	<fstream>
@@ -530,7 +531,7 @@
 	"system.h"
 	"utils.h"
 
-1473536354 z:\projects\c++\lx\src\audio.h
+1474126056 z:\projects\c++\lx\src\audio.h
 	<cstdint>
 	<cstring>
 	"exceptions.h"
@@ -1551,10 +1552,10 @@
 	"begin_code.h"
 	"close_code.h"
 
-1462570137 z:\projects\c++\lx\src\network.h
+1474125650 z:\projects\c++\lx\src\network.h
 	"lib_sdlnet.h"
 
-1462570137 source:z:\projects\c++\lx\src\network.cpp
+1474125639 source:z:\projects\c++\lx\src\network.cpp
 	"network.h"
 	"utils.h"
 

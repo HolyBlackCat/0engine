@@ -12,7 +12,28 @@ namespace Audio
 {
     static ALCdevice *device;
     static ALCcontext *context;
-    static ALCint freq, mono_srcs, stereo_srcs;
+
+    namespace Init
+    {
+        static ALCint freq = 44100,
+                      mono_srcs = 31,
+                      stereo_srcs = 7;
+
+        void Frequency(int f) {freq = f;}
+        void MonoSources(int c) {mono_srcs = c;}
+        void StereoSources(int c) {stereo_srcs = c;}
+    }
+
+    namespace Config
+    {
+        static float ref_distance = 1,
+                     max_distance = 100,
+                     rolloff_factor = 1;
+
+        void ReferenceDistance(float d) {ref_distance = d;}
+        void MaxDistance(float d) {max_distance = d;}
+        void RolloffFactor(float f) {rolloff_factor = f;}
+    }
 
     struct SourceData
     {
@@ -43,7 +64,7 @@ namespace Audio
     static Utils::PoolManager<int> mono_manager;
     static Utils::PoolManager<int> stereo_manager;
 
-    static void PrepareAudioSettings(const char *txt)
+    /*static void PrepareAudioSettings(const char *txt)
     {
         static auto Fail = [=]
         {
@@ -90,24 +111,18 @@ namespace Audio
 
         if (*txt)
             Fail();
-    }
+    }*/
 
-    void Init()
+    void Initialize()
     {
         ExecuteThisOnce();
 
         static constexpr int needed_openal_major = 1, needed_openal_minor = 1; // 1.1
 
-        const char *config_str;
-        if (Sys::CommandLineArgs::Check("lxsys-openal-config", &config_str))
-            PrepareAudioSettings(config_str);
-        else
-            PrepareAudioSettings(Sys::Config::openal_config.c_str());
-
         device = alcOpenDevice(0);
         if (!device)
         {
-            if (Sys::CommandLineArgs::Check("lxsys-ignore-al-init-fail"))
+            if (Sys::Args::ignore_openal_init_failure())
                 return;
             else
                 Sys::Error("No valid audio device found.");
@@ -120,7 +135,7 @@ namespace Audio
         if (openal_major < needed_openal_major || (openal_major == needed_openal_major && openal_minor < needed_openal_minor))
             Sys::Error(Jo("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'));
 
-        const ALCint config_array[] = {ALC_FREQUENCY, freq, ALC_MONO_SOURCES, mono_srcs, ALC_STEREO_SOURCES, stereo_srcs, 0};
+        const ALCint config_array[] = {ALC_FREQUENCY, Init::freq, ALC_MONO_SOURCES, Init::mono_srcs, ALC_STEREO_SOURCES, Init::stereo_srcs, 0};
 
         context = alcCreateContext(device, config_array);
         if (!context)
@@ -129,11 +144,11 @@ namespace Audio
         if (!alcMakeContextCurrent(context))
             Sys::Error("Audio context switching failed.");
 
-        mono_manager.Resize(mono_srcs);
-        stereo_manager.Resize(stereo_srcs);
+        mono_manager.Resize(Init::mono_srcs);
+        stereo_manager.Resize(Init::stereo_srcs);
 
-        mono_src_array.Alloc(mono_srcs);
-        stereo_src_array.Alloc(stereo_srcs);
+        mono_src_array.Alloc(Init::mono_srcs);
+        stereo_src_array.Alloc(Init::stereo_srcs);
     }
     void Cleanup()
     {
@@ -710,9 +725,9 @@ namespace Audio
         data.full_update = 1;
         data.container_dead = 0;
         data.a.mode = SourceMode::once;
-        data.a.ref_distance   = Sys::Config::openal_default_ref_distance;
-        data.a.max_distance   = Sys::Config::openal_default_max_distance;
-        data.a.rolloff_factor = Sys::Config::openal_default_rolloff_factor;
+        data.a.ref_distance   = Config::ref_distance;
+        data.a.max_distance   = Config::max_distance;
+        data.a.rolloff_factor = Config::rolloff_factor;
         data.a.volume = 1;
         data.a.pitch = 1;
         data.a.pos = {0,0,0};
