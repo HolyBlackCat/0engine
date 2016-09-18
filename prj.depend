@@ -35,7 +35,7 @@
 	<X11/Xmd.h>
 	<GL/glew.h>
 
-1474147549 source:z:\projects\c++\lx\src\system.cpp
+1474202939 source:z:\projects\c++\lx\src\system.cpp
 	<csignal>
 	<cstdlib>
 	<cstring>
@@ -398,7 +398,7 @@
 	"begin_code.h"
 	"close_code.h"
 
-1474138885 z:\projects\c++\lx\src\system.h
+1474202479 z:\projects\c++\lx\src\system.h
 	<cstdint>
 	<string>
 	<list>
@@ -440,7 +440,7 @@
 1472942334 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1474148498 source:z:\projects\c++\lx\src\logic.cpp
+1474199431 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
 
 1465479696 z:\projects\c++\lx\src\logic.h
@@ -462,14 +462,14 @@
 	"utils.h"
 	"window.h"
 
-1474148795 source:z:\projects\c++\lx\src\window.cpp
+1474204163 source:z:\projects\c++\lx\src\window.cpp
 	"window.h"
 	"lib_gl.h"
 	"input.h"
 	"system.h"
 	"utils.h"
 
-1474147674 z:\projects\c++\lx\src\window.h
+1474199557 z:\projects\c++\lx\src\window.h
 	"lib_sdl.h"
 	"input.h"
 	"math.h"

@@ -14,9 +14,9 @@ namespace Window
 {
     static SDL_Window *handle = 0;
     static SDL_GLContext context_handle = 0;
-    static ivec2 size, min_size;
-    static bool fullscreen, maximized;
-    static bool resizable;
+    static ivec2 size, min_size, default_size;
+    static bool fullscreen, maximized, resizable;
+    static bool fix_window_when_fullscreen_is_disabled_once = 0;
 
     static bool resize_needed = 0;
     static ivec2 new_size;
@@ -303,6 +303,30 @@ namespace Window
             Input::Initialize();
         }
 
+        // Applying command line arguemnts
+        if (Sys::Args::opengl_version())
+        {
+            Init::OpenGL::major = Sys::Args::Values::opengl_version().x;
+            Init::OpenGL::minor = Sys::Args::Values::opengl_version().y;
+            if (Init::OpenGL::major < 0 || Init::OpenGL::minor < 0)
+                Sys::Error("Bad OpenGL version specified with a command line argument.");
+        }
+        if (Sys::Args::msaa())
+        {
+            Init::OpenGL::msaa = Sys::Args::Values::msaa();
+            if (Init::OpenGL::msaa != 0 &&
+                Init::OpenGL::msaa != 1 &&
+                Init::OpenGL::msaa != 2 &&
+                Init::OpenGL::msaa != 4 &&
+                Init::OpenGL::msaa != 8 &&
+                Init::OpenGL::msaa != 16)
+            Sys::Error("Bad MSAA specified with a command line argument.");
+        }
+        if (Sys::Args::maximized())
+            Init::maximize = Sys::Args::Values::maximized();
+        if (Sys::Args::fullscreen())
+            Init::fullscreen = Sys::Args::Values::fullscreen();
+
         int flags = SDL_WINDOW_OPENGL;
         if (Init::resizable)
             flags |= SDL_WINDOW_RESIZABLE;
@@ -362,8 +386,13 @@ namespace Window
             display = 0;
 
 
+        default_size = Init::size;
         if (Init::resizable && Init::fullscreen)
-            size = Window::DisplaySize(display) - 64;
+        {
+            size = Window::DisplaySize(display);
+            if (!Init::maximize)
+            fix_window_when_fullscreen_is_disabled_once = 1;
+        }
         else
             size = Init::size;
 
@@ -608,6 +637,13 @@ namespace Window
         }
 
         SDL_SetWindowFullscreen(handle, on ? SDL_WINDOW_FULLSCREEN : 0);
+
+        if (fix_window_when_fullscreen_is_disabled_once && !on)
+        {
+            fix_window_when_fullscreen_is_disabled_once = 0;
+            SDL_SetWindowSize(handle, default_size.x, default_size.y);
+            SDL_SetWindowPosition(handle, SDL_WINDOWPOS_CENTERED_DISPLAY(CurrentDisplayNum()), SDL_WINDOWPOS_CENTERED_DISPLAY(CurrentDisplayNum()));
+        }
     }
 
     void SetTitle(const char *txt)
@@ -620,9 +656,9 @@ namespace Window
         SDL_SetWindowSize(handle, new_size.x, new_size.y);
     }
 
-    ivec2 DisplaySize(unsigned int num)
+    ivec2 DisplaySize(int num)
     {
-        static unsigned int last_num = -1;
+        static int last_num = -1;
         static ivec2 last_size;
         if (num == last_num)
             return last_size;
@@ -638,9 +674,9 @@ namespace Window
         return DisplaySize(CurrentDisplayNum());
     }
 
-    SDL_DisplayMode DisplayMode(unsigned int num)
+    SDL_DisplayMode DisplayMode(int num)
     {
-        static unsigned int last_num = -1;
+        static int last_num = -1;
         static SDL_DisplayMode last_mode;
         if (num == last_num)
             return last_mode;
@@ -654,7 +690,7 @@ namespace Window
     {
         return DisplayMode(CurrentDisplayNum());
     }
-    unsigned int CurrentDisplayNum()
+    int CurrentDisplayNum()
     {
         return SDL_GetWindowDisplayIndex(handle);
     }

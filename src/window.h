@@ -21,11 +21,11 @@ namespace Window
     void Fullscreen(bool on);
     void SetTitle(const char *txt);
     void Resize(ivec2 new_size);
-    ivec2 DisplaySize(unsigned int num);
+    ivec2 DisplaySize(int num);
     ivec2 CurrentDisplaySize();
-    SDL_DisplayMode DisplayMode(unsigned int num);
+    SDL_DisplayMode DisplayMode(int num);
     SDL_DisplayMode CurrentDisplayMode();
-    unsigned int CurrentDisplayNum();
+    int CurrentDisplayNum();
 
     enum class ContextProfile       {dont_care, core, compatibility, embedded};
     enum class ContextAcceleration  {dont_care, hard, soft};

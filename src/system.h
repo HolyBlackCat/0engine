@@ -113,9 +113,13 @@ namespace Sys
         const char *const *Array(); // -1 th item is the executable name.
 
         #define LXINTERNAL_BUILTIN_ARGS_LIST \
-            ARG( help                       , void ) \
-            ARG( display_num                , uint ) \
-            ARG( ignore_openal_init_failure , void ) \
+            ARG( help                       , void  ) \
+            ARG( display_num                , int   ) \
+            ARG( opengl_version             , ivec2 ) \
+            ARG( msaa                       , int   ) \
+            ARG( fullscreen                 , bool  ) \
+            ARG( maximized                  , bool  ) \
+            ARG( ignore_openal_init_failure , void  ) \
 
         // Functions
 
@@ -126,11 +130,15 @@ namespace Sys
         namespace Values
         {
             #define ARG_void(name)
-            #define ARG_uint(name) int name();
+            #define ARG_bool(name)  bool name();
+            #define ARG_int(name)   int name();
+            #define ARG_ivec2(name) ivec2 name();
             #define ARG(name, type) ARG_##type(name)
             LXINTERNAL_BUILTIN_ARGS_LIST
             #undef ARG_void
-            #undef ARG_uint
+            #undef ARG_bool
+            #undef ARG_int
+            #undef ARG_ivec2
             #undef ARG
         }
     }

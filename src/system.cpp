@@ -295,11 +295,15 @@ namespace Sys
             namespace Values
             {
                 #define ARG_void(name)
-                #define ARG_uint(name) static int name;
+                #define ARG_bool(name)  static bool name;
+                #define ARG_int(name)   static int name;
+                #define ARG_ivec2(name) static ivec2 name;
                 #define ARG(name, type) ARG_##type(name)
                 LXINTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
-                #undef ARG_uint
+                #undef ARG_bool
+                #undef ARG_int
+                #undef ARG_ivec2
                 #undef ARG
             }
         }
@@ -313,11 +317,15 @@ namespace Sys
         namespace Values
         {
             #define ARG_void(name)
-            #define ARG_uint(name) int name() {return Internal::Values::name;}
+            #define ARG_bool(name)  bool name() {return Internal::Values::name;}
+            #define ARG_int(name)   int name() {return Internal::Values::name;}
+            #define ARG_ivec2(name) ivec2 name() {return Internal::Values::name;}
             #define ARG(name, type) ARG_##type(name)
             LXINTERNAL_BUILTIN_ARGS_LIST
             #undef ARG_void
-            #undef ARG_uint
+            #undef ARG_bool
+            #undef ARG_int
+            #undef ARG_ivec2
             #undef ARG
         }
 
@@ -344,7 +352,46 @@ namespace Sys
                 }
             };
 
-            constexpr auto CheckUintArg = [](const char *name, const char *str, int *out) -> bool
+            constexpr auto CheckBoolArg = [](const char *name, const char *str, bool *out) -> bool
+            {
+                const char *str_copy = str;
+
+                if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
+
+                while (1)
+                {
+                    if (*name != *str)
+                    {
+                        if (*name == '\0')
+                        {
+                            if (*str == '=')
+                            {
+                                str++;
+                                if (*str == '\0')
+                                    Error(Jo("Following command line parameter must have an argument: ", str_copy));
+                                if (*str != '1' && *str != '0')
+                                    Error(Jo("Following command line parameter must have 0 or 1 as argument: ", str_copy));
+                                *out = (*str == '1');
+                                str++;
+                                if (*str != '\0')
+                                    Error(Jo("Following command line parameter must have 0 or 1 as argument: ", str_copy));
+                                return 1;
+                            }
+                            else
+                                return 0;
+                        }
+                        if (!(*name == '_' && *str == '-'))
+                            return 0;
+                    }
+                    if (*name == '\0')
+                        Error(Jo("Following command line parameter must have an argument: ", str_copy));
+
+                    name++;
+                    str++;
+                }
+            };
+
+            constexpr auto CheckIntArg = [](const char *name, const char *str, int *out) -> bool
             {
                 const char *str_copy = str;
 
@@ -364,8 +411,6 @@ namespace Sys
                                 *out = std::strtol(str, (char **)&str, 10);
                                 if (*str != '\0')
                                     Error(Jo("Unable to parse the argument for the following command line parameter: ", str_copy));
-                                if (*out < 0)
-                                    Error(Jo("Following command line parameter must have a non-negative argument: ", str_copy));
                                 return 1;
                             }
                             else
@@ -382,14 +427,65 @@ namespace Sys
                 }
             };
 
+            constexpr auto CheckIvec2Arg = [](const char *name, const char *str, ivec2 *out) -> bool
+            {
+                const char *str_copy = str;
+
+                if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
+
+                while (1)
+                {
+                    if (*name != *str)
+                    {
+                        if (*name == '\0')
+                        {
+                            if (*str == '=')
+                            {
+                                str++;
+                                if (!*str)
+                                    Error(Jo("Following command line parameter must have arguments: ", str_copy));
+                                out->x = std::strtol(str, (char **)&str, 10);
+                                if (*str == ',')
+                                {
+                                    str++;
+                                    if (!*str)
+                                        Error(Jo("Following command line parameter must have 2 arguments: ", str_copy));
+                                    out->y = std::strtol(str, (char **)&str, 10);
+                                    if (*str != '\0')
+                                        Error(Jo("Unable to parse the second argument for the following command line parameter: ", str_copy));
+                                }
+                                else if (*str == '\0')
+                                    Error(Jo("Following command line parameter must have 2 arguments: ", str_copy));
+                                else
+                                    Error(Jo("Unable to parse the first argument for the following command line parameter: ", str_copy));
+                                return 1;
+                            }
+                            else
+                                return 0;
+                        }
+                        else if (!(*name == '_' && *str == '-'))
+                            return 0;
+                    }
+                    if (!*name)
+                        Error(Jo("Following command line parameter must have arguments: ", str_copy));
+
+                    name++;
+                    str++;
+                }
+            };
+
             for (int i = 0; i < Count(); i++)
             {
-                #define ARG_void(name) CheckVoidArg(#name, Array()[i])
-                #define ARG_uint(name) CheckUintArg(#name, Array()[i], &Internal::Values::name)
+                #define ARG_void(name)  CheckVoidArg(#name, Array()[i])
+                #define ARG_bool(name)  CheckBoolArg(#name, Array()[i], &Internal::Values::name)
+                #define ARG_int(name)   CheckIntArg(#name, Array()[i], &Internal::Values::name)
+                #define ARG_ivec2(name) CheckIvec2Arg(#name, Array()[i], &Internal::Values::name)
                 #define ARG(name, type) if (ARG_##type(name)) {Internal::name = 1; continue;}
                 LXINTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
-                #undef ARG_uint
+                #undef ARG_bool
+                #undef ARG_int
+                #undef ARG_ivec2
                 #undef ARG
                 Error(Jo("Invalid command line argument: ", Array()[i], "\nUse --help to get a list of all available arguments."));
             }
@@ -398,7 +494,9 @@ namespace Sys
             {
                 std::string buf = "Available options:\n";
                 #define ARG_void
-                #define ARG_uint "=<..>"
+                #define ARG_bool  "=<0,1>"
+                #define ARG_int   "=<..>"
+                #define ARG_ivec2 "=<..>,<..>"
                 #define ARG(name, type) \
                     buf += "--"; \
                     for (char it : #name) \
@@ -412,7 +510,9 @@ namespace Sys
                     }
                 LXINTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
-                #undef ARG_uint
+                #undef ARG_bool
+                #undef ARG_int
+                #undef ARG_ivec2
                 #undef ARG
                 Message(buf.c_str());
                 Exit();
