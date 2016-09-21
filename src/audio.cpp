@@ -64,55 +64,6 @@ namespace Audio
     static Utils::PoolManager<int> mono_manager;
     static Utils::PoolManager<int> stereo_manager;
 
-    /*static void PrepareAudioSettings(const char *txt)
-    {
-        static auto Fail = [=]
-        {
-            Sys::Error("Unable to parse OpenAL config.");
-        };
-        static auto IsDigit = [&]()->bool{return *txt >= '0' && *txt <= '9';};
-        static auto GetDigit = [&]()->int{return *txt - '0';};
-
-        freq = 0;
-        if (!IsDigit())
-            Fail();
-        do
-        {
-            freq = freq * 10 + GetDigit();
-            txt++;
-        }
-        while (IsDigit());
-
-        if (*(txt++) != ',')
-            Fail();
-
-        mono_srcs = 0;
-        if (!IsDigit())
-            Fail();
-        do
-        {
-            mono_srcs = mono_srcs * 10 + GetDigit();
-            txt++;
-        }
-        while (IsDigit());
-
-        if (*(txt++) != '+')
-            Fail();
-
-        stereo_srcs = 0;
-        if (!IsDigit())
-            Fail();
-        do
-        {
-            stereo_srcs = stereo_srcs * 10 + GetDigit();
-            txt++;
-        }
-        while (IsDigit());
-
-        if (*txt)
-            Fail();
-    }*/
-
     void Initialize()
     {
         ExecuteThisOnce();
@@ -134,6 +85,22 @@ namespace Audio
 
         if (openal_major < needed_openal_major || (openal_major == needed_openal_major && openal_minor < needed_openal_minor))
             Sys::Error(Jo("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'));
+
+
+        if (Sys::Args::audio_freq())
+        {
+            Init::freq = Sys::Args::Values::audio_freq();
+            if (Init::freq <= 0)
+                Sys::Error("Bad audio sampling frequency specified with a command line argument.");
+        }
+        if (Sys::Args::audio_mono_stereo_srcs())
+        {
+            Init::mono_srcs = Sys::Args::Values::audio_mono_stereo_srcs().x;
+            Init::stereo_srcs = Sys::Args::Values::audio_mono_stereo_srcs().y;
+            if (Init::mono_srcs <= 0 || Init::stereo_srcs <= 0)
+                Sys::Error("Bad number of audio sources specified with a command line argument.");
+        }
+
 
         const ALCint config_array[] = {ALC_FREQUENCY, Init::freq, ALC_MONO_SOURCES, Init::mono_srcs, ALC_STEREO_SOURCES, Init::stereo_srcs, 0};
 

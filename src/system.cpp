@@ -29,14 +29,6 @@ void PreInit(); // You can't use most engine features here. You may only read ar
 
 namespace Sys
 {
-    /*
-    namespace Config
-    {
-        #define LXINTERNAL_CONFIG(a, b, ...) a b(__VA_ARGS__)
-        LXINTERNAL_CONFIG_VARS_SEQ
-        #undef LXINTERNAL_CONFIG
-    }*/
-
     static unsigned int argc;
     static char **argv;
     static bool sdl_init_ok = 0;
@@ -128,150 +120,6 @@ namespace Sys
         return ret;
     }
 
-    /*namespace CommandLineArgs
-    {
-        static std::unordered_map<std::string, std::string> map;
-        static std::list<std::string> id_list;
-
-        static void Initialize()
-        {
-            ExecuteThisOnce();
-
-            auto AddArg = [&](const char *id, const char *text, const char *desc = 0, const char *arg = 0)
-            {
-                Config::args.push_front({id, text, desc, arg});
-                id_list.push_front(id);
-            };
-
-            for (const auto &it : Config::args)
-            {
-                id_list.push_back(it.id);
-
-                static const char *id = "lxsys-";
-                int pos = 0;
-                while (1)
-                {
-                    if (!id[pos])
-                        Error(Jo("Command line arguments' ids starting with `", id, "` are reserved for future use, thus `", it.id, "` id is illegal."));
-                    if (id[pos] != it.id[pos])
-                        break;
-                    pos++;
-                }
-            }
-
-            AddArg("lxsys-ignore-al-init-fail", "--ignore-openal-init-failure", "Continue to run even if OpenAL init fails.");
-            AddArg("lxsys-openal-show-config",  "--show-openal-config",         "Show default OpenAL config.");
-            AddArg("lxsys-openal-config",       "--openal-config=",             "Overwrite OpenAL settings. Example: `44100,31+4`. Format: <frequency>`,`<mono sources>`+`<stereo sources>", "mode");
-            AddArg("lxsys-opengl-show-config",  "--show-opengl-config",         "Show default OpenGL config.");
-            AddArg("lxsys-opengl-config",       "--opengl-config=",             "Overwrite OpenGL settings. Example: `3.3C_1_0000*`. Format:\n      <major>`.`<minor>{`*`(core)|`C`(compatibility)|`E`(embedded)|`x`(none or don't care)}(profile)"
-                                                                        "\n      {`_`(don't care)|`H`(hardware)|`S`(sofware)}<msaa>{`_`(don't care)|`F`(forward compatibility)}<redbits><greenbits><bluebits><alphabits>(0 if you don't care)"
-                                                                        "\n      {`_`(don't care)|`-`(no vsync)|`+`(vsync)|`*`(late swap tearing (vsync when last frame was not missed) or just vsync if LST is not supported)}", "mode");
-            AddArg("lxsys-display-num",         "--display-num=",               "Force a specific display to use.", "display");
-            AddArg("lxsys-no-maximize",         "--no-maximize",                "Don't maximize window at startup.");
-            AddArg("lxsys-maximize",            "--maximize",                   "Maximize window at startup.");
-            AddArg("lxsys-windowed",            "--windowed",                   "Force windowed mode.");
-            AddArg("lxsys-fullscreen",          "--fullscreen",                 "Force fullscreen mode.");
-            AddArg("lxsys-help",                "--help",                       "Show this page.");
-
-            for (auto it = Config::args.begin(); it != --Config::args.end(); it++)
-            {
-                auto jt = it;
-                jt++;
-                while (jt != Config::args.end())
-                {
-                    if (!std::strcmp(it->id, jt->id))
-                        Error(Jo("Two command line arguments have same id: `", it->id, "`."));
-                    if (!std::strcmp(it->text, jt->text))
-                        Error(Jo("Two command line arguments have same text: `", it->text, "`."));
-                    jt++;
-                }
-            }
-
-            for (unsigned int i = 0; i < argc; i++)
-            {
-                for (auto it = Config::args.begin(); it != Config::args.end(); it++)
-                {
-                    int pos = 0;
-                    while (1)
-                    {
-                        if (it->text[pos] == '\0')
-                        {
-                            if (argv[i][pos] == '\0' || it->arg_name)
-                            {
-                                map.insert({it->id, argv[i] + pos});
-                                goto next_arg;
-                            }
-                            else
-                                break;
-                        }
-                        if (it->text[pos] != argv[i][pos])
-                            break;
-                        pos++;
-                    }
-                }
-                Error(Jo("Invalid command line switch `", argv[i], "`."));
-              next_arg:
-                ;
-            }
-
-            if (Check("lxsys-help"))
-            {
-                std::string tmp = "Following command line switches can be used:\n\n";
-                for (auto it : Config::args)
-                {
-                    tmp += it.text;
-                    if (it.arg_name)
-                    {
-                        tmp += '<';
-                        tmp += it.arg_name;
-                        tmp += '>';
-                    }
-                    tmp += "\n      ";
-                    if (it.desc)
-                    {
-                        tmp += it.desc;
-                        tmp += '\n';
-                    }
-                    else
-                        tmp += "(No descrition.)\n";
-                }
-                Message(tmp.c_str());
-                Exit();
-            }
-
-            if (Check("lxsys-opengl-show-config"))
-            {
-                Message(("Default OpenGL config: " + Config::opengl_config).c_str());
-                Exit();
-            }
-
-            if (Check("lxsys-openal-show-config"))
-            {
-                Message(("Default OpenAL config: " + Config::openal_config).c_str());
-                Exit();
-            }
-
-            Config::args.clear();
-        }
-
-        unsigned int Count()       {return argc;}
-        const char *const *Array() {return argv;}
-        const std::unordered_map<std::string, std::string> &Map() {return map;}
-        bool Check(const char *name, const char **arg_p)
-        {
-            auto it = map.find(std::string(name));
-            if (it == map.end())
-            {
-                for (const auto &it : id_list)
-                    if (it == name)
-                        return 0;
-                Error(Jo("Invalid command line argument id `", name, "` was used as an argument for Sys::CommandLineArgs::Check()."));
-            }
-            if (arg_p)
-                *arg_p = it->second.c_str();
-            return 1;
-        }
-    }*/
 
     namespace Args
     {
@@ -295,15 +143,19 @@ namespace Sys
             namespace Values
             {
                 #define ARG_void(name)
-                #define ARG_bool(name)  static bool name;
-                #define ARG_int(name)   static int name;
-                #define ARG_ivec2(name) static ivec2 name;
+                #define ARG_bool(name)   static bool name;
+                #define ARG_int(name)    static int name;
+                #define ARG_ivec2(name)  static ivec2 name;
+                #define ARG_ivec4(name)  static ivec4 name;
+                #define ARG_string(name) static std::string name;
                 #define ARG(name, type) ARG_##type(name)
                 LXINTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
                 #undef ARG_bool
                 #undef ARG_int
                 #undef ARG_ivec2
+                #undef ARG_ivec4
+                #undef ARG_string
                 #undef ARG
             }
         }
@@ -317,15 +169,19 @@ namespace Sys
         namespace Values
         {
             #define ARG_void(name)
-            #define ARG_bool(name)  bool name() {return Internal::Values::name;}
-            #define ARG_int(name)   int name() {return Internal::Values::name;}
-            #define ARG_ivec2(name) ivec2 name() {return Internal::Values::name;}
+            #define ARG_bool(name)   bool name() {return Internal::Values::name;}
+            #define ARG_int(name)    int name() {return Internal::Values::name;}
+            #define ARG_ivec2(name)  ivec2 name() {return Internal::Values::name;}
+            #define ARG_ivec4(name)  ivec4 name() {return Internal::Values::name;}
+            #define ARG_string(name) std::string name() {return Internal::Values::name;}
             #define ARG(name, type) ARG_##type(name)
             LXINTERNAL_BUILTIN_ARGS_LIST
             #undef ARG_void
             #undef ARG_bool
             #undef ARG_int
             #undef ARG_ivec2
+            #undef ARG_ivec4
+            #undef ARG_string
             #undef ARG
         }
 
@@ -354,7 +210,7 @@ namespace Sys
 
             constexpr auto CheckBoolArg = [](const char *name, const char *str, bool *out) -> bool
             {
-                const char *str_copy = str;
+                const char *name_copy = name;
 
                 if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
 
@@ -367,97 +223,110 @@ namespace Sys
                             if (*str == '=')
                             {
                                 str++;
-                                if (*str == '\0')
-                                    Error(Jo("Following command line parameter must have an argument: ", str_copy));
                                 if (*str != '1' && *str != '0')
-                                    Error(Jo("Following command line parameter must have 0 or 1 as argument: ", str_copy));
+                                    Error(Jo("Option ", name_copy, " expects 0 or 1 as an argument."));
                                 *out = (*str == '1');
                                 str++;
                                 if (*str != '\0')
-                                    Error(Jo("Following command line parameter must have 0 or 1 as argument: ", str_copy));
+                                    Error(Jo("Option ", name_copy, " expects 0 or 1 as an argument."));
                                 return 1;
                             }
                             else
                                 return 0;
                         }
-                        if (!(*name == '_' && *str == '-'))
+                        else if (!(*name == '_' && *str == '-'))
                             return 0;
                     }
                     if (*name == '\0')
-                        Error(Jo("Following command line parameter must have an argument: ", str_copy));
+                        Error(Jo("Option ", name_copy, " expects 0 or 1 as an argument."));
 
                     name++;
                     str++;
                 }
             };
 
-            constexpr auto CheckIntArg = [](const char *name, const char *str, int *out) -> bool
+            constexpr auto CheckIvecArg = [](const char *name, int len, const char *str, int *out) -> bool
             {
                 const char *str_copy = str;
 
                 if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
 
-                while (1)
+                constexpr auto BadArgCount = [](const char *name)
                 {
-                    if (*name != *str)
-                    {
-                        if (*name == '\0')
-                        {
-                            if (*str == '=')
-                            {
-                                str++;
-                                if (!*str)
-                                    Error(Jo("Following command line parameter must have an argument: ", str_copy));
-                                *out = std::strtol(str, (char **)&str, 10);
-                                if (*str != '\0')
-                                    Error(Jo("Unable to parse the argument for the following command line parameter: ", str_copy));
-                                return 1;
-                            }
-                            else
-                                return 0;
-                        }
-                        else if (!(*name == '_' && *str == '-'))
-                            return 0;
-                    }
-                    if (!*name)
-                        Error(Jo("Following command line parameter must have an argument: ", str_copy));
+                    Sys::Error(Jo("Received incorrect argument count for ", name, '.'));
+                };
 
-                    name++;
-                    str++;
-                }
-            };
-
-            constexpr auto CheckIvec2Arg = [](const char *name, const char *str, ivec2 *out) -> bool
-            {
-                const char *str_copy = str;
-
-                if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
+                constexpr auto CantParseArg = [](const char *name, int pos)
+                {
+                    Sys::Error(Jo("Can't parse argument #", pos, " for ", name, '.'));
+                };
 
                 while (1)
                 {
                     if (*name != *str)
                     {
-                        if (*name == '\0')
+                        if (*name == '\0' && *str == '=')
                         {
-                            if (*str == '=')
+                            str++;
+                            for (int i = 0; i < len; i++)
                             {
-                                str++;
                                 if (!*str)
-                                    Error(Jo("Following command line parameter must have arguments: ", str_copy));
-                                out->x = std::strtol(str, (char **)&str, 10);
-                                if (*str == ',')
+                                    BadArgCount(str_copy);
+                                if (*str < '0' || *str > '9')
+                                    CantParseArg(str_copy, i);
+                                const char *prev_ptr = str;
+                                *(out++) = std::strtol(str, (char **)&str, 10);
+                                if (str == prev_ptr)
+                                    CantParseArg(str_copy, i);
+                                if (i != len - 1)
                                 {
+                                    if (*str == '\0')
+                                        BadArgCount(str_copy);
+                                    if (*str != ',')
+                                        CantParseArg(str_copy, i);
                                     str++;
-                                    if (!*str)
-                                        Error(Jo("Following command line parameter must have 2 arguments: ", str_copy));
-                                    out->y = std::strtol(str, (char **)&str, 10);
-                                    if (*str != '\0')
-                                        Error(Jo("Unable to parse the second argument for the following command line parameter: ", str_copy));
                                 }
-                                else if (*str == '\0')
-                                    Error(Jo("Following command line parameter must have 2 arguments: ", str_copy));
                                 else
-                                    Error(Jo("Unable to parse the first argument for the following command line parameter: ", str_copy));
+                                {
+                                    if (*str == ',')
+                                        BadArgCount(str_copy);
+                                    if (*str != '\0')
+                                        CantParseArg(str_copy, i);
+                                    return 1;
+                                }
+                            }
+                        }
+                        else if (!(*name == '_' && *str == '-'))
+                            return 0;
+                    }
+                    if (!*name)
+                        BadArgCount(str_copy);
+
+                    name++;
+                    str++;
+                }
+            };
+
+            constexpr auto CheckStringArg = [](const char *name, const char *str, std::string *out) -> bool
+            {
+                const char *name_copy = name;
+
+                if (*(str++) != '-' || *(str++) != '-') return 0; // Dupe intended!
+
+                while (1)
+                {
+                    if (*name != *str)
+                    {
+                        if (*name == '\0')
+                        {
+                            if (*str == '=')
+                            {
+                                str++;
+                                while (*str != '\0')
+                                {
+                                    *out += *str;
+                                    str++;
+                                }
                                 return 1;
                             }
                             else
@@ -466,8 +335,8 @@ namespace Sys
                         else if (!(*name == '_' && *str == '-'))
                             return 0;
                     }
-                    if (!*name)
-                        Error(Jo("Following command line parameter must have arguments: ", str_copy));
+                    if (*name == '\0')
+                        Error(Jo("Option ", name_copy, " expects an argument."));
 
                     name++;
                     str++;
@@ -476,16 +345,20 @@ namespace Sys
 
             for (int i = 0; i < Count(); i++)
             {
-                #define ARG_void(name)  CheckVoidArg(#name, Array()[i])
-                #define ARG_bool(name)  CheckBoolArg(#name, Array()[i], &Internal::Values::name)
-                #define ARG_int(name)   CheckIntArg(#name, Array()[i], &Internal::Values::name)
-                #define ARG_ivec2(name) CheckIvec2Arg(#name, Array()[i], &Internal::Values::name)
+                #define ARG_void(name)   CheckVoidArg(#name, Array()[i])
+                #define ARG_bool(name)   CheckBoolArg(#name, Array()[i], &Internal::Values::name)
+                #define ARG_int(name)    CheckIvecArg(#name, 1, Array()[i], &Internal::Values::name)
+                #define ARG_ivec2(name)  CheckIvecArg(#name, 2, Array()[i], Internal::Values::name.as_array())
+                #define ARG_ivec4(name)  CheckIvecArg(#name, 4, Array()[i], Internal::Values::name.as_array())
+                #define ARG_string(name) CheckStringArg(#name, Array()[i], &Internal::Values::name)
                 #define ARG(name, type) if (ARG_##type(name)) {Internal::name = 1; continue;}
                 LXINTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
                 #undef ARG_bool
                 #undef ARG_int
                 #undef ARG_ivec2
+                #undef ARG_ivec4
+                #undef ARG_string
                 #undef ARG
                 Error(Jo("Invalid command line argument: ", Array()[i], "\nUse --help to get a list of all available arguments."));
             }
@@ -494,9 +367,11 @@ namespace Sys
             {
                 std::string buf = "Available options:\n";
                 #define ARG_void
-                #define ARG_bool  "=<0,1>"
-                #define ARG_int   "=<..>"
-                #define ARG_ivec2 "=<..>,<..>"
+                #define ARG_bool   "=<0,1>"
+                #define ARG_int    "=<..>"
+                #define ARG_ivec2  "=<..>,<..>"
+                #define ARG_ivec4  "=<..>,<..>,<..>,<..>"
+                #define ARG_string "=..."
                 #define ARG(name, type) \
                     buf += "--"; \
                     for (char it : #name) \
@@ -513,6 +388,8 @@ namespace Sys
                 #undef ARG_bool
                 #undef ARG_int
                 #undef ARG_ivec2
+                #undef ARG_ivec4
+                #undef ARG_string
                 #undef ARG
                 Message(buf.c_str());
                 Exit();

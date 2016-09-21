@@ -71,6 +71,8 @@ namespace Window
             static ContextCompatibility compatibility = ContextCompatibility::dont_care;
             static ivec4 color_bits = {8,8,8,0};
             static ContextSwapMode swap = ContextSwapMode::late_swap_tearing;
+            static int depth_bits = 0;
+            static int stencil_bits = 0;
 
             void Version(int maj, int min)
             {
@@ -101,6 +103,14 @@ namespace Window
             {
                 swap = s;
             }
+            void DepthBits(int bits)
+            {
+                depth_bits = bits;
+            }
+            void StencilBits(int bits)
+            {
+                stencil_bits = bits;
+            }
         }
     }
 
@@ -119,180 +129,6 @@ namespace Window
         int Minor() {return Init::OpenGL::minor;}
         bool ES()   {return Init::OpenGL::profile == ContextProfile::embedded;}
     }
-
-    /*static void PrepareVideoSettings(const char *txt)
-    {
-        resizable = Sys::Config::window_resizable;
-        fullscreen = Sys::Config::window_fullscreen_at_startup;
-        if (fullscreen)
-        {
-            if (Sys::CommandLineArgs::Check("lxsys-windowed"))
-                fullscreen = 0;
-        }
-        else
-        {
-            if (Sys::CommandLineArgs::Check("lxsys-fullscreen"))
-                fullscreen = 1;
-        }
-
-        if (resizable)
-        {
-            maximized = Sys::Config::window_maximize_at_startup;
-            if (maximized)
-            {
-                if (Sys::CommandLineArgs::Check("lxsys-no-maximize"))
-                    maximized = 0;
-            }
-            else
-            {
-                if (Sys::CommandLineArgs::Check("lxsys-maximize"))
-                    maximized = 1;
-            }
-        }
-        else
-            maximized = 0;
-
-        static auto Fail = [=]
-        {
-            Sys::Error("Unable to parse OpenGL config.");
-        };
-
-        const char *display_num_str;
-        if (Sys::CommandLineArgs::Check("lxsys-display-num", &display_num_str))
-        {
-            if (*display_num_str == 0 || *display_num_str < '0' || *display_num_str > '9')
-                Fail();
-            display_num = 0;
-            do
-            {
-                if (*display_num_str < '0' || *display_num_str > '9')
-                    Fail();
-                display_num = display_num * 10 + (*display_num_str - '0');
-                display_num_str++;
-            }
-            while (*display_num_str);
-        }
-        else
-            display_num = Sys::Config::window_display_num;
-
-        static auto IsDigit = [&]()->bool{return *txt >= '0' && *txt <= '9';};
-        static auto GetDigit = [&]()->int{return *txt - '0';};
-        gl_major = 0;
-        if (!IsDigit())
-            Fail();
-        do
-        {
-            gl_major = gl_major * 10 + GetDigit();
-            txt++;
-        }
-        while (IsDigit());
-        if (*(txt++) != '.')
-            Fail();
-        gl_minor = 0;
-        if (!IsDigit())
-            Fail();
-        do
-        {
-            gl_minor = gl_minor * 10 + GetDigit();
-            txt++;
-        }
-        while (IsDigit());
-
-        switch (*(txt++))
-        {
-          case '*':
-            gl_profile = GlProfile::core;
-            break;
-          case 'C':
-            gl_profile = GlProfile::compatibility;
-            break;
-          case 'E':
-            gl_profile = GlProfile::embedded;
-            break;
-          case 'x':
-            gl_profile = GlProfile::dont_care;
-            break;
-          default:
-            Fail();
-        }
-
-        switch (*(txt++))
-        {
-          case '_':
-            gl_acc = GlAccMode::dont_care;
-            break;
-          case 'H':
-            gl_acc = GlAccMode::hard;
-            break;
-          case 'S':
-            gl_acc = GlAccMode::soft;
-            break;
-          default:
-            Fail();
-        }
-
-        gl_msaa = 0;
-        if (!IsDigit())
-            Fail();
-        do
-        {
-            gl_msaa = gl_msaa * 10 + GetDigit();
-            txt++;
-        }
-        while (IsDigit());
-
-        if (gl_msaa != 1 && gl_msaa != 2 && gl_msaa != 4 && gl_msaa != 8 && gl_msaa != 16)
-            Fail();
-
-        switch (*(txt++))
-        {
-          case '_':
-            gl_compat = GlCompatMode::dont_care;
-            break;
-          case 'F':
-            gl_compat = GlCompatMode::frw_compat;
-            break;
-          default:
-            Fail();
-        }
-
-        if (!IsDigit())
-            Fail();
-        gl_bits.r = GetDigit();
-        txt++;
-        if (!IsDigit())
-            Fail();
-        gl_bits.g = GetDigit();
-        txt++;
-        if (!IsDigit())
-            Fail();
-        gl_bits.b = GetDigit();
-        txt++;
-        if (!IsDigit())
-            Fail();
-        gl_bits.a = GetDigit();
-        txt++;
-        switch (*(txt++))
-        {
-          case '_':
-            gl_vsync = -2;
-            break;
-          case '-':
-            gl_vsync = 0;
-            break;
-          case '+':
-            gl_vsync = 1;
-            break;
-          case '*':
-            gl_vsync = -1;
-            break;
-          default:
-            Fail();
-        }
-
-        if (*txt)
-            Fail();
-    }*/
 
     void Initialize()
     {
@@ -326,6 +162,61 @@ namespace Window
             Init::maximize = Sys::Args::Values::maximized();
         if (Sys::Args::fullscreen())
             Init::fullscreen = Sys::Args::Values::fullscreen();
+        if (Sys::Args::color_bits())
+        {
+            Init::OpenGL::color_bits = Sys::Args::Values::color_bits();
+            if (!(Init::OpenGL::color_bits >= 0))
+                Sys::Error("Bad amount of bits per color specified with a command line argument.");
+        }
+        if (Sys::Args::depth_bits())
+        {
+            Init::OpenGL::depth_bits = Sys::Args::Values::depth_bits();
+            if (Init::OpenGL::depth_bits < 0)
+                Sys::Error("Bad amount of depth bits specified with a command line argument.");
+        }
+        if (Sys::Args::stencil_bits())
+        {
+            Init::OpenGL::stencil_bits = Sys::Args::Values::stencil_bits();
+            if (Init::OpenGL::stencil_bits < 0)
+                Sys::Error("Bad amount of stencil bits specified with a command line argument.");
+        }
+        if (Sys::Args::opengl_profile())
+        {
+            if (Sys::Args::Values::opengl_profile() == "core")
+                Init::OpenGL::profile = ContextProfile::core;
+            else if (Sys::Args::Values::opengl_profile() == "compat")
+                Init::OpenGL::profile = ContextProfile::compatibility;
+            else if (Sys::Args::Values::opengl_profile() == "es")
+                Init::OpenGL::profile = ContextProfile::embedded;
+            else
+                Sys::Error("OpenGL profile specified with a command line argument must be one of: core, compat, es.");
+        }
+        if (Sys::Args::swap_mode())
+        {
+            if (Sys::Args::Values::swap_mode() == "no_vsync")
+                Init::OpenGL::swap = ContextSwapMode::no_vsync;
+            else if (Sys::Args::Values::swap_mode() == "vsync")
+                Init::OpenGL::swap = ContextSwapMode::vsync;
+            else if (Sys::Args::Values::swap_mode() == "late_swap_tearing")
+                Init::OpenGL::swap = ContextSwapMode::late_swap_tearing;
+            else
+                Sys::Error("Swap mode specified with a command line argument must be one of: vsync, no_vsync, late_swap_tearing.");
+        }
+        if (Sys::Args::opengl_frw_compat())
+        {
+            Init::OpenGL::compatibility = (Sys::Args::Values::opengl_frw_compat() ? ContextCompatibility::forward : ContextCompatibility::dont_care);
+        }
+        if (Sys::Args::opengl_acceleration())
+        {
+            if (Sys::Args::Values::opengl_acceleration() == "hardware")
+                Init::OpenGL::acceleration = ContextAcceleration::hard;
+            else if (Sys::Args::Values::opengl_acceleration() == "software")
+                Init::OpenGL::acceleration = ContextAcceleration::soft;
+            else if (Sys::Args::Values::opengl_acceleration() == "dont_care")
+                Init::OpenGL::acceleration = ContextAcceleration::dont_care;
+            else
+                Sys::Error("Acceleration mode specified with a command line argument must be one of: hardware, software, dont_care.");
+        }
 
         int flags = SDL_WINDOW_OPENGL;
         if (Init::resizable)
@@ -378,6 +269,8 @@ namespace Window
         if (Init::OpenGL::color_bits.g) SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, Init::OpenGL::color_bits.g);
         if (Init::OpenGL::color_bits.b) SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  Init::OpenGL::color_bits.b);
         if (Init::OpenGL::color_bits.a) SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, Init::OpenGL::color_bits.a);
+        if (Init::OpenGL::depth_bits) SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, Init::OpenGL::depth_bits);
+        if (Init::OpenGL::stencil_bits) SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, Init::OpenGL::stencil_bits);
 
         int display;
         if (Sys::Args::display_num())
@@ -435,6 +328,18 @@ namespace Window
             else
                 color_bits = "";
 
+            const char *depth;
+            if (Init::OpenGL::depth_bits)
+                depth = Jo(" with ", Init::OpenGL::depth_bits, " depth bits");
+            else
+                depth = "";
+
+            const char *stencil;
+            if (Init::OpenGL::stencil_bits)
+                stencil = Jo(" with ", Init::OpenGL::stencil_bits, " stencil bits");
+            else
+                stencil = "";
+
             const char *sync;
             switch (Init::OpenGL::swap)
             {
@@ -447,7 +352,7 @@ namespace Window
 
             Sys::Error(Jo(base_txt, " Probably your system, video card or video driver does not support required the OpenGL version or settings.\n"
                           "Following settings were used:\n"
-                          "OpenGL ", Init::OpenGL::major, '.', Init::OpenGL::minor, profile, acc, forward, msaa, color_bits, sync, ".\n"
+                          "OpenGL ", Init::OpenGL::major, '.', Init::OpenGL::minor, profile, acc, forward, msaa, color_bits, depth, stencil, sync, ".\n"
                           "Error message: `", Utils::FixEdges(SDL_GetError()), "`.\n"
                           "Update your video drivers or mess with GL setting using command line arguments. (Use `--help` to get a list of them.)\n"
                           "If you're using a laptop or have multiple videocards, go to your video driver settings and force it to use best available video card.\n"

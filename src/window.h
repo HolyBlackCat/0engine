@@ -50,6 +50,8 @@ namespace Window
             void Compatibility(ContextCompatibility c);
             void ColorBits(ivec4 bits);
             void Vsync(ContextSwapMode s);
+            void DepthBits(int bits);
+            void StencilBits(int bits);
         }
     }
 
