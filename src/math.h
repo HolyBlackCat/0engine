@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 1.6.1 by HolyBlackCat
+// Version 1.7.1 by HolyBlackCat
 
 #include <functional>
 #include <cmath>
@@ -664,6 +664,13 @@ namespace Math
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0};}
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x2();}
+            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max)
+            {
+                static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
+                return {2 / (max.x - min.x), 0,
+                        0, 2 / (max.y - min.y),
+                        (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y)};
+            }
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x2();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat3x2();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
@@ -727,6 +734,7 @@ namespace Math
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0, 0, 0};}
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x2();}
+            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x2();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x2();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x2();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
@@ -842,6 +850,7 @@ namespace Math
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1};}
             static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x3();}
+            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat3x3();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x3();}
             static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle)
             {
@@ -952,6 +961,7 @@ namespace Math
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1, 0, 0, 0};}
             static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z, 0, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x3();}
+            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x3();}
             static constexpr vec ortho(const vec2<type> &sz, type near, type far)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
@@ -959,6 +969,14 @@ namespace Math
                         0, 2 / sz.y, 0,
                         0, 0, 2 / (near - far),
                         0, 0, (near + far) / (near - far)};
+            }
+            static constexpr vec ortho(const vec2<type> &min, const vec2<type> &max, type near, type far)
+            {
+                static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
+                return {2 / (max.x - min.x), 0, 0,
+                        0, 2 / (max.y - min.y), 0,
+                        0, 0, 2 / (near - far),
+                        (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y), (near + far) / (near - far)};
             }
             static constexpr vec look_at(const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up)
             {
@@ -1096,6 +1114,7 @@ namespace Math
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0};}
             static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x4();}
+            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat3x4();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x4();}
             static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat3x4();}
             static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat3x4();}
@@ -1164,7 +1183,9 @@ namespace Math
             static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, 1};}
             static constexpr vec dia(const vec4<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, v.w};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x4();}
+            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x4();}
             static constexpr vec ortho(const vec2<type> &sz, type near, type far) {return mat4x3<type>::ortho(sz, near, far).to_mat4x4();}
+            static constexpr vec ortho(const vec2<type> &min, const vec2<type> &max, type near, type far) {return mat4x3<type>::ortho(min, max, near, far).to_mat4x4();}
             static constexpr vec look_at(const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up) {return mat4x3<type>::look_at(src, dst, local_up).to_mat4x4();}
             static constexpr vec translate(const vec3<type> &in) {return mat4x3<type>::translate(in).to_mat4x4();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x4();}
@@ -1928,26 +1949,26 @@ namespace Math
             static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
             return 3*x*x-2*x*x*x;
         }
-    }
 
-    template <typename T, typename TT> constexpr T true_div(T a, TT b)
-    {
-        static_assert(std::is_integral<T>::value &&
-                      std::is_integral<TT>::value, "Argument types must be integral.");
-        if (a >= 0)
-            return a / b;
-        else
-            return (a + 1) / b - (b >= 0 ? 1 : -1);
-    }
+        template <typename T, typename TT> constexpr T true_div(T a, TT b)
+        {
+            static_assert(std::is_integral<T>::value &&
+                          std::is_integral<TT>::value, "Argument types must be integral.");
+            if (a >= 0)
+                return a / b;
+            else
+                return (a + 1) / b - (b >= 0 ? 1 : -1);
+        }
 
-    template <typename T, typename TT> constexpr T true_mod(T a, TT b)
-    {
-        static_assert(std::is_integral<T>::value &&
-                      std::is_integral<TT>::value, "Argument types must be integral.");
-        if (a >= 0)
-            return a % b;
-        else
-            return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
+        template <typename T, typename TT> constexpr T true_mod(T a, TT b)
+        {
+            static_assert(std::is_integral<T>::value &&
+                          std::is_integral<TT>::value, "Argument types must be integral.");
+            if (a >= 0)
+                return a % b;
+            else
+                return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
+        }
     }
 }
 

@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "1.6.1"
+#define VERSION "1.7.1"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -687,11 +687,22 @@ return inv * det;
 return {2 / sz.x, 0,
 $       0, 2 / sz.y};
 )");
+                        MatrixPseudoCtorCascade(3, 2, "ortho2D", "const vec2<type> &min, const vec2<type> &max", "min, max", R"(
+return {2 / (max.x - min.x), 0,
+$       0, 2 / (max.y - min.y),
+$       (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y)};
+)");
                         MatrixPseudoCtorCascade(4, 3, "ortho", "const vec2<type> &sz, type near, type far", "sz, near, far", R"(
 return {2 / sz.x, 0, 0,
 $       0, 2 / sz.y, 0,
 $       0, 0, 2 / (near - far),
 $       0, 0, (near + far) / (near - far)};
+)");
+                        MatrixPseudoCtorCascade(4, 3, "ortho", "const vec2<type> &min, const vec2<type> &max, type near, type far", "min, max, near, far", R"(
+return {2 / (max.x - min.x), 0, 0,
+$       0, 2 / (max.y - min.y), 0,
+$       0, 0, 2 / (near - far),
+$       (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y), (near + far) / (near - far)};
 )");
                         MatrixPseudoCtorCascade(4, 3, "look_at", "const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up", "src, dst, local_up", R"(
 vec3<T> v3 = (src-dst).norm();
@@ -1226,7 +1237,6 @@ template <typename T> constexpr T smoothstep(T x)
 static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
 return 3*x*x-2*x*x*x;
 }
-}
 
 template <typename T, typename TT> constexpr T true_div(T a, TT b)
 {
@@ -1246,6 +1256,7 @@ if (a >= 0)
     return a % b;
 else
     return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
+}
 }
 )";
     }
