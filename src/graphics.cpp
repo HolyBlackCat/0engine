@@ -497,8 +497,8 @@ namespace Graphics
             Exceptions::Graphics::ShaderCompilationError(name,
                                                                    (vstat == GL_TRUE ? "OK" : "NOT OK"),
                                                                    (fstat == GL_TRUE ? "OK" : "NOT OK"),
-                                                                   ('\n'+FixEdges(vlog_str.c_str())),
-                                                                   ('\n'+FixEdges(flog_str.c_str())));
+                                                                   ('\n'+(std::string)FixEdges(vlog_str.c_str())).c_str(),
+                                                                   ('\n'+(std::string)FixEdges(flog_str.c_str())).c_str());
         }
 
         int loc = 0;

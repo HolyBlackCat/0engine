@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 1.7.1 by HolyBlackCat
+// Version 1.8.1 by HolyBlackCat
 
 #include <functional>
 #include <cmath>
@@ -438,6 +438,7 @@ namespace Math
             constexpr auto len_sqr() const {return x*x + y*y;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec2<TT> &o) const {return x*o.x + y*o.y;}
+            template <typename TT> constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}
             constexpr decltype(std::sqrt(x/y)) ratio() const {return decltype(std::sqrt(x/y))(x) / decltype(std::sqrt(x/y))(y);}
             constexpr auto norm() const -> vec2<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
             constexpr bool none() const {return !(x || y);}
@@ -1919,8 +1920,7 @@ namespace Math
 
         template <typename T, typename TT> constexpr T ipow(T a, TT b)
         {
-            static_assert(std::is_integral<T>::value &&
-                          std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
+            static_assert(std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
             T ret = 1;
             while (b--)
             {

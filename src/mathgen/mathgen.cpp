@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "1.7.1"
+#define VERSION "1.8.1"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -554,8 +554,15 @@ return inv * det;
                     l ";}\n";
 
                     // Cross
-                    if (sz == 3)
+                    switch (sz)
+                    {
+                      case 3:
                         l "template <typename TT> constexpr auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};}\n";
+                        break;
+                      case 2: // Pseudo cross product. Returns z only.
+                        l "template <typename TT> constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}\n";
+                        break;
+                    }
                 }
                 if (sz == 2) // Ratio
                     l "constexpr decltype(std::sqrt(x/y)) ratio() const {return decltype(std::sqrt(x/y))(x) / decltype(std::sqrt(x/y))(y);}\n"; // std:sqrt is for determining best suitable floating-point type.
@@ -1207,8 +1214,7 @@ return in * (T)180 / pi<T>();
 
 template <typename T, typename TT> constexpr T ipow(T a, TT b)
 {
-static_assert(std::is_integral<T>::value &&
-              std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
+static_assert(std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
 T ret = 1;
 while (b--)
 {

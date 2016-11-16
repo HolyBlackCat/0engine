@@ -20,7 +20,7 @@ void Boot()
     while (1)
     {
         Sys::BeginFrame();
-        Sys::StartTick();
+        Sys::Tick();
         constexpr int period = 200;
         float f = std::cos(Sys::FrameCounter() % period / float(period) * pi<float>() * 2) * 0.5 + 0.5;
         glClearColor(0, f/2, f, 1);

@@ -119,7 +119,7 @@ namespace Sys
 
     void BeginFrame();
     void EndFrame();
-    void StartTick();
+    void Tick();
 }
 
 #endif

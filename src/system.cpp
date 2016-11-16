@@ -664,9 +664,12 @@ namespace Sys
         frame_counter++;
     }
 
-    void StartTick()
+    void Tick()
     {
         MarkLocation("Tick");
+
+        tick_delta_ticks = Utils::Clock::Time() - tick_start_time;
+        tick_delta_secs = Utils::Clock::TicksToSecs(tick_delta_ticks);
 
         tick_start_time = Utils::Clock::Time();
 

@@ -184,38 +184,38 @@ namespace Graphics
         }
     }
 
-    inline namespace TypePackDefinition
+    inline namespace VertexFormatDefinition
     {
-        template <typename F, typename ...P> struct TypePack;
+        template <typename F, typename ...P> struct VertexFormat;
 
         namespace InternalPackTemplates
         {
             template <unsigned int N, typename F, typename ...P> struct At
             {
-                static auto &func(TypePack<F, P...> *th) {return At<N-1, P...>::func(&th->next);}
+                static auto &func(VertexFormat<F, P...> *th) {return At<N-1, P...>::func(&th->next);}
             };
             template <typename F, typename ...P> struct At<0, F, P...>
             {
-                static auto &func(TypePack<F, P...> *th) {return th->first;}
+                static auto &func(VertexFormat<F, P...> *th) {return th->first;}
             };
         }
 
-        template <typename F, typename ...P> struct TypePack
+        template <typename F, typename ...P> struct VertexFormat
         {
             static constexpr unsigned int size = sizeof...(P)+1;
             F first;
-            TypePack<P...> next;
-            TypePack() {}
-            TypePack(const F &f, const P &... p) : first(f), next(p...) {}
+            VertexFormat<P...> next;
+            VertexFormat() {}
+            VertexFormat(const F &f, const P &... p) : first(f), next(p...) {}
             template <unsigned int N> using TypeAt = typename Utils::TypeAt<N, F, P...>::type;
             template <unsigned int N> auto &At() {return InternalPackTemplates::At<N, F, P...>::func(this);}
         };
-        template <typename F> struct TypePack<F>
+        template <typename F> struct VertexFormat<F>
         {
             static constexpr unsigned int size = 1;
             F first;
-            TypePack() {}
-            TypePack(const F &f) : first(f) {}
+            VertexFormat() {}
+            VertexFormat(const F &f) : first(f) {}
             template <unsigned int N> using TypeAt = typename Utils::TypeAt<N, F>::type;
             template <unsigned int N> auto &At() {return InternalPackTemplates::At<N, F>::func(this);}
         };
@@ -243,20 +243,20 @@ namespace Graphics
                 {
                     static void func() {}
                 };
-                template <unsigned int SIZE, unsigned int POS, unsigned int BYTEPOS, typename F, typename ...P> struct SetAttribs<SIZE, POS, BYTEPOS, TypePack<F, P...>>
+                template <unsigned int SIZE, unsigned int POS, unsigned int BYTEPOS, typename F, typename ...P> struct SetAttribs<SIZE, POS, BYTEPOS, VertexFormat<F, P...>>
                 {
                     static void func()
                     {
-                        SetAttribPointer<typename BaseTypeOf<typename TypePack<F, P...>::template TypeAt<0>>::type>(POS, DimOf<F>::value, SIZE, (void *)BYTEPOS);
-                        using pack = TypePack<F, P...>;
-                        SetAttribs<SIZE, POS+1, BYTEPOS + offsetof(pack, next), TypePack<P...>>::func();
+                        SetAttribPointer<typename BaseTypeOf<typename VertexFormat<F, P...>::template TypeAt<0>>::type>(POS, DimOf<F>::value, SIZE, (void *)BYTEPOS);
+                        using pack = VertexFormat<F, P...>;
+                        SetAttribs<SIZE, POS+1, BYTEPOS + offsetof(pack, next), VertexFormat<P...>>::func();
                     }
                 };
-                template <unsigned int SIZE, unsigned int POS, unsigned int BYTEPOS, typename F> struct SetAttribs<SIZE, POS, BYTEPOS, TypePack<F>>
+                template <unsigned int SIZE, unsigned int POS, unsigned int BYTEPOS, typename F> struct SetAttribs<SIZE, POS, BYTEPOS, VertexFormat<F>>
                 {
                     static void func()
                     {
-                        SetAttribPointer<typename BaseTypeOf<typename TypePack<F>::template TypeAt<0>>::type>(POS, DimOf<F>::value, SIZE, (void *)BYTEPOS);
+                        SetAttribPointer<typename BaseTypeOf<typename VertexFormat<F>::template TypeAt<0>>::type>(POS, DimOf<F>::value, SIZE, (void *)BYTEPOS);
                     }
                 };
             }
@@ -374,7 +374,7 @@ namespace Graphics
         void NewData(ArrayView<T> src, StorageType acc = StorageType::draw_static) // (`src` may be null) Auto binds VBO
         {
             BindStorage();
-            glBufferData(GL_ARRAY_BUFFER, src.Size() * sizeof (T), src.Data(), (GLenum)acc);
+            glBufferData(GL_ARRAY_BUFFER, src.size() * sizeof (T), src.data(), (GLenum)acc);
         }
         WarningForMobile("This does not work on mobile platforms.")
         void Get(ArrayProxy<T> dst, unsigned int src_pos) const // Auto binds VBO
@@ -382,13 +382,13 @@ namespace Graphics
             BindStorage();
             ForPC
             (
-            glGetBufferSubData(GL_ARRAY_BUFFER, src_pos * sizeof (T), dst.Size() * sizeof (T), dst.Data());
+            glGetBufferSubData(GL_ARRAY_BUFFER, src_pos * sizeof (T), dst.size() * sizeof (T), dst.data());
             )
         }
         void Set(ArrayView<T> src, unsigned int dst_pos) // Auto binds VBO
         {
             BindStorage();
-            glBufferSubData(GL_ARRAY_BUFFER, dst_pos * sizeof (T), src.Size() * sizeof (T), src.Data());
+            glBufferSubData(GL_ARRAY_BUFFER, dst_pos * sizeof (T), src.size() * sizeof (T), src.data());
         }
 
         void NewDataBytes(ArrayView<uint8_t> src, StorageType acc = StorageType::draw_static) // (`src` may be null) Auto binds VBO
@@ -437,12 +437,12 @@ namespace Graphics
         }
         SizedVertexArray(ArrayView<T> src, StorageType acc = StorageType::draw_static) : VertexArray<T>(src, acc) // (`data` may be null) Binds VBO after construction.
         {
-            size = src.Size();
+            size = src.size();
         }
 
         void NewData(ArrayView<T> src, StorageType acc = StorageType::draw_static)
         {
-            size = src.Size();
+            size = src.size();
             VertexArray<T>::NewData(src, acc);
         }
         void NewDataBytes(ArrayView<uint8_t> src, StorageType acc = StorageType::draw_static) = delete;
@@ -452,6 +452,7 @@ namespace Graphics
         void DrawPoints   () const {DrawPoints   (size);} // Auto binds VBO
         void DrawLines    () const {DrawLines    (size);} // Auto binds VBO
         void DrawTriangles() const {DrawTriangles(size);} // Auto binds VBO
+        unsigned int Vertices() const {return size;}
     };
 
 
@@ -710,6 +711,7 @@ namespace Graphics
 
         struct Glyph
         {
+            bool exists;
             ivec2 pos, size;
             ivec2 offset;
             int advance;
@@ -742,24 +744,37 @@ namespace Graphics
                 for (int i = 0; i < sub_buffer_size; i++)
                     glyph_map[sub_buffer][i] = Glyph{};
             }
-            glyph_map[sub_buffer][glyph % sub_buffer_size] = {pos, size, offset, advance};
+            glyph_map[sub_buffer][glyph % sub_buffer_size] = {1, pos, size, offset, advance};
         }
       public:
-
+        bool HasGlyph(uint16_t glyph) const
+        {
+            if (glyph_map[glyph / sub_buffer_size] == 0)
+                return 0;
+            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].exists;
+        }
         ivec2 Pos(uint16_t glyph) const
         {
+            if (glyph_map[glyph / sub_buffer_size] == 0)
+                return {0,0};
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].pos;
         }
         ivec2 Size(uint16_t glyph) const
         {
+            if (glyph_map[glyph / sub_buffer_size] == 0)
+                return {0,0};
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].size;
         }
         ivec2 Offset(uint16_t glyph) const
         {
+            if (glyph_map[glyph / sub_buffer_size] == 0)
+                return {0,0};
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].offset;
         }
         int Advance(uint16_t glyph) const // Horisontal offset to the next glyph.
         {
+            if (glyph_map[glyph / sub_buffer_size] == 0)
+                return 0;
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].advance;
         }
         int Kerning(uint16_t a, uint16_t b) const; // This function relies on the original Font object which created the current instance. It must be alive and opened.
@@ -1407,6 +1422,10 @@ namespace Graphics
             return prog;
         }
 
+        bool Enabled() const
+        {
+            return binding == prog;
+        }
         void Use() const
         {
             if (prog == binding)
