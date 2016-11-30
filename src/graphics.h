@@ -152,7 +152,7 @@ namespace Graphics
         template <typename T> struct type2glconst;
         template <> struct type2glconst<unsigned char>  {static constexpr GLenum value = GL_UNSIGNED_BYTE;};
         template <> struct type2glconst<signed char>    {static constexpr GLenum value = GL_BYTE;};
-        template <> struct type2glconst<char>           {static constexpr GLenum value = Utils::SysInfo::char_signed ? GL_BYTE : GL_UNSIGNED_BYTE;};
+        template <> struct type2glconst<char>           {static constexpr GLenum value = Utils::SysInfo::char_is_signed ? GL_BYTE : GL_UNSIGNED_BYTE;};
         template <> struct type2glconst<unsigned short> {static constexpr GLenum value = GL_UNSIGNED_SHORT;};
         template <> struct type2glconst<signed short>   {static constexpr GLenum value = GL_SHORT;};
         template <> struct type2glconst<unsigned int>   {static constexpr GLenum value = GL_UNSIGNED_INT;};

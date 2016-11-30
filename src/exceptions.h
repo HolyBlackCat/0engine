@@ -28,10 +28,13 @@ namespace Exceptions
                         if (!at_separator)
                         {
                             *names = '\0';
-                            description += "\n - ";
-                            description += current_name;
-                            description += ": ";
-                            description += **current_field;
+                            if ((**current_field)[0])
+                            {
+                                description += "\n - ";
+                                description += current_name;
+                                description += ": ";
+                                description += **current_field;
+                            }
                             current_field++;
                             at_separator = 1;
                         }
@@ -120,6 +123,12 @@ namespace Exceptions
         NEW_EXCEPTION(FontAtlasOverflow, "Not enough space in a font atlas to store all requested glyphs.", 2, font, atlas_size)
         NEW_EXCEPTION(ShaderCompilationError, "Shader compilation error.", 5, shader_name, vertex_shader_status, fragment_shader_status, vertex_shader_log, fragment_shader_log)
         NEW_EXCEPTION(ShaderLinkingError, "Shader linking error.", 2, shader_name, log)
+    }
+    EXCEPTION_CATEGORY(Network)
+    {
+        NEW_EXCEPTION(CantConnect, "Can't connect to a remote host.", 1, address)
+        NEW_EXCEPTION(CantResolve, "Can't resolve a host name.", 1, address)
+        NEW_EXCEPTION(CantCreateServer, "Can't create a server.", 1, port)
     }
 }
 

@@ -233,7 +233,7 @@ namespace Utils
 
     inline namespace SysInfo
     {
-        static constexpr bool char_signed = char(-1) < 0;
+        static constexpr bool char_is_signed = char(-1) < 0;
         static constexpr bool big_endian = SDL_BYTEORDER == SDL_BIG_ENDIAN;
     }
 
