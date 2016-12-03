@@ -118,7 +118,7 @@ namespace Exceptions
     }
     EXCEPTION_CATEGORY(Graphics)
     {
-        NEW_EXCEPTION(RenderingQueueOverflow, "Rendering queue overflow.", 1, queue_length)
+        NEW_EXCEPTION(RenderArrayOverflow, "Render array overflow.", 1, queue_length)
         NEW_EXCEPTION(BadCubeMapImage, "Attempt to use incorrectly sized image as a cubemap side.", 1, size)
         NEW_EXCEPTION(FontAtlasOverflow, "Not enough space in a font atlas to store all requested glyphs.", 2, font, atlas_size)
         NEW_EXCEPTION(ShaderCompilationError, "Shader compilation error.", 5, shader_name, vertex_shader_status, fragment_shader_status, vertex_shader_log, fragment_shader_log)

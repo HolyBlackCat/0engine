@@ -293,6 +293,17 @@ namespace Graphics
         static bool vbo_attribs_configured;
     };
 
+    enum RenderMode : GLenum
+    {
+        points     = GL_POINTS,
+        lines      = GL_LINES,
+        line_strip = GL_LINE_STRIP,
+        line_loop  = GL_LINE_LOOP,
+        triangles  = GL_TRIANGLES,
+        triangle_strip = GL_TRIANGLE_STRIP,
+        triangle_fan   = GL_TRIANGLE_FAN,
+    };
+
     template <typename T>
     class VertexArray
     {
@@ -411,13 +422,8 @@ namespace Graphics
             glBufferSubData(GL_ARRAY_BUFFER, dst_pos, src.size(), src.data());
         }
 
-        void DrawPoints   (unsigned int pos, unsigned int count) const {Bind(); glDrawArrays(GL_POINTS   , pos, count);} // Auto binds VBO
-        void DrawLines    (unsigned int pos, unsigned int count) const {Bind(); glDrawArrays(GL_LINES    , pos, count);} // Auto binds VBO
-        void DrawTriangles(unsigned int pos, unsigned int count) const {Bind(); glDrawArrays(GL_TRIANGLES, pos, count);} // Auto binds VBO
-
-        void DrawPoints   (unsigned int count) const {DrawPoints   (0, count);} // Auto binds VBO
-        void DrawLines    (unsigned int count) const {DrawLines    (0, count);} // Auto binds VBO
-        void DrawTriangles(unsigned int count) const {DrawTriangles(0, count);} // Auto binds VBO
+        void Draw(unsigned int pos, unsigned int count, RenderMode m = RenderMode::triangles) const {Bind(); glDrawArrays((GLenum)m, pos, count);} // Auto binds VBO
+        void Draw(                  unsigned int count, RenderMode m = RenderMode::triangles) const {Bind(); glDrawArrays((GLenum)m,   0, count);} // Auto binds VBO
     };
 
     template <typename T>
@@ -446,18 +452,16 @@ namespace Graphics
             VertexArray<T>::NewData(src, acc);
         }
         void NewDataBytes(ArrayView<uint8_t> src, StorageType acc = StorageType::draw_static) = delete;
-        using VertexArray<T>::DrawPoints;
-        using VertexArray<T>::DrawLines;
-        using VertexArray<T>::DrawTriangles;
-        void DrawPoints   () const {DrawPoints   (size);} // Auto binds VBO
-        void DrawLines    () const {DrawLines    (size);} // Auto binds VBO
-        void DrawTriangles() const {DrawTriangles(size);} // Auto binds VBO
+
+        using VertexArray<T>::Draw; // Auto binds VBO
+        void Draw(RenderMode m = RenderMode::triangles) const {Draw(size, m);} // Auto binds VBO
+
         unsigned int Vertices() const {return size;}
     };
 
 
     template <typename L>
-    class RenderQueue
+    class RenderArray
     {
         VertexArray<L> vao;
         uint32_t size;
@@ -465,20 +469,20 @@ namespace Graphics
         Utils::Array<L> arr;
 
       public:
-        RenderQueue(uint32_t l, StorageType acc = StorageType::draw_dynamic) : vao({(const uint8_t *)0, sizeof (L) * l}, acc) // Name MUST remain valid whlie a queue exists, you should use a string literal for that.
+        RenderArray(uint32_t l, StorageType acc = StorageType::draw_dynamic) : vao({(const uint8_t *)0, sizeof (L) * l}, acc)
         {
             if (l == 0)
-                Sys::Error("Invalid rendering queue size.");
+                Sys::Error("Invalid rendering array size.");
             size = l;
             pos = 0;
             arr.Alloc(l);
         }
-        RenderQueue(const RenderQueue &) = delete;
-        RenderQueue(RenderQueue &&) = delete;
-        RenderQueue &operator=(const RenderQueue &) = delete;
-        RenderQueue &operator=(RenderQueue &&) = delete;
+        RenderArray(const RenderArray &) = delete;
+        RenderArray(RenderArray &&) = delete;
+        RenderArray &operator=(const RenderArray &) = delete;
+        RenderArray &operator=(RenderArray &&) = delete;
 
-        ~RenderQueue() {}
+        ~RenderArray() {}
 
         uint32_t MaxSize() const
         {
@@ -489,18 +493,12 @@ namespace Graphics
             return pos;
         }
 
-        std::size_t ByteSize() const
-        {
-            return arr.ByteSize();
-        }
-
         void ChangeSize(uint32_t l, StorageType acc = StorageType::draw_dynamic)
         {
             if (l == 0)
-                Sys::Error("Invalid rendering queue size.");
+                Sys::Error("Invalid rendering array size.");
             size = l;
             pos = 0;
-            delete [] arr;
             arr.Alloc(l);
             vao.~VertexArray();
             new(&vao) VertexArray<L>(0, sizeof (L) * l, acc);
@@ -509,47 +507,39 @@ namespace Graphics
         L *Add(uint32_t amount)
         {
             if (pos + amount > size)
-                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
+                Exceptions::Graphics::RenderArrayOverflow(Jo(size));
             L *ret = arr + pos;
             pos += amount;
             return ret;
         }
 
-        void Push1(const L &x)
+        void Push1(const L &a)
         {
-            if (pos >= size)
-                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
-            arr[pos    ] = x;
-            pos += 1;
+            L *dst = Add(1);
+            dst[0] = a;
         }
-        void Push2(const L &x, const L &y)
+        void Push2(const L &a, const L &b)
         {
-            if (pos + 1 >= size)
-                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
-            arr[pos    ] = x;
-            arr[pos + 1] = y;
-            pos += 2;
+            L *dst = Add(2);
+            dst[0] = a;
+            dst[1] = b;
         }
-        void Push3(const L &x, const L &y, const L &z)
+        void Push3(const L &a, const L &b, const L &c)
         {
-            if (pos + 2 >= size)
-                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
-            arr[pos    ] = x;
-            arr[pos + 1] = y;
-            arr[pos + 2] = z;
-            pos += 3;
+            L *dst = Add(3);
+            dst[0] = a;
+            dst[1] = b;
+            dst[2] = c;
         }
-        void Push4as3x2(const L &x, const L &y, const L &z, const L &w) // a b d  b c d
+        void Push4as3x2(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
         {
-            if (pos + 5 >= size)
-                Exceptions::Graphics::RenderingQueueOverflow(Jo(size));
-            arr[pos    ] = x;
-            arr[pos + 1] = y;
-            arr[pos + 2] = w;
-            arr[pos + 3] = y;
-            arr[pos + 4] = z;
-            arr[pos + 5] = w;
-            pos += 6;
+            L *dst = Add(6);
+            dst[0] = a;
+            dst[1] = b;
+            dst[2] = d;
+            dst[3] = b;
+            dst[4] = c;
+            dst[5] = d;
         }
 
         operator const L *() const
@@ -566,17 +556,84 @@ namespace Graphics
             pos = 0;
         }
 
-        void DrawPoints() const
+        void Draw(RenderMode m = RenderMode::triangles) const
         {
-            vao.DrawPoints(0, pos);
+            vao.Draw(pos, m);
         }
-        void DrawLines() const
+    };
+
+    template <typename L, int Dim>
+    class RenderQueue : RenderArray<L>
+    {
+        static_assert(Dim >= 1 && Dim <= 3, "RenderQueue dim is invalid.");
+      public:
+        RenderQueue(const RenderQueue &) = delete;
+        RenderQueue(RenderQueue &&) = delete;
+        RenderQueue &operator=(const RenderQueue &) = delete;
+        RenderQueue &operator=(RenderQueue &&) = delete;
+
+        RenderQueue(uint32_t l, StorageType acc = StorageType::draw_dynamic) : RenderArray<L>(l * Dim, acc) {}
+
+        using RenderArray<L>::MaxSize;
+        using RenderArray<L>::CurrentSize;
+        using RenderArray<L>::ChangeSize;
+        using RenderArray<L>::Clear;
+
+        void Clear()
         {
-            vao.DrawLines(0, pos);
+            RenderArray<L>::pos = 0;
         }
-        void DrawTriangles() const
+        void Flush() // Draws and clears the queue.
         {
-            vao.DrawTriangles(0, pos);
+            switch (Dim)
+            {
+                case 1: Draw(RenderArray<L>::pos, points   ); break;
+                case 2: Draw(RenderArray<L>::pos, lines    ); break;
+                case 3: Draw(RenderArray<L>::pos, triangles); break;
+            }
+            RenderArray<L>::pos = 0;
+        }
+
+        L *Add(uint32_t primitives)
+        {
+            if (RenderArray<L>::pos + primitives * Dim > RenderArray<L>::size)
+            {
+                if (primitives * Dim > RenderArray<L>::size)
+                    Exceptions::Graphics::RenderArrayOverflow(Jo(RenderArray<L>::size));
+                Flush();
+            }
+            L *ret = RenderArray<L>::arr + RenderArray<L>::pos;
+            RenderArray<L>::pos += primitives * Dim;
+            return ret;
+        }
+
+        std::enable_if_t<Dim == 1, void> Insert(const L &a)
+        {
+            L *dst = Add(1);
+            dst[0] = a;
+        }
+        std::enable_if_t<Dim == 2, void> Insert(const L &a, const L &b)
+        {
+            L *dst = Add(2);
+            dst[0] = a;
+            dst[1] = b;
+        }
+        std::enable_if_t<Dim == 3, void> Insert(const L &a, const L &b, const L &c)
+        {
+            L *dst = Add(3);
+            dst[0] = a;
+            dst[1] = b;
+            dst[2] = c;
+        }
+        std::enable_if_t<Dim == 3, void> Insert(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
+        {
+            L *dst = Add(6);
+            dst[0] = a;
+            dst[1] = b;
+            dst[2] = d;
+            dst[3] = b;
+            dst[4] = c;
+            dst[5] = d;
         }
     };
 
@@ -1178,7 +1235,7 @@ namespace Graphics
     }
 
 
-    enum class WrapMode
+    enum WrapMode
     {
         clamp  = GL_CLAMP_TO_EDGE,
         mirror = GL_MIRRORED_REPEAT,

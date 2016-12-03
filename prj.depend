@@ -35,7 +35,7 @@
 	<X11/Xmd.h>
 	<GL/glew.h>
 
-1474490763 source:z:\projects\c++\lx\src\system.cpp
+1480542811 source:z:\projects\c++\lx\src\system.cpp
 	<csignal>
 	<cstdlib>
 	<cstring>
@@ -407,7 +407,7 @@
 	"math.h"
 	"os.h"
 
-1474665397 z:\projects\c++\lx\src\utils.h
+1480627630 z:\projects\c++\lx\src\utils.h
 	<array>
 	<cstddef>
 	<cstdint>
@@ -437,10 +437,10 @@
 1445788523 source:z:\projects\c++\lx\src\math.cpp
 	"math.h"
 
-1472942334 source:z:\projects\c++\lx\src\utils.cpp
+1474665397 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1474199431 source:z:\projects\c++\lx\src\logic.cpp
+1480801309 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
 
 1465479696 z:\projects\c++\lx\src\logic.h
@@ -462,7 +462,7 @@
 	"utils.h"
 	"window.h"
 
-1474491145 source:z:\projects\c++\lx\src\window.cpp
+1474665397 source:z:\projects\c++\lx\src\window.cpp
 	"window.h"
 	"lib_gl.h"
 	"input.h"
@@ -504,7 +504,7 @@
 	"lib_zlib.h"
 	"window.h"
 
-1475958649 z:\projects\c++\lx\src\graphics.h
+1480806155 z:\projects\c++\lx\src\graphics.h
 	<cstddef>
 	<cstring>
 	<initializer_list>
@@ -1552,10 +1552,14 @@
 	"begin_code.h"
 	"close_code.h"
 
-1474665397 z:\projects\c++\lx\src\network.h
+1480024780 z:\projects\c++\lx\src\network.h
+	"lib_sdl.h"
 	"lib_sdlnet.h"
+	"system.h"
+	"utils.h"
+	<cstdint>
 
-1474125639 source:z:\projects\c++\lx\src\network.cpp
+1474665397 source:z:\projects\c++\lx\src\network.cpp
 	"network.h"
 	"utils.h"
 
@@ -1601,11 +1605,11 @@
 	<stdint.h>
 	<sys/types.h>
 
-1474665397 z:\projects\c++\lx\src\exceptions.h
+1480805485 z:\projects\c++\lx\src\exceptions.h
 	<exception>
 	<string>
 
-1474665397 z:\projects\c++\lx\src\input_enums.h
+1479571645 z:\projects\c++\lx\src\input_enums.h
 	"lib_sdl.h"
 
 1478352336 z:\projects\c++\lx\src\master.h
