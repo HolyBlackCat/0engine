@@ -18,6 +18,7 @@
 #include "math.h"
 #include "network.h"
 #include "os.h"
+#include "renderer2d.h"
 #include "system.h"
 #include "utils.h"
 #include "window.h"

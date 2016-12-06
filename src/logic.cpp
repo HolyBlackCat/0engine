@@ -17,6 +17,8 @@ void Boot()
 {
     MarkLocation("Boot");
 
+    Renderer2D r({"1.png"}, {{"f.ttf", Graphics::Font::Quality::fancy, 0, {0,0}, {256,256}, 12}}, {Utils::Encodings::cp1251(), 256});
+
     while (1)
     {
         Sys::BeginFrame();

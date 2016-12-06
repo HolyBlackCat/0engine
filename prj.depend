@@ -440,7 +440,7 @@
 1474665397 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1480801309 source:z:\projects\c++\lx\src\logic.cpp
+1481064573 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
 
 1465479696 z:\projects\c++\lx\src\logic.h
@@ -504,7 +504,7 @@
 	"lib_zlib.h"
 	"window.h"
 
-1480806155 z:\projects\c++\lx\src\graphics.h
+1481064001 z:\projects\c++\lx\src\graphics.h
 	<cstddef>
 	<cstring>
 	<initializer_list>
@@ -1612,7 +1612,7 @@
 1479571645 z:\projects\c++\lx\src\input_enums.h
 	"lib_sdl.h"
 
-1478352336 z:\projects\c++\lx\src\master.h
+1480974433 z:\projects\c++\lx\src\master.h
 	"lib_sdl.h"
 	"lib_sdlimg.h"
 	"lib_sdlttf.h"
@@ -1630,6 +1630,7 @@
 	"math.h"
 	"network.h"
 	"os.h"
+	"renderer2d.h"
 	"system.h"
 	"utils.h"
 	"window.h"
@@ -1657,4 +1658,8 @@
 	"SDL.h"
 	"begin_code.h"
 	"close_code.h"
+
+1481064681 z:\projects\c++\lx\src\renderer2d.h
+	"graphics.h"
+	"math.h"
 

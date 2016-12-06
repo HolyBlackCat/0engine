@@ -1072,10 +1072,10 @@ namespace Graphics
             return ret ? ret : "";
         }
 
-        enum class Quality {fast, fancy};
+        enum Quality {fast, fancy};
 
         // Uses UTF-16 for glyphs.
-        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
+        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = fancy, u8vec4 color = {255,255,255,255})
         {
             SDL_Surface *surface;
             if (Utils::big_endian)
@@ -1112,11 +1112,11 @@ namespace Graphics
             {
                 if (!HasGlyph(it))
                     continue;
-                glyph_surface = (quality == Quality::fancy ? TTF_RenderGlyph_Blended : TTF_RenderGlyph_Solid)(handle, it, {color.r, color.g, color.b, color.a});
+                glyph_surface = (quality == fancy ? TTF_RenderGlyph_Blended : TTF_RenderGlyph_Solid)(handle, it, {color.r, color.g, color.b, color.a});
                 if (!glyph_surface)
                     continue;
                 SDL_SetSurfaceBlendMode(glyph_surface, SDL_BLENDMODE_NONE);
-                if (quality == Quality::fast)
+                if (quality == fast)
                 {
                     SDL_SetColorKey(glyph_surface, 0, 0);
                     glyph_surface->format->palette->colors[0] = {0,0,0,0};
@@ -1161,7 +1161,7 @@ namespace Graphics
         }
 
         // Uses UTF-8 for glyphs.
-        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<char> glyphs, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255})
+        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<char> glyphs, Quality quality = fancy, u8vec4 color = {255,255,255,255})
         {
             std::size_t len = u8strlen(glyphs);
             std::cout << len;
