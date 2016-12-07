@@ -114,8 +114,8 @@ namespace Audio
         mono_manager.Resize(Init::mono_srcs);
         stereo_manager.Resize(Init::stereo_srcs);
 
-        mono_src_array.Alloc(Init::mono_srcs);
-        stereo_src_array.Alloc(Init::stereo_srcs);
+        mono_src_array.alloc(Init::mono_srcs);
+        stereo_src_array.alloc(Init::stereo_srcs);
     }
     void Cleanup()
     {
@@ -348,7 +348,7 @@ namespace Audio
 
         size = data_size / FormatBytesPerSample(format);
 
-        data.Alloc(data_size);
+        data.alloc(data_size);
 
         if (uses_16_bits)
         {
@@ -601,7 +601,7 @@ namespace Audio
         io.ReadEx(tmp); len |= tmp << 24;
         Utils::Array<char> buf(len);
         uLongf dstlen = ByteSize();
-        data.Alloc(dstlen);
+        data.alloc(dstlen);
         io.ReadEx((char *)buf, len);
         uncompress((unsigned char *)data, &dstlen, (unsigned char *)(char *)buf, len);
 

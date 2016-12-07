@@ -145,7 +145,7 @@ namespace Audio
             Clear();
             size = new_size;
             format = new_format;
-            data.Alloc(ByteSize());
+            data.alloc(ByteSize());
         }
         void LoadFromMem(uint32_t new_size, SoundFormat new_format, uint8_t *mem)
         {
@@ -155,7 +155,7 @@ namespace Audio
         void Clear()
         {
             size = 0;
-            data.Free();
+            data.free();
         }
         void *Data()
         {
@@ -220,7 +220,7 @@ namespace Audio
             size = samples;
             freq = frequency;
             format = data_format;
-            data.Alloc(ByteSize());
+            data.alloc(ByteSize());
             if (from)
                 std::memcpy(data, from, ByteSize());
         }

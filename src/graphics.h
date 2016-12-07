@@ -475,7 +475,7 @@ namespace Graphics
                 Sys::Error("Invalid rendering array size.");
             size = l;
             pos = 0;
-            arr.Alloc(l);
+            arr.alloc(l);
         }
         RenderArray(const RenderArray &) = delete;
         RenderArray(RenderArray &&) = delete;
@@ -499,7 +499,7 @@ namespace Graphics
                 Sys::Error("Invalid rendering array size.");
             size = l;
             pos = 0;
-            arr.Alloc(l);
+            arr.alloc(l);
             vao.~VertexArray();
             new(&vao) VertexArray<L>(0, sizeof (L) * l, acc);
         }
@@ -704,7 +704,7 @@ namespace Graphics
             Clear();
 
             size = new_size;
-            data.Alloc(size.product());
+            data.alloc(size.product());
         }
         void LoadFromMem(ivec2 new_size, uint8_t *mem)
         {
@@ -714,7 +714,7 @@ namespace Graphics
         void Clear()
         {
             size = {0,0};
-            data.Free();
+            data.free();
         }
         void Fill(u8vec4 color)
         {
@@ -752,7 +752,7 @@ namespace Graphics
         ImageData(uvec2 new_size)
         {
             size = new_size;
-            data.Alloc(size.product());
+            data.alloc(size.product());
         }
         ~ImageData()
         {
@@ -782,9 +782,9 @@ namespace Graphics
         int height, ascent, descent, line_skip;
         Font *font_ptr;
 
-        void Alloc(Font *font, int he, int asc, int lsk)
+        void alloc(Font *font, int he, int asc, int lsk)
         {
-            glyph_map.Alloc(sub_buffer_count);
+            glyph_map.alloc(sub_buffer_count);
             font_ptr = font;
             height = he;
             ascent = asc;
@@ -797,7 +797,7 @@ namespace Graphics
             int sub_buffer = glyph / sub_buffer_size;
             if (!glyph_map[sub_buffer])
             {
-                glyph_map[sub_buffer].Alloc(sub_buffer_size);
+                glyph_map[sub_buffer].alloc(sub_buffer_size);
                 for (int i = 0; i < sub_buffer_size; i++)
                     glyph_map[sub_buffer][i] = Glyph{};
             }
@@ -1085,7 +1085,7 @@ namespace Graphics
             if (!surface)
                 Sys::Error("Can't create a temporary surface for the font renderer.");
 
-            font_data.Alloc(this, Height(), Ascent(), LineSkip());
+            font_data.alloc(this, Height(), Ascent(), LineSkip());
 
             SDL_Surface *glyph_surface;
 

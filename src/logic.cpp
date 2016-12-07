@@ -17,7 +17,8 @@ void Boot()
 {
     MarkLocation("Boot");
 
-    Renderer2D r({"1.png"}, {{"f.ttf", Graphics::Font::Quality::fancy, 0, {0,0}, {256,256}, 12}}, {Utils::Encodings::cp1251(), 256});
+    Renderer2D r({{"1.png", 1}}, {{"f.ttf", Utils::Encodings::cp1251(), Graphics::Font::fancy, 0, {0,0}, {256,256}, 12}});
+    r.InitializeState();
 
     while (1)
     {

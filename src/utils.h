@@ -41,36 +41,36 @@ namespace Utils
         static_assert(std::is_const<T>::value == 0, "Mutable arrays of const values are not supported, use const arrays instead.");
 
         T *data;
-        std::size_t size;
+        std::size_t sz;
 
       public:
         using type = T;
 
-        void Alloc(std::size_t new_size) // You can call this safely at any time.
+        void alloc(std::size_t new_size) // You can call this safely at any time.
         {
             if (data)
                 delete [] data;
-            size = new_size;
-            data = new T[size];
+            sz = new_size;
+            data = new T[sz];
         }
-        void Free() // You can call this safely at any time.
+        void free() // You can call this safely at any time.
         {
             if (data)
             {
                 delete [] data;
                 data = 0;
             }
-            size = 0;
+            sz = 0;
         }
 
-        std::size_t Size() const
+        std::size_t size() const
         {
-            return size;
+            return sz;
         }
 
-        std::size_t ByteSize() const
+        std::size_t bytesize() const
         {
-            return size * sizeof (T);
+            return sz * sizeof (T);
         }
 
         T &operator*() {return *data;}
@@ -79,48 +79,44 @@ namespace Utils
         operator const T *() const {return data;}
 
         T *begin() {return data;}
-        T *Begin() {return data;}
-        T *end() {return data+size;}
-        T *End() {return data+size;}
+        T *end() {return data+sz;}
         const T *begin() const {return data;}
-        const T *Begin() const {return data;}
-        const T *end() const {return data+size;}
-        const T *End() const {return data+size;}
+        const T *end() const {return data+sz;}
 
         Array()
         {
-            data = 0; size = 0;
+            data = 0; sz = 0;
         }
         Array(std::size_t size) : Array()
         {
-            Alloc(size);
+            alloc(size);
         }
         Array(std::initializer_list<T> list) : Array()
         {
-            Alloc(list.size());
+            alloc(list.size());
             for (std::size_t i = 0; i < list.size(); i++)
                 (*this)[i] = list.begin()[i];
         }
 
         Array(const Array &o) : Array()
         {
-            Alloc(o.size);
-            for (std::size_t i = 0; i < o.size; i++)
+            alloc(o.sz);
+            for (std::size_t i = 0; i < o.sz; i++)
                 (*this)[i] = o[i];
         }
         Array(Array &&o)
         {
             data = o.data;
-            size = o.size;
+            sz = o.sz;
             o.data = 0;
-            o.size = 0;
+            o.sz = 0;
         }
         Array &operator=(const Array &o)
         {
             if (&o == this)
                 return *this;
-            Alloc(o.size);
-            for (std::size_t i = 0; i < o.size; i++)
+            alloc(o.sz);
+            for (std::size_t i = 0; i < o.sz; i++)
                 (*this)[i] = o[i];
             return *this;
         }
@@ -131,9 +127,9 @@ namespace Utils
             if (data)
                 delete [] data;
             data = o.data;
-            size = o.size;
+            sz = o.sz;
             o.data = 0;
-            o.size = 0;
+            o.sz = 0;
             return *this;
         }
 
@@ -154,13 +150,13 @@ namespace Utils
       public:
         using type = T;
 
-        void Alloc(std::size_t new_size) // You can call this safely at any time.
+        void alloc(std::size_t new_size) // You can call this safely at any time.
         {
             if (data)
                 delete [] data;
             data = new T[new_size];
         }
-        void Free() // You can call this safely at any time.
+        void free() // You can call this safely at any time.
         {
             if (data)
             {
@@ -212,6 +208,77 @@ namespace Utils
         }
     };
 
+    template <typename T> class Object
+    {
+        T *ptr;
+
+      public:
+        Object() : ptr(0) {}
+        Object(const Object &o) : ptr(new T(o)) {}
+        Object(Object &&o) : ptr(new T((T &&) o)) {}
+        Object &operator=(const Object &o)
+        {
+            if (&o == this)
+                return *this;
+            if (!o.ptr)
+            {
+                if (ptr) delete ptr;
+                return *this;
+            }
+            if (ptr)
+            {
+                ptr->~T();
+                new (ptr) T(o);
+            }
+            else
+                ptr = new T(o);
+            return *this;
+        }
+        Object &operator=(Object &&o)
+        {
+            if (&o == this)
+                return *this;
+            if (!o.ptr)
+            {
+                if (ptr) delete ptr;
+                return *this;
+            }
+            if (ptr)
+            {
+                ptr->~T();
+                new (ptr) T((T &&)o);
+            }
+            else
+                ptr = new T((T &&)o);
+            return *this;
+        }
+        ~Object()
+        {
+            if (ptr) delete ptr;
+        }
+
+              T *operator->()       {return ptr;}
+        const T *operator->() const {return ptr;}
+
+        operator       T *()       {return ptr;}
+        operator const T *() const {return ptr;}
+
+        template <typename ...P> void alloc(P &&... p)
+        {
+            if (ptr)
+            {
+                ptr->~T();
+                new (ptr) T((P &&) p...);
+            }
+            else
+                ptr = new T((P &&) p...);
+        }
+        void free()
+        {
+            if (ptr) delete ptr;
+        }
+    };
+
     namespace Clock
     {
         inline uint64_t Time()                         {return SDL_GetPerformanceCounter();}
@@ -246,7 +313,7 @@ namespace Utils
         {
             pos = 0;
             size = sz;
-            array.Alloc(size);
+            array.alloc(size);
         }
         T *operator->() {return array + pos;}
         const T *operator->() const {return array + pos;}
@@ -400,7 +467,7 @@ namespace Utils
                 }
             }
 
-            const uint16_t *cp1251();
+            const uint16_t (&cp1251())[256];
         }
     }
 
@@ -432,8 +499,8 @@ namespace Utils
 
             size = pool_size;
             pos = 0;
-            pool.Alloc(size);
-            locs.Alloc(size);
+            pool.alloc(size);
+            locs.alloc(size);
             for (Index i = 0; i < pool_size; i++)
                 pool[i] = locs[i] = (Index)i;
         }

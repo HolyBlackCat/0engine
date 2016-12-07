@@ -171,7 +171,7 @@ namespace Graphics
 
         io.SeekRel(id_field_len);
 
-        data.Alloc(size.product());
+        data.alloc(size.product());
         int x, y, xend, yend, xstep, ystep, xbegin;
 
         if (!swap_x)
@@ -297,7 +297,7 @@ namespace Graphics
         io.ReadEx(tmp); len |= tmp << 16;
         io.ReadEx(tmp); len |= tmp << 24;
         Utils::Array<char> buf(len);
-        data.Alloc(size.product());
+        data.alloc(size.product());
         io.ReadEx((char *)buf, len);
         uLongf dstlen = ByteSize();
         uncompress((unsigned char *)&*data, &dstlen, (unsigned char *)(char *)buf, len);
@@ -339,7 +339,7 @@ namespace Graphics
         size.x = converted->w;
         size.y = converted->h;
 
-        data.Alloc(size.product());
+        data.alloc(size.product());
 
         int x, y, xend, yend, xstep, ystep, xbegin;
 
@@ -526,9 +526,9 @@ namespace Graphics
         }
 
         loc = 0;
-        if (source.uniforms.Size())
+        if (source.uniforms.size())
         {
-            uniform_locs.Alloc(source.uniforms.Size());
+            uniform_locs.alloc(source.uniforms.size());
             for (const char *it : source.uniforms)
             {
                 uniform_locs[loc++] = glGetUniformLocation(prog, it);

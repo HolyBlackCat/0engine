@@ -65,7 +65,7 @@ namespace Input
         board_int_size = (board_size + 31) / 32;
         for (auto *it : {&board, &board_pr, &board_re})
         {
-            it->Alloc(board_int_size);
+            it->alloc(board_int_size);
             ClearBits(*it);
         }
     }
@@ -85,9 +85,9 @@ namespace Input
     void Cleanup()
     {
         ExecuteThisOnce();
-        board.Free();
-        board_pr.Free();
-        board_re.Free();
+        board.free();
+        board_pr.free();
+        board_re.free();
     }
 
     void MoveKeyDown(KeyID id)
