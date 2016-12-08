@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "1.8.1"
+#define VERSION "1.9.0"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -191,7 +191,7 @@ static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
 static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
 )";
         };
-        auto Fields = [&](int len, const char *type, const char *ref_type)
+        auto Fields = [&](int len, const char *type)
         {
             for (int i = 0; i < len; i++)
             {
@@ -527,7 +527,7 @@ return inv * det;
 
 
                 // Fields
-                Fields(sz, "T", "T &");
+                Fields(sz, "T");
 
 
                 // Members
@@ -568,6 +568,15 @@ return inv * det;
                     l "constexpr decltype(std::sqrt(x/y)) ratio() const {return decltype(std::sqrt(x/y))(x) / decltype(std::sqrt(x/y))(y);}\n"; // std:sqrt is for determining best suitable floating-point type.
                 // Normalize
                 l "constexpr auto norm() const -> vec" << sz << "<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}\n";
+                { // Apply
+                    l "template <typename TT> vec" << sz << "<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ", ";
+                        l "func(" << field_names_main[i] << ")";
+                    }
+                    l "};}\n";
+                }
                 { // Bool pack
                     auto BoolFunc = [&](const char *name, const char *bin, bool inverted)
                     {
@@ -605,7 +614,7 @@ return inv * det;
 
 
                     // Fields
-                    Fields(w, Jo("vec",h,"<T>"), Jo("vec",h,"<T &>"));
+                    Fields(w, Jo("vec",h,"<T>"));
 
 
                     // Members
@@ -785,6 +794,15 @@ $       0, 0, v.z};
                                     l "constexpr mat" << www << "<type> to_mat" << www << "() const {return to_mat" << www << 'x' << www << "();}\n";
                             }
                         }
+                    }
+                    { // Apply
+                        l "template <typename TT> mat" << w << 'x' << h << "<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {";
+                        for (int i = 0; i < w; i++)
+                        {
+                            if (i != 0) l ", ";
+                            l field_names_main[i] << ".apply(func)";
+                        }
+                        l "};}\n";
                     }
                     { // Bool pack
                         auto BoolFunc = [&](const char *name, const char *bin, bool inverted)
@@ -1312,6 +1330,7 @@ int main()
 #include <cstdint>
 #include <ostream>
 #include <type_traits>
+#include <utility>
 
 
 namespace Math

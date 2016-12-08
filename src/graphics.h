@@ -463,6 +463,7 @@ namespace Graphics
     template <typename L>
     class RenderArray
     {
+      protected:
         VertexArray<L> vao;
         uint32_t size;
         uint32_t pos;
@@ -513,25 +514,25 @@ namespace Graphics
             return ret;
         }
 
-        void Push1(const L &a)
+        void Insert1(const L &a)
         {
             L *dst = Add(1);
             dst[0] = a;
         }
-        void Push2(const L &a, const L &b)
+        void Insert2(const L &a, const L &b)
         {
             L *dst = Add(2);
             dst[0] = a;
             dst[1] = b;
         }
-        void Push3(const L &a, const L &b, const L &c)
+        void Insert3(const L &a, const L &b, const L &c)
         {
             L *dst = Add(3);
             dst[0] = a;
             dst[1] = b;
             dst[2] = c;
         }
-        void Push4as3x2(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
+        void Insert4as3x2(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
         {
             L *dst = Add(6);
             dst[0] = a;
@@ -585,11 +586,12 @@ namespace Graphics
         }
         void Flush() // Draws and clears the queue.
         {
+            RenderArray<L>::Send();
             switch (Dim)
             {
-                case 1: Draw(RenderArray<L>::pos, points   ); break;
-                case 2: Draw(RenderArray<L>::pos, lines    ); break;
-                case 3: Draw(RenderArray<L>::pos, triangles); break;
+                case 1: RenderArray<L>::Draw(points   ); break;
+                case 2: RenderArray<L>::Draw(lines    ); break;
+                case 3: RenderArray<L>::Draw(triangles); break;
             }
             RenderArray<L>::pos = 0;
         }

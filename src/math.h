@@ -1,13 +1,14 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 1.8.1 by HolyBlackCat
+// Version 1.9.0 by HolyBlackCat
 
 #include <functional>
 #include <cmath>
 #include <cstdint>
 #include <ostream>
 #include <type_traits>
+#include <utility>
 
 
 namespace Math
@@ -441,6 +442,7 @@ namespace Math
             template <typename TT> constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}
             constexpr decltype(std::sqrt(x/y)) ratio() const {return decltype(std::sqrt(x/y))(x) / decltype(std::sqrt(x/y))(y);}
             constexpr auto norm() const -> vec2<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
+            template <typename TT> vec2<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {func(x), func(y)};}
             constexpr bool none() const {return !(x || y);}
             constexpr bool any() const {return x || y;}
             constexpr bool each() const {return x && y;}
@@ -487,6 +489,7 @@ namespace Math
             template <typename TT> constexpr auto dot(const vec3<TT> &o) const {return x*o.x + y*o.y + z*o.z;}
             template <typename TT> constexpr auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};}
             constexpr auto norm() const -> vec3<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
+            template <typename TT> vec3<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {func(x), func(y), func(z)};}
             constexpr bool none() const {return !(x || y || z);}
             constexpr bool any() const {return x || y || z;}
             constexpr bool each() const {return x && y && z;}
@@ -536,6 +539,7 @@ namespace Math
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec4<TT> &o) const {return x*o.x + y*o.y + z*o.z + w*o.w;}
             constexpr auto norm() const -> vec4<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
+            template <typename TT> vec4<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {func(x), func(y), func(z), func(w)};}
             constexpr bool none() const {return !(x || y || z || w);}
             constexpr bool any() const {return x || y || z || w;}
             constexpr bool each() const {return x && y && z && w;}
@@ -606,6 +610,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,0,0,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat2x2<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || y.x || y.y);}
             constexpr bool any() const {return x.x || x.y || y.x || y.y;}
             constexpr bool each() const {return x.x && x.y && y.x && y.y;}
@@ -685,6 +690,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat3x2<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || y.x || y.y || z.x || z.y);}
             constexpr bool any() const {return x.x || x.y || y.x || y.y || z.x || z.y;}
             constexpr bool each() const {return x.x && x.y && y.x && y.y && z.x && z.y;}
@@ -749,6 +755,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0,w.x,w.y,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat4x2<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || y.x || y.y || z.x || z.y || w.x || w.y);}
             constexpr bool any() const {return x.x || x.y || y.x || y.y || z.x || z.y || w.x || w.y;}
             constexpr bool each() const {return x.x && x.y && y.x && y.y && z.x && z.y && w.x && w.y;}
@@ -804,6 +811,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,0,0,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat2x3<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z);}
             constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z;}
             constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z;}
@@ -884,6 +892,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat3x3<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z);}
             constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z;}
             constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z && z.x && z.y && z.z;}
@@ -1013,6 +1022,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,w.x,w.y,w.z,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat4x3<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z || w.x || w.y || w.z);}
             constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z || w.x || w.y || w.z;}
             constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z && z.x && z.y && z.z && w.x && w.y && w.z;}
@@ -1068,6 +1078,7 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,0,0,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat2x4<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w);}
             constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w;}
             constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w;}
@@ -1132,6 +1143,7 @@ namespace Math
             constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
+            template <typename TT> mat3x4<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w);}
             constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w;}
             constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w && z.x && z.y && z.z && z.w;}
@@ -1213,6 +1225,7 @@ namespace Math
             constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
             constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
+            template <typename TT> mat4x4<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w || w.x || w.y || w.z || w.w);}
             constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w || w.x || w.y || w.z || w.w;}
             constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w && z.x && z.y && z.z && z.w && w.x && w.y && w.z && w.w;}

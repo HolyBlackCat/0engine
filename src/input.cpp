@@ -20,7 +20,8 @@ namespace Input
 
     static unsigned int board_size, board_int_size;
 
-    static ivec2 (*mouse_mapping_func)(ivec2), (*mouse_mapping_func_reverse)(ivec2);
+    static ivec2 mouse_mapping_offset{0,0};
+    static float mouse_mapping_scale = 1;
 
     static bool mmode_show = 1, mmode_show_needed = 1;
     static bool mmode_rel = 0, mmode_rel_needed = 0;
@@ -77,8 +78,7 @@ namespace Input
         ResetKeyboardBuffer();
 
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
-        if (mouse_mapping_func)
-            mouse_pos = mouse_mapping_func(mouse_pos);
+        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply(lround);
 
         SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, Init::separate_mouse_and_touch ? "1" : "0");
     }
@@ -169,8 +169,7 @@ namespace Input
         SDL_GetRelativeMouseState(&mouse_shift.x, &mouse_shift.y);
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
 
-        if (mouse_mapping_func)
-            mouse_pos = mouse_mapping_func(mouse_pos);
+        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply(lround);
 
         if (mouse_buttons)
             any_button_down_id = WhatBitIsSet(mouse_buttons)+1;
@@ -215,10 +214,14 @@ namespace Input
         return keyboard_focus;
     }
 
-    void SetMouseMapping(ivec2 (*func)(ivec2), ivec2 (*reverse)(ivec2))
+    void SetMouseMapping(ivec2 offset, float scale)
     {
-        mouse_mapping_func = func;
-        mouse_mapping_func_reverse = reverse;
+        mouse_mapping_offset = offset;
+        mouse_mapping_scale = scale;
+    }
+    void ResetMouseMapping()
+    {
+        SetMouseMapping({0,0}, 1);
     }
 
     ivec2 MousePos()
@@ -254,17 +257,11 @@ namespace Input
     void SetMousePos(ivec2 pos)
     {
         mouse_movement_needed = 1;
-        if (mouse_mapping_func_reverse)
-            mouse_movement_dst = mouse_mapping_func_reverse(pos);
-        else
-            mouse_movement_dst = pos;
+        mouse_movement_dst = (pos / mouse_mapping_scale - mouse_mapping_offset).apply(lround);
     }
     void SetMousePosImmediate(ivec2 pos)
     {
-        if (mouse_mapping_func_reverse)
-        {
-            pos = mouse_mapping_func_reverse(pos);
-        }
+        pos = (pos / mouse_mapping_scale - mouse_mapping_offset).apply(lround);
         SDL_WarpMouseInWindow(Window::Handle(), pos.x, pos.y);
     }
 }

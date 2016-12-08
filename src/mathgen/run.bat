@@ -1,4 +1,4 @@
-g++ mathgen.cpp -o mathgen.exe -std=c++14
+g++ mathgen.cpp -o mathgen.exe -std=c++14 -Wall -Wextra -pedantic-errors
 pause
 mathgen.exe
 del /F /Q mathgen.exe

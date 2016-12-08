@@ -45,7 +45,8 @@ namespace Input
     void RelativeMouseModeImmediate(bool n);
     bool MouseFocus();
     bool KeyboardFocus();
-    void SetMouseMapping(ivec2 (*func)(ivec2), ivec2 (*reverse)(ivec2) = 0); // Pass 0 to disable any mapping.
+    void SetMouseMapping(ivec2 offset, float scale);
+    void ResetMouseMapping();
     ivec2 MousePos();
     ivec2 MousePosDelta();
     ivec2 MouseShift(); // Same as MousePosDelta(), but it ignores mapping and works nice even with relative mode.
