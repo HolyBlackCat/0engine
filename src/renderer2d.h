@@ -55,7 +55,7 @@ class Renderer2D
         fonts_data.alloc(fonts_info.size());
         for (std::size_t i = 0; i < textures_info.size(); i++)
         {
-            Graphics::ImageData img = Graphics::ImageData::FromPNG((Utils::BinaryInput &&) textures_info[i].file, Graphics::Mirror::y);
+            Graphics::ImageData img = Graphics::ImageData::FromPNG((Utils::BinaryInput &&) textures_info[i].file);
             for (std::size_t j = 0; j < fonts_info.size(); j++)
             {
                 if (fonts_info[j].texture != int(i))
@@ -102,7 +102,6 @@ void main()
     gl_FragColor = vec4(mix(v_color.rgb, tex_color.rgb, v_factors.x), mix(v_color.a, tex_color.a, v_factors.y));
     gl_FragColor.rgb *= gl_FragColor.a;
     gl_FragColor.a *= (1 - v_factors.z);
-    gl_FragColor = vec4(1,0,0,1);
 })"});
         UpdateViewport();
         if (textures.size())
@@ -133,20 +132,20 @@ void main()
         scale = s;
     }
 
-    void UpdateViewport()
+    void UpdateViewport(ivec2 size = Window::Size())
     {
-        min_pos = -(Window::Size() + 1) / 2;
-        max_pos = Window::Size() / 2;
-        primary_shader->SetUniform<fmat4>(0, fmat4::ortho({min_pos.x * scale, max_pos.y * scale}, {max_pos.x * scale, min_pos.y * scale}, -1, 1));
-        min_pos.x = std::lround(std::ceil(min_pos.x * scale));
-        min_pos.y = std::lround(std::ceil(min_pos.y * scale));
-        max_pos.x = std::lround(std::ceil(max_pos.x * scale));
-        max_pos.y = std::lround(std::ceil(max_pos.y * scale));
+        min_pos = -(size + 1) / 2;
+        max_pos = size / 2;
+        primary_shader->SetUniform<fmat4>(0, fmat4::ortho({min_pos.x / scale, max_pos.y / scale}, {max_pos.x / scale, min_pos.y / scale}, -1, 1));
+        min_pos.x = std::lround(std::ceil(min_pos.x / scale));
+        min_pos.y = std::lround(std::ceil(min_pos.y / scale));
+        max_pos.x = std::lround(std::ceil(max_pos.x / scale));
+        max_pos.y = std::lround(std::ceil(max_pos.y / scale));
     }
 
     void SetMouseMapping() const
     {
-        Input::SetMouseMapping(-(Window::Size() + 1) / 2, scale);
+        Input::SetMouseMapping(-(Window::Size() + 1) / 2, 1/scale);
     }
 
     ivec2 MinPos() const
@@ -201,7 +200,7 @@ void main()
             tex_a = src;
             tex_b = src+srcsz;
             set_all_colors({0,0,0,0});
-            set_all_factors({0, alpha, luminance});
+            set_all_factors({1, alpha, luminance});
         }
         Source(fvec4 fill_color, float luminance = 1)
         {
@@ -227,13 +226,26 @@ void main()
         }
     };
 
-    void Rect(ivec2 dst, ivec2 dstsz, Source src)
+    void Rect(ivec2 dst, ivec2 dstsz, Source src, fvec2 center = {0,0}, float angle = 0)
     {
-        dstsz += dst;
-        render_queue->Insert({fvec2(dst.x  , dst.y  ), src.color00, fvec2(src.tex_a.x, src.tex_a.y), src.factors00},
-                             {fvec2(dstsz.x, dst.y  ), src.color10, fvec2(src.tex_b.x, src.tex_a.y), src.factors10},
-                             {fvec2(dstsz.x, dstsz.y), src.color11, fvec2(src.tex_b.x, src.tex_b.y), src.factors11},
-                             {fvec2(dst.x  , dstsz.y), src.color01, fvec2(src.tex_a.x, src.tex_b.y), src.factors01});
+        center *= dstsz / fvec2(src.tex_b - src.tex_a);
+        if (angle == 0)
+        {
+            dst -= center;
+            dstsz += dst;
+            render_queue->Insert({fvec2(dst.x  , dst.y  ), src.color00, fvec2(src.tex_a.x, src.tex_a.y), src.factors00},
+                                 {fvec2(dstsz.x, dst.y  ), src.color10, fvec2(src.tex_b.x, src.tex_a.y), src.factors10},
+                                 {fvec2(dstsz.x, dstsz.y), src.color11, fvec2(src.tex_b.x, src.tex_b.y), src.factors11},
+                                 {fvec2(dst.x  , dstsz.y), src.color01, fvec2(src.tex_a.x, src.tex_b.y), src.factors01});
+        }
+        else
+        {
+            dstsz -= center;
+            render_queue->Insert({dst + fmat2::rotate2D(angle) /mul/ fvec2(-center.x, -center.y), src.color00, fvec2(src.tex_a.x, src.tex_a.y), src.factors00},
+                                 {dst + fmat2::rotate2D(angle) /mul/ fvec2(dstsz.x  , -center.y), src.color10, fvec2(src.tex_b.x, src.tex_a.y), src.factors10},
+                                 {dst + fmat2::rotate2D(angle) /mul/ fvec2(dstsz.x  , dstsz.y  ), src.color11, fvec2(src.tex_b.x, src.tex_b.y), src.factors11},
+                                 {dst + fmat2::rotate2D(angle) /mul/ fvec2(-center.x, dstsz.y  ), src.color01, fvec2(src.tex_a.x, src.tex_b.y), src.factors01});
+        }
     }
 };
 
