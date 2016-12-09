@@ -449,7 +449,10 @@ namespace Graphics
     int FontData::Kerning(uint16_t a, uint16_t b) const // This function relies on the original Font object which created the current instance.
     {
         // This was moved into .cpp to avoid a circular dependency.
-        return font_ptr->GlyphKerning(a, b);
+        if (font_ptr)
+            return font_ptr->GlyphKerning(a, b);
+        else
+            return 0;
     }
 
 

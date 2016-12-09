@@ -13,6 +13,8 @@ class Renderer2D
   private:
     float scale = 1;
     ivec2 min_pos, max_pos;
+    int font_index = 0;
+    bool kerning = 1;
     Utils::Array<Graphics::Texture>  textures;
     Utils::Array<Graphics::Font>     fonts;
     Utils::Array<Graphics::FontData> fonts_data;
@@ -43,7 +45,14 @@ class Renderer2D
         u8vec4 color = {255,255,255,255};
     };
 
-    Renderer2D(Utils::ArrayView<TextureInfo> textures_info, Utils::ArrayView<FontInfo> fonts_info)
+    struct BitmapFontInfo
+    {
+        ArrayView<uint16_t> glyphs;
+        ivec2 src, glyph_sz;
+        int row_len, asc = (glyph_sz.y+1)/2, adv = glyph_sz.x, lskip = glyph_sz.y;
+    };
+
+    Renderer2D(Utils::ArrayView<TextureInfo> textures_info, Utils::ArrayView<FontInfo> fonts_info, Utils::Array<BitmapFontInfo> bitmap_fonts_info)
     {
         fonts.alloc(fonts_info.size());
         for (std::size_t i = 0; i < fonts_info.size(); i++)
@@ -52,7 +61,7 @@ class Renderer2D
         }
 
         textures.alloc(textures_info.size());
-        fonts_data.alloc(fonts_info.size());
+        fonts_data.alloc(fonts_info.size() + bitmap_fonts_info.size());
         for (std::size_t i = 0; i < textures_info.size(); i++)
         {
             Graphics::ImageData img = Graphics::ImageData::FromPNG((Utils::BinaryInput &&) textures_info[i].file);
@@ -60,10 +69,21 @@ class Renderer2D
             {
                 if (fonts_info[j].texture != int(i))
                     continue;
-                fonts[j].RenderGlyphs(fonts_data[j], img, fonts_info[j].dst, fonts_info[j].dstsz, fonts_info[j].glyphs, fonts_info[j].quality, fonts_info[j].color);
+                fonts[j].RenderGlyphs(fonts_data[j], img, fonts_info[j].dst, fonts_info[j].dstsz, fonts_info[j].glyphs, 1, fonts_info[j].quality, fonts_info[j].color);
             }
             textures[i].SetData(img);
             textures[i].LinearInterpolation(textures_info[i].linear);
+        }
+
+        for (std::size_t i = 0; i < bitmap_fonts_info.size(); i++)
+        {
+            fonts_data[fonts_info.size() + i] = Graphics::FontData(bitmap_fonts_info[i].glyphs,
+                                                                   bitmap_fonts_info[i].src,
+                                                                   bitmap_fonts_info[i].glyph_sz,
+                                                                   bitmap_fonts_info[i].row_len,
+                                                                   bitmap_fonts_info[i].asc,
+                                                                   bitmap_fonts_info[i].adv,
+                                                                   bitmap_fonts_info[i].lskip);
         }
 
         primary_shader.alloc("Renderer2D primary shader", Graphics::ShaderSource
@@ -226,7 +246,7 @@ void main()
         }
     };
 
-    void Rect(ivec2 dst, ivec2 dstsz, Source src, fvec2 center = {0,0}, float angle = 0)
+    void Rectf(fvec2 dst, fvec2 dstsz, Source src, fvec2 center = {0,0}, float angle = 0)
     {
         center *= dstsz / fvec2(src.tex_b - src.tex_a);
         if (angle == 0)
@@ -246,6 +266,139 @@ void main()
                                  {dst + fmat2::rotate2D(angle) /mul/ fvec2(dstsz.x  , dstsz.y  ), src.color11, fvec2(src.tex_b.x, src.tex_b.y), src.factors11},
                                  {dst + fmat2::rotate2D(angle) /mul/ fvec2(-center.x, dstsz.y  ), src.color01, fvec2(src.tex_a.x, src.tex_b.y), src.factors01});
         }
+    }
+    void Rectf(fvec2 dst, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        Rectf(dst, src.tex_b - src.tex_a, src, center, angle);
+    }
+
+    void Rect(ivec2 dst, ivec2 dstsz, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        Rectf(dst, dstsz, src, center, angle);
+    }
+    void Rect(ivec2 dst, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        Rectf(dst, src, center, angle);
+    }
+
+
+    void Rectf_x(fvec2 dst, fvec2 dstsz, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        center *= dstsz / fvec2(src.tex_b - src.tex_a);
+        if (angle == 0)
+        {
+            dst -= center;
+            dstsz += dst;
+            render_queue->Insert({fvec2(dst.x  , dst.y  ), src.color00, fvec2(src.tex_b.x, src.tex_a.y), src.factors00},
+                                 {fvec2(dstsz.x, dst.y  ), src.color10, fvec2(src.tex_a.x, src.tex_a.y), src.factors10},
+                                 {fvec2(dstsz.x, dstsz.y), src.color11, fvec2(src.tex_a.x, src.tex_b.y), src.factors11},
+                                 {fvec2(dst.x  , dstsz.y), src.color01, fvec2(src.tex_b.x, src.tex_b.y), src.factors01});
+        }
+        else
+        {
+            dstsz -= center;
+            render_queue->Insert({dst + fmat2::rotate2D(angle) /mul/ fvec2(-center.x, -center.y), src.color00, fvec2(src.tex_b.x, src.tex_a.y), src.factors00},
+                                 {dst + fmat2::rotate2D(angle) /mul/ fvec2(dstsz.x  , -center.y), src.color10, fvec2(src.tex_a.x, src.tex_a.y), src.factors10},
+                                 {dst + fmat2::rotate2D(angle) /mul/ fvec2(dstsz.x  , dstsz.y  ), src.color11, fvec2(src.tex_a.x, src.tex_b.y), src.factors11},
+                                 {dst + fmat2::rotate2D(angle) /mul/ fvec2(-center.x, dstsz.y  ), src.color01, fvec2(src.tex_b.x, src.tex_b.y), src.factors01});
+        }
+    }
+    void Rectf_x(fvec2 dst, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        Rectf_x(dst, src.tex_b - src.tex_a, src, center, angle);
+    }
+
+    void Rect_x(ivec2 dst, ivec2 dstsz, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        Rectf_x(dst, dstsz, src, center, angle);
+    }
+    void Rect_x(ivec2 dst, Source src, fvec2 center = {0,0}, float angle = 0)
+    {
+        Rectf_x(dst, src, center, angle);
+    }
+
+
+    void Kerning(bool enable)
+    {
+        kerning = enable;
+    }
+
+    void Textf(fvec2 dst, int font_index, float scale, ivec2 alignment, const char *str, fvec4 color, float angle = 0, float luminance = 1)
+    {
+        if (!(scale >= -1 && scale <= 1))
+            Sys::Error("Text alignment is out of range.");
+
+        const auto &data = fonts_data[font_index];
+
+        fmat2 rot;
+        if (angle != 0)
+            rot = fmat2::rotate2D(angle);
+        else
+            rot = fmat2::identity();
+
+
+        auto LocalLen = [&](const char *ptr) -> int
+        {
+            int ret = 0;
+            uint16_t prev = 0;
+            while (1)
+            {
+                uint16_t ch = u8decode(ptr, &ptr);
+                if (ch == '\0' || ch == '\n')
+                    break;
+                if (data.HasGlyph(ch))
+                    ret += data.Advance(ch) + data.Kerning(prev, ch) * kerning;
+                prev = ch;
+            };
+            return ret;
+        };
+        fvec2 pos = dst;
+        float yoffset = 0;
+        if (alignment.x != -1)
+            pos -= rot /mul/ fvec2(LocalLen(str) * (alignment.x+1)/2, 0);
+        if (alignment.y == -1)
+            yoffset += data.Ascent();
+        else
+        {
+            int newlines = 0;
+            const char *ptr = str;
+            while (*ptr != '\0')
+            {
+                if (*ptr == '\n')
+                    newlines++;
+                ptr++;
+            }
+            yoffset -= newlines * data.Height() * (alignment.y+1)/2;
+            if (alignment.y == 1)
+                yoffset -= data.Descent();
+        }
+        pos += rot /mul/ fvec2(0, yoffset);
+        uint16_t prev = 0;
+        int line = 0;
+        while (1)
+        {
+            uint16_t ch = u8decode(str, &str);
+            if (ch == '\0')
+                break;
+            if (ch == '\n')
+            {
+                line++;
+                pos = dst + rot /mul/ fvec2(0, data.Height() * line + yoffset);
+                if (alignment.x != -1)
+                    pos -= rot /mul/ fvec2(LocalLen(str) * (alignment.x+1)/2, 0);
+            }
+            else if (data.HasGlyph(ch))
+            {
+                ivec2 glyph_sz = data.Size(ch), glyph_offset = data.Offset(ch);
+                Rectf(pos, glyph_sz * scale, {color.to_vec3(), data.Pos(ch), glyph_sz, 1, color.a, luminance}, {float(-glyph_offset.x),float(-glyph_offset.y)}, angle);
+                pos += rot /mul/ fvec2(data.Advance(ch) + data.Kerning(prev, ch) * kerning, 0);
+            }
+            prev = ch;
+        }
+    }
+    void Text(ivec2 dst, int font_index, float scale, ivec2 alignment, const char *str, fvec4 color, float angle = 0, float luminance = 1)
+    {
+        Textf(dst, font_index, scale, alignment, str, color, angle, luminance);
     }
 };
 

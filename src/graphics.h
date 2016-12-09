@@ -784,14 +784,14 @@ namespace Graphics
         int height, ascent, descent, line_skip;
         Font *font_ptr;
 
-        void alloc(Font *font, int he, int asc, int lsk)
+        void Alloc(Font *font, int he, int asc, int lskip)
         {
             glyph_map.alloc(sub_buffer_count);
             font_ptr = font;
             height = he;
             ascent = asc;
             descent = he - asc;
-            line_skip = lsk;
+            line_skip = lskip;
         }
 
         void AddGlyph(uint16_t glyph, ivec2 pos, ivec2 size, ivec2 offset, int advance)
@@ -805,7 +805,33 @@ namespace Graphics
             }
             glyph_map[sub_buffer][glyph % sub_buffer_size] = {1, pos, size, offset, advance};
         }
+
       public:
+        FontData() {}
+
+        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc, int adv, int lskip) // Computes font data for monospaced font placed directly on the texture.
+        {
+            glyph_map.alloc(sub_buffer_count);
+            font_ptr = 0;
+            height = glyph_sz.y;
+            ascent = asc;
+            descent = height - ascent;
+            line_skip = lskip;
+
+            for (std::size_t i = 0; i < enc.size(); i++)
+            {
+                AddGlyph(enc[i], {src.x + int(i) % row_len * glyph_sz.x, src.y + int(i) / row_len * glyph_sz.y}, glyph_sz, {0, -asc}, adv);
+            }
+        }
+        /*
+        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc, int adv)
+            : FontData(enc, src, glyph_sz, row_len, asc, adv, glyph_sz.y) {}
+
+        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc)
+            : FontData(enc, src, glyph_sz, row_len, asc, glyph_sz.x, glyph_sz.y) {}
+        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len)
+            : FontData(enc, src, glyph_sz, row_len, (glyph_sz.y+1)/2, glyph_sz.x, glyph_sz.y) {}*/
+
         bool HasGlyph(uint16_t glyph) const
         {
             if (glyph_map[glyph / sub_buffer_size] == 0)
@@ -1077,7 +1103,7 @@ namespace Graphics
         enum Quality {fast, fancy};
 
         // Uses UTF-16 for glyphs.
-        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, Quality quality = fancy, u8vec4 color = {255,255,255,255})
+        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, bool outline = 0, Quality quality = fancy, u8vec4 color = {255,255,255,255})
         {
             SDL_Surface *surface;
             if (Utils::big_endian)
@@ -1087,7 +1113,7 @@ namespace Graphics
             if (!surface)
                 Sys::Error("Can't create a temporary surface for the font renderer.");
 
-            font_data.alloc(this, Height(), Ascent(), LineSkip());
+            font_data.Alloc(this, Height(), Ascent(), LineSkip());
 
             SDL_Surface *glyph_surface;
 
@@ -1110,6 +1136,9 @@ namespace Graphics
              * img.At(dst + dstsz + ivec2(-1,-1)) = {255,255,255,255};
              */
 
+            dst += outline;
+            dstsz -= outline;
+
             for (uint16_t it : glyphs)
             {
                 if (!HasGlyph(it))
@@ -1128,7 +1157,7 @@ namespace Graphics
                 GlyphRawMetrics(it, &minx, &maxx, &miny, &maxy, &advance);
                 ivec2 tex_sz(maxx-minx, maxy-miny);
 
-                while (pixel_pos.y + tex_sz.y > dstsz.y)
+                while (pixel_pos.y + tex_sz.y+outline > dstsz.y)
                 {
                     pixel_pos.y = 0;
                     pixel_pos.x += column_h;
@@ -1137,8 +1166,8 @@ namespace Graphics
 
                 ivec2 tex_pos = dst + pixel_pos;
 
-                if (column_h < tex_sz.x)
-                    column_h = tex_sz.x;
+                if (column_h < tex_sz.x+outline)
+                    column_h = tex_sz.x+outline;
 
                 if (pixel_pos.x + column_h > dstsz.x)
                 {
@@ -1156,14 +1185,28 @@ namespace Graphics
                     SDL_FreeSurface(glyph_surface);
                     Sys::Error(Jo("Can't blit glyph #", it, " for font ", Name(), '.'));
                 }
-                pixel_pos.y += tex_sz.y;
+                if (outline)
+                {
+                    static constexpr u8vec4 outline_color(0,0,0,0);
+                    for (int i = -1; i < tex_sz.x+1; i++)
+                    {
+                        img.At(tex_pos + ivec2(i,-1)) = outline_color;
+                        img.At(tex_pos + ivec2(i,tex_sz.y)) = outline_color;
+                    }
+                    for (int i = -1; i < tex_sz.y+1; i++)
+                    {
+                        img.At(tex_pos + ivec2(-1,i)) = outline_color;
+                        img.At(tex_pos + ivec2(tex_sz.x,i)) = outline_color;
+                    }
+                }
+                pixel_pos.y += tex_sz.y+outline;
                 SDL_FreeSurface(glyph_surface);
             }
             SDL_FreeSurface(surface);
         }
 
         // Uses UTF-8 for glyphs.
-        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<char> glyphs, Quality quality = fancy, u8vec4 color = {255,255,255,255})
+        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<char> glyphs, bool outline = 0, Quality quality = fancy, u8vec4 color = {255,255,255,255})
         {
             std::size_t len = u8strlen(glyphs);
             std::cout << len;
@@ -1173,7 +1216,7 @@ namespace Graphics
             {
                 arr[i] = u8decode(ptr, &ptr);
             }
-            RenderGlyphs(font_data, img, dst, dstsz, {arr, len}, quality, color);
+            RenderGlyphs(font_data, img, dst, dstsz, {arr, len}, outline, quality, color);
         }
     };
 
