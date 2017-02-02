@@ -61,18 +61,18 @@ namespace Graphics
             isglerr = 1;
             switch (err)
             {
-              case GL_INVALID_ENUM:                  glerr += "GL: Invalid enum. ";                  break;
-              case GL_INVALID_VALUE:                 glerr += "GL: Invalid value. ";                 break;
-              case GL_INVALID_OPERATION:             glerr += "GL: Invalid operation. ";             break;
-              case GL_INVALID_FRAMEBUFFER_OPERATION: glerr += "GL: Invalid framebuffer operation. "; break;
-              case GL_OUT_OF_MEMORY:                 glerr += "GL: Out of memory. ";                 break;
-              #ifdef GL_STACK_UNDERFLOW
-              case GL_STACK_UNDERFLOW:               glerr += "GL: Stack underflow. ";               break;
-              #endif
-              #ifdef GL_STACK_OVERFLOW
-              case GL_STACK_OVERFLOW:                glerr += "GL: Stack overflow. ";                break;
-              #endif
-              default:                               glerr += "GL: Unknown error. ";                 break;
+                case GL_INVALID_ENUM:                  glerr += "GL: Invalid enum. ";                  break;
+                case GL_INVALID_VALUE:                 glerr += "GL: Invalid value. ";                 break;
+                case GL_INVALID_OPERATION:             glerr += "GL: Invalid operation. ";             break;
+                case GL_INVALID_FRAMEBUFFER_OPERATION: glerr += "GL: Invalid framebuffer operation. "; break;
+                case GL_OUT_OF_MEMORY:                 glerr += "GL: Out of memory. ";                 break;
+                #ifdef GL_STACK_UNDERFLOW
+                case GL_STACK_UNDERFLOW:               glerr += "GL: Stack underflow. ";               break;
+                #endif
+                #ifdef GL_STACK_OVERFLOW
+                case GL_STACK_OVERFLOW:                glerr += "GL: Stack overflow. ";                break;
+                #endif
+                default:                               glerr += "GL: Unknown error. ";                 break;
             }
         }
         if (isglerr)

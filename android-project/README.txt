@@ -185,7 +185,7 @@ Useful when adding external libs.
 	cd    clang_3.8_android_api12_mips
 	python ..\android-ndk\build\tools\make_standalone_toolchain.py --arch mips --stl libc++ --api 12 --force
 	cd ..
-	# Извлекаем из ариховов и подпапок
+	# Extract the resulting toolchains from archives and folders.
 	
 	
     android-ndk/build/tools/make-standalone-toolchain.sh --use-llvm --stl=libc++ --platform=android-12 --toolchain=arm-linux-androideabi-clang --install-dir=Y:/clang_3.8_android_api12_androideabi/

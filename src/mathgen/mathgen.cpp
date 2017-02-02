@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "1.9.0"
+#define VERSION "1.9.1"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -256,7 +256,7 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
                 if (i != 0) l ", ";
                 l field_names_main[i] << "(obj." << field_names_main[i] << ')';
             }
-            l " {}";
+            l " {}\n";
 
             // Member combinations
             l "constexpr auto sum() const {return "; // Sum

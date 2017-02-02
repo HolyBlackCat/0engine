@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 1.9.0 by HolyBlackCat
+// Version 1.9.1 by HolyBlackCat
 
 #include <functional>
 #include <cmath>
@@ -423,7 +423,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             constexpr vec(type obj) : x(obj), y(obj) {}
-            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}constexpr auto sum() const {return x + y;}
+            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
+            constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -468,7 +469,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
-            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}constexpr auto sum() const {return x + y + z;}
+            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
+            constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -516,7 +518,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
-            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}constexpr auto sum() const {return x + y + z + w;}
+            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
+            constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -564,7 +567,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             constexpr vec(type obj) : x(obj), y(obj) {}
-            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}constexpr auto sum() const {return x + y;}
+            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
+            constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -649,7 +653,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
-            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}constexpr auto sum() const {return x + y + z;}
+            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
+            constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -717,7 +722,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
-            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}constexpr auto sum() const {return x + y + z + w;}
+            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
+            constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -780,7 +786,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             constexpr vec(type obj) : x(obj), y(obj) {}
-            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}constexpr auto sum() const {return x + y;}
+            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
+            constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -837,7 +844,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
-            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}constexpr auto sum() const {return x + y + z;}
+            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
+            constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -946,7 +954,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
-            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}constexpr auto sum() const {return x + y + z + w;}
+            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
+            constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -1047,7 +1056,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             constexpr vec(type obj) : x(obj), y(obj) {}
-            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}constexpr auto sum() const {return x + y;}
+            template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
+            constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -1104,7 +1114,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
-            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}constexpr auto sum() const {return x + y + z;}
+            template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
+            constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
@@ -1170,7 +1181,8 @@ namespace Math
             constexpr vec() {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
-            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}constexpr auto sum() const {return x + y + z + w;}
+            template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
+            constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
             constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
             constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
