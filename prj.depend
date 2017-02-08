@@ -1664,3 +1664,633 @@
 	"graphics.h"
 	"math.h"
 
+1486158765 source:z:\projects\remote\jam\src\audio.cpp
+	"audio.h"
+	<cstdio>
+	<fstream>
+	"lib_vorbis.h"
+	"lib_zlib.h"
+	"system.h"
+	"utils.h"
+
+1486158765 z:\projects\remote\jam\src\audio.h
+	<cstdint>
+	<cstring>
+	"exceptions.h"
+	"lib_al.h"
+	"math.h"
+	"system.h"
+	"utils.h"
+
+1486158765 z:\projects\remote\jam\src\exceptions.h
+	<exception>
+	<string>
+
+1486158765 z:\projects\remote\jam\src\lib_al.h
+	"os.h"
+	<AL/al.h>
+	<AL/alc.h>
+	<OpenAL/al.h>
+	<OpenAL/alc.h>
+
+1486159727 z:\projects\remote\jam\src\os.h
+
+1486158765 z:\projects\remote\jam\lib\include\al\al.h
+
+1486158765 z:\projects\remote\jam\lib\include\al\alc.h
+
+1486158765 z:\projects\remote\jam\src\math.h
+	<functional>
+	<cmath>
+	<cstdint>
+	<ostream>
+	<type_traits>
+	<utility>
+
+1486158765 z:\projects\remote\jam\src\system.h
+	<cstdint>
+	<string>
+	<list>
+	<unordered_map>
+	"input_enums.h"
+	"math.h"
+	"os.h"
+
+1486158765 z:\projects\remote\jam\src\input_enums.h
+	"lib_sdl.h"
+
+1486158765 z:\projects\remote\jam\src\lib_sdl.h
+	<SDL2/SDL.h>
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl.h
+	"SDL_main.h"
+	"SDL_stdinc.h"
+	"SDL_assert.h"
+	"SDL_atomic.h"
+	"SDL_audio.h"
+	"SDL_clipboard.h"
+	"SDL_cpuinfo.h"
+	"SDL_endian.h"
+	"SDL_error.h"
+	"SDL_events.h"
+	"SDL_filesystem.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_haptic.h"
+	"SDL_hints.h"
+	"SDL_loadso.h"
+	"SDL_log.h"
+	"SDL_messagebox.h"
+	"SDL_mutex.h"
+	"SDL_power.h"
+	"SDL_render.h"
+	"SDL_rwops.h"
+	"SDL_system.h"
+	"SDL_thread.h"
+	"SDL_timer.h"
+	"SDL_version.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_main.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_stdinc.h
+	"SDL_config.h"
+	<sys/types.h>
+	<stdio.h>
+	<stdlib.h>
+	<stddef.h>
+	<stdarg.h>
+	<stdlib.h>
+	<malloc.h>
+	<stddef.h>
+	<stdarg.h>
+	<memory.h>
+	<string.h>
+	<strings.h>
+	<inttypes.h>
+	<stdint.h>
+	<ctype.h>
+	<math.h>
+	<float.h>
+	<iconv.h>
+	<sal.h>
+	"begin_code.h"
+	<alloca.h>
+	<malloc.h>
+	<malloc.h>
+	<malloc.h>
+	<stdlib.h>
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_config.h
+	"SDL_platform.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_platform.h
+	"AvailabilityMacros.h"
+	"TargetConditionals.h"
+	<winapifamily.h>
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\begin_code.h
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\close_code.h
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_assert.h
+	"SDL_config.h"
+	"begin_code.h"
+	<signal.h>
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_atomic.h
+	"SDL_stdinc.h"
+	"SDL_platform.h"
+	"begin_code.h"
+	<mbarrier.h>
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_audio.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_endian.h"
+	"SDL_mutex.h"
+	"SDL_thread.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_error.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_endian.h
+	"SDL_stdinc.h"
+	<endian.h>
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_mutex.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_thread.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_atomic.h"
+	"SDL_mutex.h"
+	"begin_code.h"
+	<process.h>
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_rwops.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_clipboard.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_cpuinfo.h
+	"SDL_stdinc.h"
+	<intrin.h>
+	<intrin.h>
+	<altivec.h>
+	<mmintrin.h>
+	<mm3dnow.h>
+	<xmmintrin.h>
+	<emmintrin.h>
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_events.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_keyboard.h"
+	"SDL_mouse.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_quit.h"
+	"SDL_gesture.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_video.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_surface.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_pixels.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_rect.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_pixels.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_surface.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_blendmode.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_blendmode.h
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_keyboard.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_keycode.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_keycode.h
+	"SDL_stdinc.h"
+	"SDL_scancode.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_scancode.h
+	"SDL_stdinc.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_mouse.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_joystick.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_gamecontroller.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_rwops.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_quit.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_gesture.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_touch.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_filesystem.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_haptic.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_hints.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_loadso.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_log.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_messagebox.h
+	"SDL_stdinc.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_power.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_render.h
+	"SDL_stdinc.h"
+	"SDL_rect.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_system.h
+	"SDL_stdinc.h"
+	"SDL_keyboard.h"
+	"SDL_render.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_timer.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_version.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\src\utils.h
+	<array>
+	<cstddef>
+	<cstdint>
+	<cstring>
+	<initializer_list>
+	<iomanip>
+	<iostream>
+	<iterator>
+	<memory>
+	<sstream>
+	<string>
+	<type_traits>
+	<utility>
+	<vector>
+	<type_traits>
+	"lib_sdl.h"
+	"exceptions.h"
+	"system.h"
+
+1486158765 z:\projects\remote\jam\src\lib_vorbis.h
+	<vorbis/codec.h>
+	<vorbis/vorbisenc.h>
+	<vorbis/vorbisfile.h>
+
+1486158765 z:\projects\remote\jam\lib\include\vorbis\codec.h
+	"../ogg/ogg.h"
+
+1486158765 z:\projects\remote\jam\lib\include\ogg\ogg.h
+	<stddef.h>
+	"os_types.h"
+
+1486158765 z:\projects\remote\jam\lib\include\ogg\os_types.h
+	<stdint.h>
+	<sys/types.h>
+	<sys/types.h>
+	<inttypes.h>
+	<sys/types.h>
+	<inttypes.h>
+	"config_types.h"
+
+1486158765 z:\projects\remote\jam\lib\include\ogg\config_types.h
+	<inttypes.h>
+	<stdint.h>
+	<sys/types.h>
+
+1486158765 z:\projects\remote\jam\lib\include\vorbis\vorbisenc.h
+	"codec.h"
+
+1486158765 z:\projects\remote\jam\lib\include\vorbis\vorbisfile.h
+	<stdio.h>
+	"codec.h"
+
+1486158765 z:\projects\remote\jam\src\lib_zlib.h
+	<zlib.h>
+
+1486158765 z:\projects\remote\jam\lib\include\zlib.h
+	"zconf.h"
+
+1486158765 z:\projects\remote\jam\lib\include\zconf.h
+	<windows.h>
+	<limits.h>
+	<sys/types.h>
+	<stdarg.h>
+	<stddef.h>
+	<unistd.h>
+	<unixio.h>
+
+1486158765 source:z:\projects\remote\jam\src\glew_import.cpp
+	"os.h"
+	"../lib/glew.c.code"
+
+1486158765 source:z:\projects\remote\jam\src\graphics.cpp
+	"graphics.h"
+	<cstdint>
+	<fstream>
+	"lib_sdlimg.h"
+	"lib_sdlttf.h"
+	"lib_zlib.h"
+	"window.h"
+
+1486170992 z:\projects\remote\jam\src\graphics.h
+	<cstddef>
+	<cstring>
+	<initializer_list>
+	<type_traits>
+	<typeinfo>
+	<typeindex>
+	<utility>
+	"exceptions.h"
+	"lib_gl.h"
+	"lib_sdl.h"
+	"lib_sdlttf.h"
+	"math.h"
+	"os.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1486160511 z:\projects\remote\jam\src\lib_gl.h
+	"os.h"
+	<GLFL/glfl.h>
+
+1485908240 z:\projects\remote\jam\lib\include\glfl\glfl.h
+	<cstdint>
+	<iostream>
+	<string>
+	<type_traits>
+	<cstdlib>
+	"glfl_proxy_proto__.h"
+	"glfl_simple_proto__.h"
+
+1485908240 z:\projects\remote\jam\lib\include\glfl\glfl_proxy_proto__.h
+
+1485908240 z:\projects\remote\jam\lib\include\glfl\glfl_simple_proto__.h
+
+1486158765 z:\projects\remote\jam\src\lib_sdlttf.h
+	<SDL2/SDL_ttf.h>
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_ttf.h
+	"SDL.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\src\window.h
+	"lib_sdl.h"
+	"input.h"
+	"math.h"
+
+1486158765 z:\projects\remote\jam\src\input.h
+	<cstdint>
+	<map>
+	<type_traits>
+	"input_enums.h"
+	"math.h"
+	"utils.h"
+
+1486158765 z:\projects\remote\jam\src\lib_sdlimg.h
+	<SDL2/SDL_image.h>
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_image.h
+	"SDL.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 source:z:\projects\remote\jam\src\input.cpp
+	<cstring>
+	<vector>
+	"input.h"
+	"system.h"
+	"window.h"
+
+1486158765 source:z:\projects\remote\jam\src\logic.cpp
+	"master.h"
+
+1486158765 z:\projects\remote\jam\src\master.h
+	"lib_sdl.h"
+	"lib_sdlimg.h"
+	"lib_sdlttf.h"
+	"lib_sdlnet.h"
+	"lib_gl.h"
+	"lib_al.h"
+	"lib_zlib.h"
+	"lib_ogg.h"
+	"lib_vorbis.h"
+	"audio.h"
+	"exceptions.h"
+	"graphics.h"
+	"input.h"
+	"input_enums.h"
+	"math.h"
+	"network.h"
+	"os.h"
+	"renderer2d.h"
+	"system.h"
+	"utils.h"
+	"window.h"
+
+1486158765 z:\projects\remote\jam\src\lib_sdlnet.h
+	<SDL2/SDL_net.h>
+
+1486158765 z:\projects\remote\jam\lib\include\sdl2\sdl_net.h
+	<stdint.h>
+	"SDL.h"
+	"SDL_endian.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1486158765 z:\projects\remote\jam\src\lib_ogg.h
+	<ogg/ogg.h>
+
+1486158765 z:\projects\remote\jam\src\network.h
+	"lib_sdl.h"
+	"lib_sdlnet.h"
+	"system.h"
+	"utils.h"
+	<cstdint>
+
+1486170848 z:\projects\remote\jam\src\renderer2d.h
+	"graphics.h"
+	"math.h"
+
+1486158765 source:z:\projects\remote\jam\src\network.cpp
+	"network.h"
+	"utils.h"
+
+1486158765 source:z:\projects\remote\jam\src\system.cpp
+	<csignal>
+	<cstdlib>
+	<cstring>
+	<algorithm>
+	<exception>
+	<fstream>
+	<iostream>
+	<list>
+	<unordered_map>
+	<string>
+	"system.h"
+	"audio.h"
+	"graphics.h"
+	"lib_zlib.h"
+	"math.h"
+	"network.h"
+	"window.h"
+	"utils.h"
+
+1486158765 source:z:\projects\remote\jam\src\utils.cpp
+	"utils.h"
+
+1486160654 source:z:\projects\remote\jam\src\window.cpp
+	"window.h"
+	"lib_gl.h"
+	"input.h"
+	"system.h"
+	"utils.h"
+
+1485908240 source:z:\projects\remote\jam\lib\glfl.cpp
+	"GLFL/glfl.h"
+	"GLFL/glfl_func_indices.h"
+
+1485908240 z:\projects\remote\jam\lib\include\glfl\glfl_func_indices.h
+
+1486171378 source:z:\projects\remote\jam\src\game\main.cpp
+	"main.h"
+
+1486170772 z:\projects\remote\jam\src\game\main.h
+	"../master.h"
+
+1486171257 source:z:\projects\remote\jam\src\game\menu.cpp
+	"main.h"
+

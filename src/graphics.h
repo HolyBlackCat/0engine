@@ -1173,7 +1173,7 @@ namespace Graphics
                 {
                     SDL_FreeSurface(surface);
                     SDL_FreeSurface(glyph_surface);
-                    Exceptions::Graphics::FontAtlasOverflow(Name(), Jo(dstsz));
+                    Exceptions::Graphics::FontAtlasOverflow(Name(), Jo(dstsz+1));
                 }
 
                 font_data.AddGlyph(it, tex_pos, tex_sz, {minx, -maxy}, advance);

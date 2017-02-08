@@ -120,7 +120,6 @@
 			<Add library="shell32" />
 			<Add library="version" />
 			<Add library="uuid" />
-			<Add library="opengl32" />
 			<Add library="OpenAL32.dll" />
 			<Add library="zlibstatic" />
 			<Add library="ws2_32" />
@@ -133,10 +132,10 @@
 			<Add library="freetype" />
 			<Add directory="lib" />
 		</Linker>
+		<Unit filename="lib/glfl.cpp" />
 		<Unit filename="src/audio.cpp" />
 		<Unit filename="src/audio.h" />
 		<Unit filename="src/exceptions.h" />
-		<Unit filename="src/glew_import.cpp" />
 		<Unit filename="src/graphics.cpp" />
 		<Unit filename="src/graphics.h" />
 		<Unit filename="src/input.cpp" />

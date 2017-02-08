@@ -373,14 +373,9 @@ namespace Window
         if (!context_handle)
             WindowError("OpenGL context creation failed.");
 
-        #if OnWindows || defined(ASSUME_ANDROID)
-        glewExperimental = 1;
-        {
-            MarkLocation("GLEW");
-            if (glewInit() != GLEW_OK)
-                Sys::Error("GLEW init failed.");
-            while (glGetError()) {} // Skip any errors that can be caused by glewExperimental == 1.
-        }
+        #if OnWindows || OnLinux || defined(ASSUME_ANDROID)
+        glfl::set_function_loader(SDL_GL_GetProcAddress);
+        glfl::load_gl();
         #endif
         #if OnMobile && !defined(ASSUME_ANDROID)
         GLboolean status = 0;
