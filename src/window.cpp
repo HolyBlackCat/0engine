@@ -62,9 +62,11 @@ namespace Window
         {
             ForWindows(static int major = 3, minor = 3;)
             ForMac    (static int major = 3, minor = 2;)
+            ForLinux  (static int major = 3, minor = 3;)
             ForMobile (static int major = 2, minor = 0;)
             ForWindows(static ContextProfile profile = ContextProfile::compatibility;)
             ForMac    (static ContextProfile profile = ContextProfile::dont_care;)
+            ForLinux  (static ContextProfile profile = ContextProfile::compatibility;)
             ForMobile (static ContextProfile profile = ContextProfile::es;)
             static ContextAcceleration acceleration = ContextAcceleration::dont_care;
             static int msaa = 0;
@@ -375,7 +377,7 @@ namespace Window
 
         #if OnWindows || OnLinux || defined(ASSUME_ANDROID)
         glfl::set_function_loader(SDL_GL_GetProcAddress);
-        glfl::load_gl();
+        glfl::load_gl(Init::OpenGL::major, Init::OpenGL::minor);
         #endif
         #if OnMobile && !defined(ASSUME_ANDROID)
         GLboolean status = 0;
