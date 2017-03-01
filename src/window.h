@@ -1,7 +1,7 @@
 #ifndef WINDOW_H_INCLUDED
 #define WINDOW_H_INCLUDED
 
-#include "lib_sdl.h"
+#include "lib/sdl.h"
 #include "input.h"
 #include "math.h"
 

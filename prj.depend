@@ -35,7 +35,7 @@
 	<X11/Xmd.h>
 	<GL/glew.h>
 
-1480542811 source:z:\projects\c++\lx\src\system.cpp
+1488406421 source:z:\projects\c++\lx\src\system.cpp
 	<csignal>
 	<cstdlib>
 	<cstring>
@@ -49,7 +49,7 @@
 	"system.h"
 	"audio.h"
 	"graphics.h"
-	"lib_zlib.h"
+	"lib/z.h"
 	"math.h"
 	"network.h"
 	"window.h"
@@ -407,7 +407,7 @@
 	"math.h"
 	"os.h"
 
-1486158765 z:\projects\c++\lx\src\utils.h
+1488406421 z:\projects\c++\lx\src\utils.h
 	<array>
 	<cstddef>
 	<cstdint>
@@ -423,7 +423,7 @@
 	<utility>
 	<vector>
 	<type_traits>
-	"lib_sdl.h"
+	"lib/sdl.h"
 	"exceptions.h"
 	"system.h"
 
@@ -438,7 +438,7 @@
 1445788523 source:z:\projects\c++\lx\src\math.cpp
 	"math.h"
 
-1481147272 source:z:\projects\c++\lx\src\utils.cpp
+1486158765 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
 1481321606 source:z:\projects\c++\lx\src\logic.cpp
@@ -463,15 +463,15 @@
 	"utils.h"
 	"window.h"
 
-1474665397 source:z:\projects\c++\lx\src\window.cpp
+1488406421 source:z:\projects\c++\lx\src\window.cpp
 	"window.h"
-	"lib_gl.h"
+	"lib/gl.h"
 	"input.h"
 	"system.h"
 	"utils.h"
 
-1486158765 z:\projects\c++\lx\src\window.h
-	"lib_sdl.h"
+1488406421 z:\projects\c++\lx\src\window.h
+	"lib/sdl.h"
 	"input.h"
 	"math.h"
 
@@ -481,7 +481,7 @@
 1367159028 z:\projects\c++\lx\lib\include\zlib.h
 	"zconf.h"
 
-1481240331 source:z:\projects\c++\lx\src\input.cpp
+1486158765 source:z:\projects\c++\lx\src\input.cpp
 	<cstring>
 	<vector>
 	"input.h"
@@ -496,16 +496,16 @@
 	"math.h"
 	"utils.h"
 
-1481310796 source:z:\projects\c++\lx\src\graphics.cpp
+1488406419 source:z:\projects\c++\lx\src\graphics.cpp
 	"graphics.h"
 	<cstdint>
 	<fstream>
-	"lib_sdlimg.h"
-	"lib_sdlttf.h"
-	"lib_zlib.h"
+	"lib/sdlimg.h"
+	"lib/sdlttf.h"
+	"lib/z.h"
 	"window.h"
 
-1486170992 z:\projects\c++\lx\src\graphics.h
+1488406421 z:\projects\c++\lx\src\graphics.h
 	<cstddef>
 	<cstring>
 	<initializer_list>
@@ -514,29 +514,29 @@
 	<typeindex>
 	<utility>
 	"exceptions.h"
-	"lib_gl.h"
-	"lib_sdl.h"
-	"lib_sdlttf.h"
+	"lib/gl.h"
+	"lib/sdl.h"
+	"lib/sdlttf.h"
 	"math.h"
 	"os.h"
 	"system.h"
 	"utils.h"
 	"window.h"
 
-1481149121 source:z:\projects\c++\lx\src\audio.cpp
+1488406421 source:z:\projects\c++\lx\src\audio.cpp
 	"audio.h"
 	<cstdio>
 	<fstream>
-	"lib_vorbis.h"
-	"lib_zlib.h"
+	"lib/vorbis.h"
+	"lib/z.h"
 	"system.h"
 	"utils.h"
 
-1486158765 z:\projects\c++\lx\src\audio.h
+1488406421 z:\projects\c++\lx\src\audio.h
 	<cstdint>
 	<cstring>
 	"exceptions.h"
-	"lib_al.h"
+	"lib/al.h"
 	"math.h"
 	"system.h"
 	"utils.h"
@@ -1553,14 +1553,14 @@
 	"begin_code.h"
 	"close_code.h"
 
-1486158765 z:\projects\c++\lx\src\network.h
-	"lib_sdl.h"
-	"lib_sdlnet.h"
+1488406421 z:\projects\c++\lx\src\network.h
+	"lib/sdl.h"
+	"lib/sdlnet.h"
 	"system.h"
 	"utils.h"
 	<cstdint>
 
-1474665397 source:z:\projects\c++\lx\src\network.cpp
+1486158765 source:z:\projects\c++\lx\src\network.cpp
 	"network.h"
 	"utils.h"
 
@@ -1610,19 +1610,19 @@
 	<exception>
 	<string>
 
-1486158765 z:\projects\c++\lx\src\input_enums.h
-	"lib_sdl.h"
+1488406421 z:\projects\c++\lx\src\input_enums.h
+	"lib/sdl.h"
 
-1486158765 z:\projects\c++\lx\src\master.h
-	"lib_sdl.h"
-	"lib_sdlimg.h"
-	"lib_sdlttf.h"
-	"lib_sdlnet.h"
-	"lib_gl.h"
-	"lib_al.h"
-	"lib_zlib.h"
-	"lib_ogg.h"
-	"lib_vorbis.h"
+1488406421 z:\projects\c++\lx\src\master.h
+	"lib/sdl.h"
+	"lib/sdlimg.h"
+	"lib/sdlttf.h"
+	"lib/sdlnet.h"
+	"lib/gl.h"
+	"lib/al.h"
+	"lib/z.h"
+	"lib/ogg.h"
+	"lib/vorbis.h"
 	"audio.h"
 	"exceptions.h"
 	"graphics.h"
@@ -2306,4 +2306,44 @@
 1485908240 z:\projects\c++\lx\lib\include\glfl\glfl_proxy_proto__.h
 
 1485908240 z:\projects\c++\lx\lib\include\glfl\glfl_simple_proto__.h
+
+1485908240 source:z:\projects\c++\lx\lib\glfl.cpp
+	"GLFL/glfl.h"
+	"GLFL/glfl_func_indices.h"
+
+1485908240 z:\projects\c++\lx\lib\include\glfl\glfl_func_indices.h
+
+1486158765 z:\projects\c++\lx\src\lib\sdl.h
+	<SDL2/SDL.h>
+
+1486158765 z:\projects\c++\lx\src\lib\sdlimg.h
+	<SDL2/SDL_image.h>
+
+1486158765 z:\projects\c++\lx\src\lib\sdlttf.h
+	<SDL2/SDL_ttf.h>
+
+1486158765 z:\projects\c++\lx\src\lib\sdlnet.h
+	<SDL2/SDL_net.h>
+
+1488406460 z:\projects\c++\lx\src\lib\gl.h
+	"../os.h"
+	<GLFL/glfl.h>
+
+1488406456 z:\projects\c++\lx\src\lib\al.h
+	"../os.h"
+	<AL/al.h>
+	<AL/alc.h>
+	<OpenAL/al.h>
+	<OpenAL/alc.h>
+
+1486158765 z:\projects\c++\lx\src\lib\z.h
+	<zlib.h>
+
+1486158765 z:\projects\c++\lx\src\lib\ogg.h
+	<ogg/ogg.h>
+
+1486158765 z:\projects\c++\lx\src\lib\vorbis.h
+	<vorbis/codec.h>
+	<vorbis/vorbisenc.h>
+	<vorbis/vorbisfile.h>
 

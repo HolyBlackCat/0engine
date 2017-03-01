@@ -5,7 +5,7 @@
 #include <cstring>
 
 #include "exceptions.h"
-#include "lib_al.h"
+#include "lib/al.h"
 #include "math.h"
 #include "system.h"
 #include "utils.h"

@@ -3,7 +3,7 @@
 
 #include "window.h"
 
-#include "lib_gl.h"
+#include "lib/gl.h"
 #include "input.h"
 #include "system.h"
 #include "utils.h"

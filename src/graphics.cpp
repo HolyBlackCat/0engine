@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <fstream>
 
-#include "lib_sdlimg.h"
-#include "lib_sdlttf.h"
-#include "lib_zlib.h"
+#include "lib/sdlimg.h"
+#include "lib/sdlttf.h"
+#include "lib/z.h"
 #include "window.h"
 
 namespace Graphics

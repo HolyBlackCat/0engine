@@ -1,4 +1,4 @@
-#include "os.h"
+#include "../os.h"
 
 #ifdef ASSUME_ANDROID
 #include <GLFL/glfl.h>

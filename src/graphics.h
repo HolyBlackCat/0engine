@@ -10,9 +10,9 @@
 #include <utility>
 
 #include "exceptions.h"
-#include "lib_gl.h"
-#include "lib_sdl.h"
-#include "lib_sdlttf.h"
+#include "lib/gl.h"
+#include "lib/sdl.h"
+#include "lib/sdlttf.h"
 #include "math.h"
 #include "os.h"
 #include "system.h"

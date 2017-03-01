@@ -1,8 +1,8 @@
 #ifndef NETWORK_H_INCLUDED
 #define NETWORK_H_INCLUDED
 
-#include "lib_sdl.h"
-#include "lib_sdlnet.h"
+#include "lib/sdl.h"
+#include "lib/sdlnet.h"
 #include "system.h"
 #include "utils.h"
 #include <cstdint>

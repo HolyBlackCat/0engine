@@ -19,7 +19,7 @@
 
 #include "audio.h"
 #include "graphics.h"
-#include "lib_zlib.h"
+#include "lib/z.h"
 #include "math.h"
 #include "network.h"
 #include "window.h"

@@ -18,7 +18,7 @@
 
 #include <type_traits>
 
-#include "lib_sdl.h"
+#include "lib/sdl.h"
 #include "exceptions.h"
 #include "system.h"
 

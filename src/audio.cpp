@@ -3,8 +3,8 @@
 #include <cstdio>
 #include <fstream>
 
-#include "lib_vorbis.h"
-#include "lib_zlib.h"
+#include "lib/vorbis.h"
+#include "lib/z.h"
 #include "system.h"
 #include "utils.h"
 

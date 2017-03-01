@@ -1,7 +1,7 @@
 #ifndef INPUT_ENUMS_H_INCLUDED
 #define INPUT_ENUMS_H_INCLUDED
 
-#include "lib_sdl.h"
+#include "lib/sdl.h"
 
 namespace Input
 {
