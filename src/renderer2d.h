@@ -241,7 +241,7 @@ void main()
         {
             tex_a = src;
             tex_b = src+srcsz;
-            set_all_colors(mix_color.to_vec4().change_a(0));
+            set_all_colors(mix_color.to_vec4(0));
             set_all_factors({mix, alpha, luminance});
         }
     };

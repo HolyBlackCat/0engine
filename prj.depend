@@ -407,7 +407,7 @@
 	"math.h"
 	"os.h"
 
-1488406421 z:\projects\c++\lx\src\utils.h
+1492814141 z:\projects\c++\lx\src\utils.h
 	<array>
 	<cstddef>
 	<cstdint>
@@ -427,10 +427,11 @@
 	"exceptions.h"
 	"system.h"
 
-1486158765 z:\projects\c++\lx\src\math.h
-	<functional>
+1494372743 z:\projects\c++\lx\src\math.h
+	<algorithm>
 	<cmath>
 	<cstdint>
+	<functional>
 	<ostream>
 	<type_traits>
 	<utility>
@@ -441,7 +442,7 @@
 1486158765 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1481321606 source:z:\projects\c++\lx\src\logic.cpp
+1494372681 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
 
 1465479696 z:\projects\c++\lx\src\logic.h
@@ -505,7 +506,7 @@
 	"lib/z.h"
 	"window.h"
 
-1488406421 z:\projects\c++\lx\src\graphics.h
+1492471043 z:\projects\c++\lx\src\graphics.h
 	<cstddef>
 	<cstring>
 	<initializer_list>
@@ -1660,7 +1661,7 @@
 	"begin_code.h"
 	"close_code.h"
 
-1486170848 z:\projects\c++\lx\src\renderer2d.h
+1492816812 z:\projects\c++\lx\src\renderer2d.h
 	"graphics.h"
 	"math.h"
 

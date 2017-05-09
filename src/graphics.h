@@ -1400,7 +1400,7 @@ namespace Graphics
         void SetData(Side side, int new_size, void *ptr = 0)
         {
             Activate();
-            size = new_size;
+            size = ivec2(new_size);
             glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
         }
         void SetData(const ImageData *sides) // "sides" must point to six objects in the following order: +x -x +y -y +z -z
@@ -1437,7 +1437,7 @@ namespace Graphics
         void SetData(int new_size, void **sides = 0) // "sides" must point to six objects (data pointers) in the following order: +x -x +y -y +z -z. "sides" may be null.
         {
             Activate();
-            size = new_size;
+            size = ivec2(new_size);
             void *nulls[6]{};
             if (!sides) sides = nulls;
             for (int i = 0; i < 6; i++)

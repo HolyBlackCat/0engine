@@ -1,11 +1,12 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 1.9.1 by HolyBlackCat
+// Version 2.1.0 by HolyBlackCat
 
-#include <functional>
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <ostream>
 #include <type_traits>
 #include <utility>
@@ -17,6 +18,89 @@ namespace Math
     {
         template <unsigned int D, typename T> struct vec;
         template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, T>>;
+    }
+
+    namespace Utility
+    {
+        template <typename T> struct floating_point_t_impl {using type = double;};
+        template <> struct floating_point_t_impl<float> {using type = float;};
+        template <> struct floating_point_t_impl<long double> {using type = long double;};
+        template <unsigned int D, typename T> struct floating_point_t_impl<Vector::vec<D,T>> {using type = typename floating_point_t_impl<T>::type;};
+        template <typename T> using floating_point_t = typename floating_point_t_impl<T>::type;
+
+        template <typename T> struct is_vec_or_mat {static constexpr bool value = 0;};
+        template <unsigned int D, typename T> struct is_vec_or_mat<Vector::vec<D,T>> {static constexpr bool value = 1;};
+
+        template <typename T> struct is_mat {static constexpr bool value = 0;};
+        template <unsigned int W, unsigned int H, typename T> struct is_mat<Vector::mat<W,H,T>> {static constexpr bool value = 1;};
+
+        template <typename T> struct is_vec {static constexpr bool value = is_vec_or_mat<T>::value && !is_mat<T>::value;};
+
+        template <typename Condition, typename T> using enable_if_vec_or_mat_t = std::enable_if_t<is_vec_or_mat<Condition>::value, T>;
+        template <typename Condition, typename T> using enable_if_not_vec_or_mat_t = std::enable_if_t<!is_vec_or_mat<Condition>::value, T>;
+
+        template <typename T, typename TT> struct change_base_type_t_impl {using type = TT;};
+        template <unsigned int D, typename T, typename TT> struct change_base_type_t_impl<Vector::vec<D,T>,TT> {using type = Vector::vec<D,TT>;};
+        template <unsigned int W, unsigned int H, typename T, typename TT> struct change_base_type_t_impl<Vector::mat<W,H,T>,TT> {using type = Vector::mat<W,H,TT>;};
+        template <typename T, typename TT> using change_base_type_t = typename change_base_type_t_impl<T,TT>::type;
+
+        template <typename T> struct base_type_t_impl {using type = T;};
+        template <unsigned int D, typename T> struct base_type_t_impl<Vector::vec<D,T>> {using type = typename Vector::vec<D,T>::type;};
+        template <typename T> using base_type_t = typename base_type_t_impl<T>::type;
+
+        template <typename ...P> struct larger_type_t_impl {using type = void;};
+        template <typename ...P> using larger_type_t = typename larger_type_t_impl<P...>::type;
+        template <typename T, typename ...P> struct larger_type_t_impl<T, P...> {using type = larger_type_t<T, larger_type_t<P...>>;};
+        template <typename T> struct larger_type_t_impl<T> {using type = T;};
+        template <typename T, typename TT> struct larger_type_t_impl<T, TT>
+        {
+            using type =
+            std::conditional_t< std::is_arithmetic<base_type_t<T>>::value && std::is_arithmetic<base_type_t<TT>>::value,
+                std::conditional_t< !is_vec_or_mat<T>::value && !is_vec_or_mat<TT>::value,
+                    std::conditional_t< std::is_integral<T>::value == std::is_integral<TT>::value,
+                        std::conditional_t< (sizeof (T) == sizeof (TT)),
+                            std::conditional_t< std::is_same<T,TT>::value,
+                                T
+                            ,
+                                void
+                            >
+                        ,
+                            std::conditional_t< (sizeof (T) > sizeof (TT)),
+                                T
+                            ,
+                                TT
+                            >
+                        >
+                    ,
+                        std::conditional_t< std::is_floating_point<T>::value,
+                            T
+                        ,
+                            TT
+                        >
+                    >
+                ,
+                    std::conditional_t< is_vec_or_mat<T>::value && is_vec_or_mat<TT>::value,
+                        std::conditional_t< std::is_same<change_base_type_t<T,base_type_t<TT>>,TT>::value,
+                            change_base_type_t<T, larger_type_t<base_type_t<T>, base_type_t<TT>>>
+                        ,
+                            void
+                        >
+                    ,
+                        std::conditional_t< is_vec_or_mat<T>::value,
+                            change_base_type_t<T, larger_type_t<base_type_t<T>, base_type_t<TT>>>
+                        ,
+                            change_base_type_t<TT, larger_type_t<base_type_t<T>, base_type_t<TT>>>
+                        >
+                    >
+                >
+            ,
+                void
+            >;
+        };
+    }
+
+    namespace Vector
+    {
         template <typename T> using vec2 = vec<2, T>;
         template <typename T> using vec3 = vec<3, T>;
         template <typename T> using vec4 = vec<4, T>;
@@ -409,41 +493,46 @@ namespace Math
 
         template <typename T> struct vec<2,T> // vec2
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int size = 2;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = std::is_floating_point<type>::value;union {T x,r,s;};
-            union {T y,g,t;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = std::is_floating_point<type>::value;
+            union {T x, r, s;};
+            union {T y, g, t;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
-            constexpr vec(type obj) : x(obj), y(obj) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
             constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec2<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y};}
-            constexpr vec change_r(type o) const {return {o, y};}
-            constexpr vec change_s(type o) const {return {o, y};}
-            constexpr vec change_y(type o) const {return {x, o};}
-            constexpr vec change_g(type o) const {return {x, o};}
-            constexpr vec change_t(type o) const {return {x, o};}
-            constexpr vec3<type> to_vec3() const {return {x, y, type{}};}
-            constexpr vec4<type> to_vec4() const {return {x, y, type{}, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec2<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y};}
+            constexpr vec set_r(T o) const {return {o, y};}
+            constexpr vec set_s(T o) const {return {o, y};}
+            constexpr vec set_y(T o) const {return {x, o};}
+            constexpr vec set_g(T o) const {return {x, o};}
+            constexpr vec set_t(T o) const {return {x, o};}
             constexpr auto len_sqr() const {return x*x + y*y;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec2<TT> &o) const {return x*o.x + y*o.y;}
             template <typename TT> constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}
-            constexpr decltype(std::sqrt(x/y)) ratio() const {return decltype(std::sqrt(x/y))(x) / decltype(std::sqrt(x/y))(y);}
-            constexpr auto norm() const -> vec2<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
-            template <typename TT> vec2<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {func(x), func(y)};}
+            constexpr Utility::floating_point_t<T> ratio() const {return Utility::floating_point_t<T>(x) / Utility::floating_point_t<T>(y);}
+            constexpr auto norm() const -> vec2<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec2<T>(0); else return *this / l;}
+            template <typename F> constexpr auto apply(F &&func) const -> vec2<decltype(func(x))> {return {func(x), func(y)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) const -> std::enable_if_t<(sizeof...(P)>0),vec2<decltype(func(x,params...))>> {return {func(x, params...), func(y, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec2<P> &... params) const -> std::enable_if_t<(sizeof...(P)>0),vec2<decltype(func(x,params.x...))>> {return {func(x, params.x...), func(y, params.y...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) const -> vec2<decltype(func(param,x))> {return {func(param, x), func(param, y)};}
+            template <typename F, typename P> constexpr auto apply(const vec2<P> &param, F &&func) const -> vec2<decltype(func(param.x,x))> {return {func(param.x, x), func(param.y, y)};}
+            constexpr vec3<T> to_vec3(T pz) const {return {x, y, pz};}
+            constexpr vec4<T> to_vec4(T pz, T pw) const {return {x, y, pz, pw};}
+            constexpr vec3<T> to_vec3() const {return to_vec3(T{});}
+            constexpr vec4<T> to_vec4() const {return to_vec4(T{}, T{});}
             constexpr bool none() const {return !(x || y);}
             constexpr bool any() const {return x || y;}
             constexpr bool each() const {return x && y;}
@@ -451,47 +540,53 @@ namespace Math
             template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y};}
             template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y};}
             template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat4x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y, x*o.w.x+y*o.w.y};}
+            constexpr T min() const {return std::min({x,y});}
+            constexpr T max() const {return std::max({x,y});}
         };
         template <typename T> struct vec<3,T> // vec3
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int size = 3;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = std::is_floating_point<type>::value;union {T x,r,s;};
-            union {T y,g,t;};
-            union {T z,b,p;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = std::is_floating_point<type>::value;
+            union {T x, r, s;};
+            union {T y, g, t;};
+            union {T z, b, p;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
             constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec3<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z};}
-            constexpr vec change_r(type o) const {return {o, y, z};}
-            constexpr vec change_s(type o) const {return {o, y, z};}
-            constexpr vec change_y(type o) const {return {x, o, z};}
-            constexpr vec change_g(type o) const {return {x, o, z};}
-            constexpr vec change_t(type o) const {return {x, o, z};}
-            constexpr vec change_z(type o) const {return {x, y, o};}
-            constexpr vec change_b(type o) const {return {x, y, o};}
-            constexpr vec change_p(type o) const {return {x, y, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec4<type> to_vec4() const {return {x, y, z, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec3<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z};}
+            constexpr vec set_r(T o) const {return {o, y, z};}
+            constexpr vec set_s(T o) const {return {o, y, z};}
+            constexpr vec set_y(T o) const {return {x, o, z};}
+            constexpr vec set_g(T o) const {return {x, o, z};}
+            constexpr vec set_t(T o) const {return {x, o, z};}
+            constexpr vec set_z(T o) const {return {x, y, o};}
+            constexpr vec set_b(T o) const {return {x, y, o};}
+            constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr auto len_sqr() const {return x*x + y*y + z*z;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec3<TT> &o) const {return x*o.x + y*o.y + z*o.z;}
             template <typename TT> constexpr auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};}
-            constexpr auto norm() const -> vec3<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
-            template <typename TT> vec3<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {func(x), func(y), func(z)};}
+            constexpr auto norm() const -> vec3<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec3<T>(0); else return *this / l;}
+            template <typename F> constexpr auto apply(F &&func) const -> vec3<decltype(func(x))> {return {func(x), func(y), func(z)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) const -> std::enable_if_t<(sizeof...(P)>0),vec3<decltype(func(x,params...))>> {return {func(x, params...), func(y, params...), func(z, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec3<P> &... params) const -> std::enable_if_t<(sizeof...(P)>0),vec3<decltype(func(x,params.x...))>> {return {func(x, params.x...), func(y, params.y...), func(z, params.z...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) const -> vec3<decltype(func(param,x))> {return {func(param, x), func(param, y), func(param, z)};}
+            template <typename F, typename P> constexpr auto apply(const vec3<P> &param, F &&func) const -> vec3<decltype(func(param.x,x))> {return {func(param.x, x), func(param.y, y), func(param.z, z)};}
+            constexpr vec2<T> to_vec2() const {return {x, y};}
+            constexpr vec4<T> to_vec4(T pw) const {return {x, y, z, pw};}
+            constexpr vec4<T> to_vec4() const {return to_vec4(T{});}
             constexpr bool none() const {return !(x || y || z);}
             constexpr bool any() const {return x || y || z;}
             constexpr bool each() const {return x && y && z;}
@@ -499,50 +594,55 @@ namespace Math
             template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z};}
             template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z};}
             template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z, x*o.w.x+y*o.w.y+z*o.w.z};}
+            constexpr T min() const {return std::min({x,y,z});}
+            constexpr T max() const {return std::max({x,y,z});}
         };
         template <typename T> struct vec<4,T> // vec4
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int size = 4;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = std::is_floating_point<type>::value;union {T x,r,s;};
-            union {T y,g,t;};
-            union {T z,b,p;};
-            union {T w,a,q;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = std::is_floating_point<type>::value;
+            union {T x, r, s;};
+            union {T y, g, t;};
+            union {T z, b, p;};
+            union {T w, a, q;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
             constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec4<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z, w};}
-            constexpr vec change_r(type o) const {return {o, y, z, w};}
-            constexpr vec change_s(type o) const {return {o, y, z, w};}
-            constexpr vec change_y(type o) const {return {x, o, z, w};}
-            constexpr vec change_g(type o) const {return {x, o, z, w};}
-            constexpr vec change_t(type o) const {return {x, o, z, w};}
-            constexpr vec change_z(type o) const {return {x, y, o, w};}
-            constexpr vec change_b(type o) const {return {x, y, o, w};}
-            constexpr vec change_p(type o) const {return {x, y, o, w};}
-            constexpr vec change_w(type o) const {return {x, y, z, o};}
-            constexpr vec change_a(type o) const {return {x, y, z, o};}
-            constexpr vec change_q(type o) const {return {x, y, z, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec3<type> to_vec3() const {return {x, y, z};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec4<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z, w};}
+            constexpr vec set_r(T o) const {return {o, y, z, w};}
+            constexpr vec set_s(T o) const {return {o, y, z, w};}
+            constexpr vec set_y(T o) const {return {x, o, z, w};}
+            constexpr vec set_g(T o) const {return {x, o, z, w};}
+            constexpr vec set_t(T o) const {return {x, o, z, w};}
+            constexpr vec set_z(T o) const {return {x, y, o, w};}
+            constexpr vec set_b(T o) const {return {x, y, o, w};}
+            constexpr vec set_p(T o) const {return {x, y, o, w};}
+            constexpr vec set_w(T o) const {return {x, y, z, o};}
+            constexpr vec set_a(T o) const {return {x, y, z, o};}
+            constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr auto len_sqr() const {return x*x + y*y + z*z + w*w;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec4<TT> &o) const {return x*o.x + y*o.y + z*o.z + w*o.w;}
-            constexpr auto norm() const -> vec4<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}
-            template <typename TT> vec4<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {func(x), func(y), func(z), func(w)};}
+            constexpr auto norm() const -> vec4<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec4<T>(0); else return *this / l;}
+            template <typename F> constexpr auto apply(F &&func) const -> vec4<decltype(func(x))> {return {func(x), func(y), func(z), func(w)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) const -> std::enable_if_t<(sizeof...(P)>0),vec4<decltype(func(x,params...))>> {return {func(x, params...), func(y, params...), func(z, params...), func(w, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec4<P> &... params) const -> std::enable_if_t<(sizeof...(P)>0),vec4<decltype(func(x,params.x...))>> {return {func(x, params.x...), func(y, params.y...), func(z, params.z...), func(w, params.w...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) const -> vec4<decltype(func(param,x))> {return {func(param, x), func(param, y), func(param, z), func(param, w)};}
+            template <typename F, typename P> constexpr auto apply(const vec4<P> &param, F &&func) const -> vec4<decltype(func(param.x,x))> {return {func(param.x, x), func(param.y, y), func(param.z, z), func(param.w, w)};}
+            constexpr vec2<T> to_vec2() const {return {x, y};}
+            constexpr vec3<T> to_vec3() const {return {x, y, z};}
             constexpr bool none() const {return !(x || y || z || w);}
             constexpr bool any() const {return x || y || z || w;}
             constexpr bool each() const {return x && y && z && w;}
@@ -550,37 +650,36 @@ namespace Math
             template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w};}
             template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w};}
             template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w, x*o.w.x+y*o.w.y+z*o.w.z+w*o.w.w};}
+            constexpr T min() const {return std::min({x,y,z,w});}
+            constexpr T max() const {return std::max({x,y,z,w});}
         };
         template <typename T> struct vec<2,vec<2,T>> // mat2x2
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 2, height = 2;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec2<T>::is_floating_point;union {vec2<T> x,r,s;};
-            union {vec2<T> y,g,t;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec2<T>::is_floating_point;
+            union {vec2<T> x, r, s;};
+            union {vec2<T> y, g, t;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
-            constexpr vec(type obj) : x(obj), y(obj) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
             constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec2<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y};}
-            constexpr vec change_r(type o) const {return {o, y};}
-            constexpr vec change_s(type o) const {return {o, y};}
-            constexpr vec change_y(type o) const {return {x, o};}
-            constexpr vec change_g(type o) const {return {x, o};}
-            constexpr vec change_t(type o) const {return {x, o};}
-            constexpr vec3<type> to_vec3() const {return {x, y, type{}};}
-            constexpr vec4<type> to_vec4() const {return {x, y, type{}, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec2<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y};}
+            constexpr vec set_r(T o) const {return {o, y};}
+            constexpr vec set_s(T o) const {return {o, y};}
+            constexpr vec set_y(T o) const {return {x, o};}
+            constexpr vec set_g(T o) const {return {x, o};}
+            constexpr vec set_t(T o) const {return {x, o};}
             constexpr vec(type xx, type xy, type yx, type yy) : x(xx,xy), y(yx,yy) {}
             constexpr mat2x2<type> transpose() const {return {x.x,y.x,x.y,y.y};}
             static constexpr vec identity() {return {1, 0, 0, 1};}
@@ -614,20 +713,26 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,0,0,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat2x2<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat2x2<decltype(func(x.x))> {return {x.apply(func), y.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x2<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x2<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x2<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat2x2<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat2x2<P> &param, F &&func) -> mat2x2<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func)};}
             constexpr bool none() const {return !(x.x || x.y || y.x || y.y);}
             constexpr bool any() const {return x.x || x.y || y.x || y.y;}
             constexpr bool each() const {return x.x && x.y && y.x && y.y;}
-            constexpr mat2<type> inverse() const
+            constexpr T min() const {return std::min({x.x,x.y,y.x,y.y});}
+            constexpr T max() const {return std::max({x.x,x.y,y.x,y.y});}
+            constexpr mat2<T> inverse() const
             {
-                mat2<type> inv;
+                mat2<T> inv;
                 inv.x.x =  y.y;
                 inv.y.x = -y.x;
                 inv.x.y = -x.y;
                 inv.y.y =  x.x;
-                type det = x.x * inv.x.x + x.y * inv.y.x;
+                T det = x.x * inv.x.x + x.y * inv.y.x;
                 if (det == 0)
-                    return mat2<type>::identity();
+                    return mat2<T>::identity();
                 det = 1.0f / det;
                 return inv * det;
             }
@@ -638,38 +743,35 @@ namespace Math
         };
         template <typename T> struct vec<3,vec<2,T>> // mat3x2
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 3, height = 2;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec2<T>::is_floating_point;union {vec2<T> x,r,s;};
-            union {vec2<T> y,g,t;};
-            union {vec2<T> z,b,p;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec2<T>::is_floating_point;
+            union {vec2<T> x, r, s;};
+            union {vec2<T> y, g, t;};
+            union {vec2<T> z, b, p;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
             constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec3<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z};}
-            constexpr vec change_r(type o) const {return {o, y, z};}
-            constexpr vec change_s(type o) const {return {o, y, z};}
-            constexpr vec change_y(type o) const {return {x, o, z};}
-            constexpr vec change_g(type o) const {return {x, o, z};}
-            constexpr vec change_t(type o) const {return {x, o, z};}
-            constexpr vec change_z(type o) const {return {x, y, o};}
-            constexpr vec change_b(type o) const {return {x, y, o};}
-            constexpr vec change_p(type o) const {return {x, y, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec4<type> to_vec4() const {return {x, y, z, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec3<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z};}
+            constexpr vec set_r(T o) const {return {o, y, z};}
+            constexpr vec set_s(T o) const {return {o, y, z};}
+            constexpr vec set_y(T o) const {return {x, o, z};}
+            constexpr vec set_g(T o) const {return {x, o, z};}
+            constexpr vec set_t(T o) const {return {x, o, z};}
+            constexpr vec set_z(T o) const {return {x, y, o};}
+            constexpr vec set_b(T o) const {return {x, y, o};}
+            constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr vec(type xx, type xy, type yx, type yy, type zx, type zy) : x(xx,xy), y(yx,yy), z(zx,zy) {}
             constexpr mat2x3<type> transpose() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0};}
@@ -695,10 +797,16 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat3x2<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat3x2<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x2<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x2<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x2<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat3x2<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat3x2<P> &param, F &&func) -> mat3x2<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func)};}
             constexpr bool none() const {return !(x.x || x.y || y.x || y.y || z.x || z.y);}
             constexpr bool any() const {return x.x || x.y || y.x || y.y || z.x || z.y;}
             constexpr bool each() const {return x.x && x.y && y.x && y.y && z.x && z.y;}
+            constexpr T min() const {return std::min({x.x,x.y,y.x,y.y,z.x,z.y});}
+            constexpr T max() const {return std::max({x.x,x.y,y.x,y.y,z.x,z.y});}
             template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z};}
             template <typename TT> constexpr mat2x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z};}
             template <typename TT> constexpr mat3x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z};}
@@ -706,42 +814,39 @@ namespace Math
         };
         template <typename T> struct vec<4,vec<2,T>> // mat4x2
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 4, height = 2;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec2<T>::is_floating_point;union {vec2<T> x,r,s;};
-            union {vec2<T> y,g,t;};
-            union {vec2<T> z,b,p;};
-            union {vec2<T> w,a,q;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec2<T>::is_floating_point;
+            union {vec2<T> x, r, s;};
+            union {vec2<T> y, g, t;};
+            union {vec2<T> z, b, p;};
+            union {vec2<T> w, a, q;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
             constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec4<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z, w};}
-            constexpr vec change_r(type o) const {return {o, y, z, w};}
-            constexpr vec change_s(type o) const {return {o, y, z, w};}
-            constexpr vec change_y(type o) const {return {x, o, z, w};}
-            constexpr vec change_g(type o) const {return {x, o, z, w};}
-            constexpr vec change_t(type o) const {return {x, o, z, w};}
-            constexpr vec change_z(type o) const {return {x, y, o, w};}
-            constexpr vec change_b(type o) const {return {x, y, o, w};}
-            constexpr vec change_p(type o) const {return {x, y, o, w};}
-            constexpr vec change_w(type o) const {return {x, y, z, o};}
-            constexpr vec change_a(type o) const {return {x, y, z, o};}
-            constexpr vec change_q(type o) const {return {x, y, z, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec3<type> to_vec3() const {return {x, y, z};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec4<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z, w};}
+            constexpr vec set_r(T o) const {return {o, y, z, w};}
+            constexpr vec set_s(T o) const {return {o, y, z, w};}
+            constexpr vec set_y(T o) const {return {x, o, z, w};}
+            constexpr vec set_g(T o) const {return {x, o, z, w};}
+            constexpr vec set_t(T o) const {return {x, o, z, w};}
+            constexpr vec set_z(T o) const {return {x, y, o, w};}
+            constexpr vec set_b(T o) const {return {x, y, o, w};}
+            constexpr vec set_p(T o) const {return {x, y, o, w};}
+            constexpr vec set_w(T o) const {return {x, y, z, o};}
+            constexpr vec set_a(T o) const {return {x, y, z, o};}
+            constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr vec(type xx, type xy, type yx, type yy, type zx, type zy, type wx, type wy) : x(xx,xy), y(yx,yy), z(zx,zy), w(wx,wy) {}
             constexpr mat2x4<type> transpose() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0, 0, 0};}
@@ -761,10 +866,16 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0,w.x,w.y,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat4x2<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat4x2<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x2<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...), w.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x2<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x2<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...), w.apply(func, params.w...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat4x2<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func), w.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat4x2<P> &param, F &&func) -> mat4x2<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func), w.apply(param.w, func)};}
             constexpr bool none() const {return !(x.x || x.y || y.x || y.y || z.x || z.y || w.x || w.y);}
             constexpr bool any() const {return x.x || x.y || y.x || y.y || z.x || z.y || w.x || w.y;}
             constexpr bool each() const {return x.x && x.y && y.x && y.y && z.x && z.y && w.x && w.y;}
+            constexpr T min() const {return std::min({x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y});}
+            constexpr T max() const {return std::max({x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y});}
             template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w};}
             template <typename TT> constexpr mat2x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w};}
             template <typename TT> constexpr mat3x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w};}
@@ -772,34 +883,31 @@ namespace Math
         };
         template <typename T> struct vec<2,vec<3,T>> // mat2x3
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 2, height = 3;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec3<T>::is_floating_point;union {vec3<T> x,r,s;};
-            union {vec3<T> y,g,t;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec3<T>::is_floating_point;
+            union {vec3<T> x, r, s;};
+            union {vec3<T> y, g, t;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
-            constexpr vec(type obj) : x(obj), y(obj) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
             constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec2<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y};}
-            constexpr vec change_r(type o) const {return {o, y};}
-            constexpr vec change_s(type o) const {return {o, y};}
-            constexpr vec change_y(type o) const {return {x, o};}
-            constexpr vec change_g(type o) const {return {x, o};}
-            constexpr vec change_t(type o) const {return {x, o};}
-            constexpr vec3<type> to_vec3() const {return {x, y, type{}};}
-            constexpr vec4<type> to_vec4() const {return {x, y, type{}, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec2<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y};}
+            constexpr vec set_r(T o) const {return {o, y};}
+            constexpr vec set_s(T o) const {return {o, y};}
+            constexpr vec set_y(T o) const {return {x, o};}
+            constexpr vec set_g(T o) const {return {x, o};}
+            constexpr vec set_t(T o) const {return {x, o};}
             constexpr vec(type xx, type xy, type xz, type yx, type yy, type yz) : x(xx,xy,xz), y(yx,yy,yz) {}
             constexpr mat3x2<type> transpose() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0};}
@@ -818,10 +926,16 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,0,0,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat2x3<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat2x3<decltype(func(x.x))> {return {x.apply(func), y.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x3<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x3<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x3<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat2x3<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat2x3<P> &param, F &&func) -> mat2x3<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z);}
             constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z;}
             constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z;}
+            constexpr T min() const {return std::min({x.x,x.y,x.z,y.x,y.y,y.z});}
+            constexpr T max() const {return std::max({x.x,x.y,x.z,y.x,y.y,y.z});}
             template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{})> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y, x.z*o.x+y.z*o.y};}
             template <typename TT> constexpr mat2x3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y};}
             template <typename TT> constexpr mat3x3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.z*o.z.x+y.z*o.z.y};}
@@ -829,38 +943,35 @@ namespace Math
         };
         template <typename T> struct vec<3,vec<3,T>> // mat3x3
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 3, height = 3;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec3<T>::is_floating_point;union {vec3<T> x,r,s;};
-            union {vec3<T> y,g,t;};
-            union {vec3<T> z,b,p;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec3<T>::is_floating_point;
+            union {vec3<T> x, r, s;};
+            union {vec3<T> y, g, t;};
+            union {vec3<T> z, b, p;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
             constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec3<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z};}
-            constexpr vec change_r(type o) const {return {o, y, z};}
-            constexpr vec change_s(type o) const {return {o, y, z};}
-            constexpr vec change_y(type o) const {return {x, o, z};}
-            constexpr vec change_g(type o) const {return {x, o, z};}
-            constexpr vec change_t(type o) const {return {x, o, z};}
-            constexpr vec change_z(type o) const {return {x, y, o};}
-            constexpr vec change_b(type o) const {return {x, y, o};}
-            constexpr vec change_p(type o) const {return {x, y, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec4<type> to_vec4() const {return {x, y, z, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec3<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z};}
+            constexpr vec set_r(T o) const {return {o, y, z};}
+            constexpr vec set_s(T o) const {return {o, y, z};}
+            constexpr vec set_y(T o) const {return {x, o, z};}
+            constexpr vec set_g(T o) const {return {x, o, z};}
+            constexpr vec set_t(T o) const {return {x, o, z};}
+            constexpr vec set_z(T o) const {return {x, y, o};}
+            constexpr vec set_b(T o) const {return {x, y, o};}
+            constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr vec(type xx, type xy, type xz, type yx, type yy, type yz, type zx, type zy, type zz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz) {}
             constexpr mat3x3<type> transpose() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1};}
@@ -900,34 +1011,40 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat3x3<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat3x3<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x3<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x3<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x3<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat3x3<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat3x3<P> &param, F &&func) -> mat3x3<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z);}
             constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z;}
             constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z && z.x && z.y && z.z;}
-            constexpr mat3<type> inverse() const
+            constexpr T min() const {return std::min({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z});}
+            constexpr T max() const {return std::max({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z});}
+            constexpr mat3<T> inverse() const
             {
-                mat3<type> inv;
-                inv.x.x =  y.y * z.z -
-                           z.y * y.z;
-                inv.y.x = -y.x * z.z +
-                           z.x * y.z;
-                inv.z.x =  y.x * z.y -
-                           z.x * y.y;
-                inv.x.y = -x.y * z.z +
-                           z.y * x.z;
-                inv.y.y =  x.x * z.z -
-                           z.x * x.z;
-                inv.z.y = -x.x * z.y +
-                           z.x * x.y;
-                inv.x.z =  x.y * y.z -
-                           y.y * x.z;
-                inv.y.z = -x.x * y.z +
-                           y.x * x.z;
-                inv.z.z =  x.x * y.y -
-                           y.x * x.y;
-                type det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x;
+                mat3<T> inv;
+                inv.x.x = y.y * z.z -
+                          z.y * y.z;
+                inv.y.x = z.x * y.z -
+                          y.x * z.z;
+                inv.z.x = y.x * z.y -
+                          z.x * y.y;
+                inv.x.y = z.y * x.z -
+                          x.y * z.z;
+                inv.y.y = x.x * z.z -
+                          z.x * x.z;
+                inv.z.y = z.x * x.y -
+                          x.x * z.y;
+                inv.x.z = x.y * y.z -
+                          y.y * x.z;
+                inv.y.z = y.x * x.z -
+                          x.x * y.z;
+                inv.z.z = x.x * y.y -
+                          y.x * x.y;
+                T det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x;
                 if (det == 0)
-                    return mat3<type>::identity();
+                    return mat3<T>::identity();
                 det = 1.0f / det;
                 return inv * det;
             }
@@ -938,42 +1055,39 @@ namespace Math
         };
         template <typename T> struct vec<4,vec<3,T>> // mat4x3
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 4, height = 3;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec3<T>::is_floating_point;union {vec3<T> x,r,s;};
-            union {vec3<T> y,g,t;};
-            union {vec3<T> z,b,p;};
-            union {vec3<T> w,a,q;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec3<T>::is_floating_point;
+            union {vec3<T> x, r, s;};
+            union {vec3<T> y, g, t;};
+            union {vec3<T> z, b, p;};
+            union {vec3<T> w, a, q;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
             constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec4<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z, w};}
-            constexpr vec change_r(type o) const {return {o, y, z, w};}
-            constexpr vec change_s(type o) const {return {o, y, z, w};}
-            constexpr vec change_y(type o) const {return {x, o, z, w};}
-            constexpr vec change_g(type o) const {return {x, o, z, w};}
-            constexpr vec change_t(type o) const {return {x, o, z, w};}
-            constexpr vec change_z(type o) const {return {x, y, o, w};}
-            constexpr vec change_b(type o) const {return {x, y, o, w};}
-            constexpr vec change_p(type o) const {return {x, y, o, w};}
-            constexpr vec change_w(type o) const {return {x, y, z, o};}
-            constexpr vec change_a(type o) const {return {x, y, z, o};}
-            constexpr vec change_q(type o) const {return {x, y, z, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec3<type> to_vec3() const {return {x, y, z};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec4<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z, w};}
+            constexpr vec set_r(T o) const {return {o, y, z, w};}
+            constexpr vec set_s(T o) const {return {o, y, z, w};}
+            constexpr vec set_y(T o) const {return {x, o, z, w};}
+            constexpr vec set_g(T o) const {return {x, o, z, w};}
+            constexpr vec set_t(T o) const {return {x, o, z, w};}
+            constexpr vec set_z(T o) const {return {x, y, o, w};}
+            constexpr vec set_b(T o) const {return {x, y, o, w};}
+            constexpr vec set_p(T o) const {return {x, y, o, w};}
+            constexpr vec set_w(T o) const {return {x, y, z, o};}
+            constexpr vec set_a(T o) const {return {x, y, z, o};}
+            constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr vec(type xx, type xy, type xz, type yx, type yy, type yz, type zx, type zy, type zz, type wx, type wy, type wz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz), w(wx,wy,wz) {}
             constexpr mat3x4<type> transpose() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};}
@@ -1031,10 +1145,16 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,w.x,w.y,w.z,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat4x3<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat4x3<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x3<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...), w.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x3<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x3<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...), w.apply(func, params.w...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat4x3<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func), w.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat4x3<P> &param, F &&func) -> mat4x3<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func), w.apply(param.w, func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z || w.x || w.y || w.z);}
             constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z || w.x || w.y || w.z;}
             constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z && z.x && z.y && z.z && w.x && w.y && w.z;}
+            constexpr T min() const {return std::min({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z});}
+            constexpr T max() const {return std::max({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z});}
             template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w, x.z*o.x+y.z*o.y+z.z*o.z+w.z*o.w};}
             template <typename TT> constexpr mat2x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w};}
             template <typename TT> constexpr mat3x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w};}
@@ -1042,34 +1162,31 @@ namespace Math
         };
         template <typename T> struct vec<2,vec<4,T>> // mat2x4
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 2, height = 4;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec4<T>::is_floating_point;union {vec4<T> x,r,s;};
-            union {vec4<T> y,g,t;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec4<T>::is_floating_point;
+            union {vec4<T> x, r, s;};
+            union {vec4<T> y, g, t;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
-            constexpr vec(type obj) : x(obj), y(obj) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
             constexpr auto sum() const {return x + y;}
             constexpr auto product() const {return x * y;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec2<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y};}
-            constexpr vec change_r(type o) const {return {o, y};}
-            constexpr vec change_s(type o) const {return {o, y};}
-            constexpr vec change_y(type o) const {return {x, o};}
-            constexpr vec change_g(type o) const {return {x, o};}
-            constexpr vec change_t(type o) const {return {x, o};}
-            constexpr vec3<type> to_vec3() const {return {x, y, type{}};}
-            constexpr vec4<type> to_vec4() const {return {x, y, type{}, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec2<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec2<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y};}
+            constexpr vec set_r(T o) const {return {o, y};}
+            constexpr vec set_s(T o) const {return {o, y};}
+            constexpr vec set_y(T o) const {return {x, o};}
+            constexpr vec set_g(T o) const {return {x, o};}
+            constexpr vec set_t(T o) const {return {x, o};}
             constexpr vec(type xx, type xy, type xz, type xw, type yx, type yy, type yz, type yw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw) {}
             constexpr mat4x2<type> transpose() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0};}
@@ -1088,10 +1205,16 @@ namespace Math
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,0,0,1,0};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat2x4<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat2x4<decltype(func(x.x))> {return {x.apply(func), y.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x4<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x4<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x4<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat2x4<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat2x4<P> &param, F &&func) -> mat2x4<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w);}
             constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w;}
             constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w;}
+            constexpr T min() const {return std::min({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w});}
+            constexpr T max() const {return std::max({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w});}
             template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{})> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y, x.z*o.x+y.z*o.y, x.w*o.x+y.w*o.y};}
             template <typename TT> constexpr mat2x4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.w*o.x.x+y.w*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.w*o.y.x+y.w*o.y.y};}
             template <typename TT> constexpr mat3x4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.w*o.x.x+y.w*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.w*o.y.x+y.w*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.z*o.z.x+y.z*o.z.y, x.w*o.z.x+y.w*o.z.y};}
@@ -1099,38 +1222,35 @@ namespace Math
         };
         template <typename T> struct vec<3,vec<4,T>> // mat3x4
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 3, height = 4;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec4<T>::is_floating_point;union {vec4<T> x,r,s;};
-            union {vec4<T> y,g,t;};
-            union {vec4<T> z,b,p;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec4<T>::is_floating_point;
+            union {vec4<T> x, r, s;};
+            union {vec4<T> y, g, t;};
+            union {vec4<T> z, b, p;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
             constexpr auto sum() const {return x + y + z;}
             constexpr auto product() const {return x * y * z;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec3<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z};}
-            constexpr vec change_r(type o) const {return {o, y, z};}
-            constexpr vec change_s(type o) const {return {o, y, z};}
-            constexpr vec change_y(type o) const {return {x, o, z};}
-            constexpr vec change_g(type o) const {return {x, o, z};}
-            constexpr vec change_t(type o) const {return {x, o, z};}
-            constexpr vec change_z(type o) const {return {x, y, o};}
-            constexpr vec change_b(type o) const {return {x, y, o};}
-            constexpr vec change_p(type o) const {return {x, y, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec4<type> to_vec4() const {return {x, y, z, type{}};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec3<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec3<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z};}
+            constexpr vec set_r(T o) const {return {o, y, z};}
+            constexpr vec set_s(T o) const {return {o, y, z};}
+            constexpr vec set_y(T o) const {return {x, o, z};}
+            constexpr vec set_g(T o) const {return {x, o, z};}
+            constexpr vec set_t(T o) const {return {x, o, z};}
+            constexpr vec set_z(T o) const {return {x, y, o};}
+            constexpr vec set_b(T o) const {return {x, y, o};}
+            constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr vec(type xx, type xy, type xz, type xw, type yx, type yy, type yz, type yw, type zx, type zy, type zz, type zw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw) {}
             constexpr mat4x3<type> transpose() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,x.w,y.w,z.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0};}
@@ -1154,10 +1274,16 @@ namespace Math
             constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
             constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename TT> mat3x4<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat3x4<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x4<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x4<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x4<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat3x4<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat3x4<P> &param, F &&func) -> mat3x4<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w);}
             constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w;}
             constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w && z.x && z.y && z.z && z.w;}
+            constexpr T min() const {return std::min({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w});}
+            constexpr T max() const {return std::max({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w});}
             template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z, x.z*o.x+y.z*o.y+z.z*o.z, x.w*o.x+y.w*o.y+z.w*o.z};}
             template <typename TT> constexpr mat2x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z};}
             template <typename TT> constexpr mat3x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z};}
@@ -1165,42 +1291,39 @@ namespace Math
         };
         template <typename T> struct vec<4,vec<4,T>> // mat4x4
         {
+            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+            static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+            using type = T;
             static constexpr int width = 4, height = 4;
-            using type = std::remove_reference_t<T>;
-            static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-            static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-                          !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-            static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
-            static constexpr bool is_floating_point = vec4<T>::is_floating_point;union {vec4<T> x,r,s;};
-            union {vec4<T> y,g,t;};
-            union {vec4<T> z,b,p;};
-            union {vec4<T> w,a,q;};
-            decltype(x) &operator[](int pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static type ret; ret = type{}; return ret;}}
-            constexpr decltype(x) operator[](int pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return decltype(x){};}}
+            static constexpr bool is_floating_point = vec4<T>::is_floating_point;
+            union {vec4<T> x, r, s;};
+            union {vec4<T> y, g, t;};
+            union {vec4<T> z, b, p;};
+            union {vec4<T> w, a, q;};
+            template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
             constexpr vec() {}
+            explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
-            constexpr vec(type obj) : x(obj), y(obj), z(obj), w(obj) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
             constexpr auto sum() const {return x + y + z + w;}
             constexpr auto product() const {return x * y * z * w;}
-            constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, "This function does not work for reference vectors.");}
-            template <typename TT, typename TTT> constexpr vec4<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
-            constexpr vec change_x(type o) const {return {o, y, z, w};}
-            constexpr vec change_r(type o) const {return {o, y, z, w};}
-            constexpr vec change_s(type o) const {return {o, y, z, w};}
-            constexpr vec change_y(type o) const {return {x, o, z, w};}
-            constexpr vec change_g(type o) const {return {x, o, z, w};}
-            constexpr vec change_t(type o) const {return {x, o, z, w};}
-            constexpr vec change_z(type o) const {return {x, y, o, w};}
-            constexpr vec change_b(type o) const {return {x, y, o, w};}
-            constexpr vec change_p(type o) const {return {x, y, o, w};}
-            constexpr vec change_w(type o) const {return {x, y, z, o};}
-            constexpr vec change_a(type o) const {return {x, y, z, o};}
-            constexpr vec change_q(type o) const {return {x, y, z, o};}
-            constexpr vec2<type> to_vec2() const {return {x, y};}
-            constexpr vec3<type> to_vec3() const {return {x, y, z};}
+            constexpr T *as_array() {return (T *)this;}
+            constexpr const T *as_array() const {return (const T *)this;}
+            template <typename TT, typename TTT> constexpr vec4<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec4<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}
+            constexpr vec set_x(T o) const {return {o, y, z, w};}
+            constexpr vec set_r(T o) const {return {o, y, z, w};}
+            constexpr vec set_s(T o) const {return {o, y, z, w};}
+            constexpr vec set_y(T o) const {return {x, o, z, w};}
+            constexpr vec set_g(T o) const {return {x, o, z, w};}
+            constexpr vec set_t(T o) const {return {x, o, z, w};}
+            constexpr vec set_z(T o) const {return {x, y, o, w};}
+            constexpr vec set_b(T o) const {return {x, y, o, w};}
+            constexpr vec set_p(T o) const {return {x, y, o, w};}
+            constexpr vec set_w(T o) const {return {x, y, z, o};}
+            constexpr vec set_a(T o) const {return {x, y, z, o};}
+            constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr vec(type xx, type xy, type xz, type xw, type yx, type yy, type yz, type yw, type zx, type zy, type zz, type zw, type wx, type wy, type wz, type ww) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw), w(wx,wy,wz,ww) {}
             constexpr mat4x4<type> transpose() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z,x.w,y.w,z.w,w.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
@@ -1237,112 +1360,118 @@ namespace Math
             constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
             constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
             constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
-            template <typename TT> mat4x4<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
+            template <typename F> constexpr auto apply(F &&func) const -> mat4x4<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x4<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...), w.apply(func, params...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x4<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x4<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...), w.apply(func, params.w...)};}
+            template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat4x4<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func), w.apply(param, func)};}
+            template <typename F, typename P> constexpr auto apply(const mat4x4<P> &param, F &&func) -> mat4x4<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func), w.apply(param.w, func)};}
             constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w || w.x || w.y || w.z || w.w);}
             constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w || w.x || w.y || w.z || w.w;}
             constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w && z.x && z.y && z.z && z.w && w.x && w.y && w.z && w.w;}
-            constexpr mat4<type> inverse() const
+            constexpr T min() const {return std::min({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w});}
+            constexpr T max() const {return std::max({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w});}
+            constexpr mat4<T> inverse() const
             {
-                mat4<type> inv;
-                inv.x.x =  y.y * z.z * w.w -
-                           y.y * z.w * w.z -
-                           z.y * y.z * w.w +
-                           z.y * y.w * w.z +
-                           w.y * y.z * z.w -
-                           w.y * y.w * z.z;
-                inv.y.x = -y.x * z.z * w.w +
-                           y.x * z.w * w.z +
-                           z.x * y.z * w.w -
-                           z.x * y.w * w.z -
-                           w.x * y.z * z.w +
-                           w.x * y.w * z.z;
-                inv.z.x =  y.x * z.y * w.w -
-                           y.x * z.w * w.y -
-                           z.x * y.y * w.w +
-                           z.x * y.w * w.y +
-                           w.x * y.y * z.w -
-                           w.x * y.w * z.y;
-                inv.w.x = -y.x * z.y * w.z +
-                           y.x * z.z * w.y +
-                           z.x * y.y * w.z -
-                           z.x * y.z * w.y -
-                           w.x * y.y * z.z +
-                           w.x * y.z * z.y;
-                inv.x.y = -x.y * z.z * w.w +
-                           x.y * z.w * w.z +
-                           z.y * x.z * w.w -
-                           z.y * x.w * w.z -
-                           w.y * x.z * z.w +
-                           w.y * x.w * z.z;
-                inv.y.y =  x.x * z.z * w.w -
-                           x.x * z.w * w.z -
-                           z.x * x.z * w.w +
-                           z.x * x.w * w.z +
-                           w.x * x.z * z.w -
-                           w.x * x.w * z.z;
-                inv.z.y = -x.x * z.y * w.w +
-                           x.x * z.w * w.y +
-                           z.x * x.y * w.w -
-                           z.x * x.w * w.y -
-                           w.x * x.y * z.w +
-                           w.x * x.w * z.y;
-                inv.w.y =  x.x * z.y * w.z -
-                           x.x * z.z * w.y -
-                           z.x * x.y * w.z +
-                           z.x * x.z * w.y +
-                           w.x * x.y * z.z -
-                           w.x * x.z * z.y;
-                inv.x.z =  x.y * y.z * w.w -
-                           x.y * y.w * w.z -
-                           y.y * x.z * w.w +
-                           y.y * x.w * w.z +
-                           w.y * x.z * y.w -
-                           w.y * x.w * y.z;
-                inv.y.z = -x.x * y.z * w.w +
-                           x.x * y.w * w.z +
-                           y.x * x.z * w.w -
-                           y.x * x.w * w.z -
-                           w.x * x.z * y.w +
-                           w.x * x.w * y.z;
-                inv.z.z =  x.x * y.y * w.w -
-                           x.x * y.w * w.y -
-                           y.x * x.y * w.w +
-                           y.x * x.w * w.y +
-                           w.x * x.y * y.w -
-                           w.x * x.w * y.y;
-                inv.w.z = -x.x * y.y * w.z +
-                           x.x * y.z * w.y +
-                           y.x * x.y * w.z -
-                           y.x * x.z * w.y -
-                           w.x * x.y * y.z +
-                           w.x * x.z * y.y;
-                inv.x.w = -x.y * y.z * z.w +
-                           x.y * y.w * z.z +
-                           y.y * x.z * z.w -
-                           y.y * x.w * z.z -
-                           z.y * x.z * y.w +
-                           z.y * x.w * y.z;
-                inv.y.w =  x.x * y.z * z.w -
-                           x.x * y.w * z.z -
-                           y.x * x.z * z.w +
-                           y.x * x.w * z.z +
-                           z.x * x.z * y.w -
-                           z.x * x.w * y.z;
-                inv.z.w = -x.x * y.y * z.w +
-                           x.x * y.w * z.y +
-                           y.x * x.y * z.w -
-                           y.x * x.w * z.y -
-                           z.x * x.y * y.w +
-                           z.x * x.w * y.y;
-                inv.w.w =  x.x * y.y * z.z -
-                           x.x * y.z * z.y -
-                           y.x * x.y * z.z +
-                           y.x * x.z * z.y +
-                           z.x * x.y * y.z -
-                           z.x * x.z * y.y;
-                type det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x + x.w * inv.w.x;
+                mat4<T> inv;
+                inv.x.x = y.y * z.z * w.w -
+                          y.y * z.w * w.z -
+                          z.y * y.z * w.w +
+                          z.y * y.w * w.z +
+                          w.y * y.z * z.w -
+                          w.y * y.w * z.z;
+                inv.y.x = y.x * z.w * w.z -
+                          y.x * z.z * w.w +
+                          z.x * y.z * w.w -
+                          z.x * y.w * w.z -
+                          w.x * y.z * z.w +
+                          w.x * y.w * z.z;
+                inv.z.x = y.x * z.y * w.w -
+                          y.x * z.w * w.y -
+                          z.x * y.y * w.w +
+                          z.x * y.w * w.y +
+                          w.x * y.y * z.w -
+                          w.x * y.w * z.y;
+                inv.w.x = y.x * z.z * w.y -
+                          y.x * z.y * w.z +
+                          z.x * y.y * w.z -
+                          z.x * y.z * w.y -
+                          w.x * y.y * z.z +
+                          w.x * y.z * z.y;
+                inv.x.y = x.y * z.w * w.z -
+                          x.y * z.z * w.w +
+                          z.y * x.z * w.w -
+                          z.y * x.w * w.z -
+                          w.y * x.z * z.w +
+                          w.y * x.w * z.z;
+                inv.y.y = x.x * z.z * w.w -
+                          x.x * z.w * w.z -
+                          z.x * x.z * w.w +
+                          z.x * x.w * w.z +
+                          w.x * x.z * z.w -
+                          w.x * x.w * z.z;
+                inv.z.y = x.x * z.w * w.y -
+                          x.x * z.y * w.w +
+                          z.x * x.y * w.w -
+                          z.x * x.w * w.y -
+                          w.x * x.y * z.w +
+                          w.x * x.w * z.y;
+                inv.w.y = x.x * z.y * w.z -
+                          x.x * z.z * w.y -
+                          z.x * x.y * w.z +
+                          z.x * x.z * w.y +
+                          w.x * x.y * z.z -
+                          w.x * x.z * z.y;
+                inv.x.z = x.y * y.z * w.w -
+                          x.y * y.w * w.z -
+                          y.y * x.z * w.w +
+                          y.y * x.w * w.z +
+                          w.y * x.z * y.w -
+                          w.y * x.w * y.z;
+                inv.y.z = x.x * y.w * w.z -
+                          x.x * y.z * w.w +
+                          y.x * x.z * w.w -
+                          y.x * x.w * w.z -
+                          w.x * x.z * y.w +
+                          w.x * x.w * y.z;
+                inv.z.z = x.x * y.y * w.w -
+                          x.x * y.w * w.y -
+                          y.x * x.y * w.w +
+                          y.x * x.w * w.y +
+                          w.x * x.y * y.w -
+                          w.x * x.w * y.y;
+                inv.w.z = x.x * y.z * w.y -
+                          x.x * y.y * w.z +
+                          y.x * x.y * w.z -
+                          y.x * x.z * w.y -
+                          w.x * x.y * y.z +
+                          w.x * x.z * y.y;
+                inv.x.w = x.y * y.w * z.z -
+                          x.y * y.z * z.w +
+                          y.y * x.z * z.w -
+                          y.y * x.w * z.z -
+                          z.y * x.z * y.w +
+                          z.y * x.w * y.z;
+                inv.y.w = x.x * y.z * z.w -
+                          x.x * y.w * z.z -
+                          y.x * x.z * z.w +
+                          y.x * x.w * z.z +
+                          z.x * x.z * y.w -
+                          z.x * x.w * y.z;
+                inv.z.w = x.x * y.w * z.y -
+                          x.x * y.y * z.w +
+                          y.x * x.y * z.w -
+                          y.x * x.w * z.y -
+                          z.x * x.y * y.w +
+                          z.x * x.w * y.y;
+                inv.w.w = x.x * y.y * z.z -
+                          x.x * y.z * z.y -
+                          y.x * x.y * z.z +
+                          y.x * x.z * z.y +
+                          z.x * x.y * y.z -
+                          z.x * x.z * y.y;
+                T det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x + x.w * inv.w.x;
                 if (det == 0)
-                    return mat4<type>::identity();
+                    return mat4<T>::identity();
                 det = 1.0f / det;
                 return inv * det;
             }
@@ -1756,244 +1885,302 @@ namespace Math
         using Quaternion = GenericQuaternion<>;
     }
 
-    namespace CustomOperators
+    namespace Operators
     {
-        namespace Internal
+        template <typename T> struct dot_operator_expression_t
         {
-            template <typename T> struct dot_tmp
-            {
-                T ref;
-                template <typename TT> constexpr auto operator/(const Vector::vec2<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec2<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::vec3<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec3<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::vec4<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec4<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x2<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x2<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x2<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x2<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x2<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x2<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x3<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x3<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x3<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x3<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x3<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x3<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x4<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x4<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x4<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x4<TT> &&obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x4<TT> &obj) const {return ref.dot(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x4<TT> &&obj) const {return ref.dot(obj);}
-            };
-            template <typename T> struct cross_tmp
-            {
-                T ref;
-                template <typename TT> constexpr auto operator/(const Vector::vec2<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec2<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::vec3<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec3<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::vec4<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec4<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x2<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x2<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x2<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x2<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x2<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x2<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x3<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x3<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x3<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x3<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x3<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x3<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x4<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x4<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x4<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x4<TT> &&obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x4<TT> &obj) const {return ref.cross(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x4<TT> &&obj) const {return ref.cross(obj);}
-            };
-            template <typename T> struct mul_tmp
-            {
-                T ref;
-                template <typename TT> constexpr auto operator/(const Vector::vec2<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec2<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::vec3<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec3<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::vec4<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::vec4<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x2<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x2<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x2<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x2<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x2<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x2<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x3<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x3<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x3<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x3<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x3<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x3<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat2x4<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat2x4<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat3x4<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat3x4<TT> &&obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(const Vector::mat4x4<TT> &obj) const {return ref.mul(obj);}
-                template <typename TT> constexpr auto operator/(Vector::mat4x4<TT> &&obj) const {return ref.mul(obj);}
-            };
-        }
-
-        namespace Internal {struct dot_type {constexpr dot_type(){}};} static constexpr Internal::dot_type dot;
-        template <typename T> constexpr auto operator/(const Vector::vec2<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::vec2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec2<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::vec2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::vec3<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::vec3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec3<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::vec3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::vec4<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::vec4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec4<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::vec4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x2<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat2x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x2<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat2x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x2<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat3x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x2<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat3x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x2<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat4x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x2<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat4x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x3<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat2x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x3<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat2x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x3<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat3x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x3<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat3x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x3<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat4x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x3<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat4x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x4<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat2x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x4<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat2x4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x4<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat3x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x4<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat3x4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x4<T> &obj, decltype(dot)) {return Internal::dot_tmp<const Vector::mat4x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x4<T> &&obj, decltype(dot)) {return Internal::dot_tmp<Vector::mat4x4<T>>{obj};}
-        namespace Internal {struct cross_type {constexpr cross_type(){}};} static constexpr Internal::cross_type cross;
-        template <typename T> constexpr auto operator/(const Vector::vec2<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::vec2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec2<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::vec2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::vec3<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::vec3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec3<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::vec3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::vec4<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::vec4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec4<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::vec4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x2<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat2x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x2<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat2x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x2<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat3x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x2<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat3x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x2<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat4x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x2<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat4x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x3<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat2x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x3<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat2x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x3<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat3x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x3<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat3x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x3<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat4x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x3<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat4x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x4<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat2x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x4<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat2x4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x4<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat3x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x4<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat3x4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x4<T> &obj, decltype(cross)) {return Internal::cross_tmp<const Vector::mat4x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x4<T> &&obj, decltype(cross)) {return Internal::cross_tmp<Vector::mat4x4<T>>{obj};}
-        namespace Internal {struct mul_type {constexpr mul_type(){}};} static constexpr Internal::mul_type mul;
-        template <typename T> constexpr auto operator/(const Vector::vec2<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::vec2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec2<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::vec2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::vec3<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::vec3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec3<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::vec3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::vec4<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::vec4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::vec4<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::vec4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x2<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat2x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x2<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat2x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x2<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat3x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x2<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat3x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x2<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat4x2<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x2<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat4x2<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x3<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat2x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x3<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat2x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x3<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat3x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x3<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat3x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x3<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat4x3<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x3<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat4x3<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat2x4<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat2x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat2x4<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat2x4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat3x4<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat3x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat3x4<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat3x4<T>>{obj};}
-        template <typename T> constexpr auto operator/(const Vector::mat4x4<T> &obj, decltype(mul)) {return Internal::mul_tmp<const Vector::mat4x4<T> &>{obj};}
-        template <typename T> constexpr auto operator/(Vector::mat4x4<T> &&obj, decltype(mul)) {return Internal::mul_tmp<Vector::mat4x4<T>>{obj};}
+            T ref;
+            template <typename TT> constexpr auto operator/(const Vector::vec2<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec2<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::vec3<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec3<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::vec4<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec4<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x2<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x2<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x2<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x2<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x2<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x2<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x3<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x3<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x3<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x3<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x3<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x3<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x4<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x4<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x4<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x4<TT> &&obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x4<TT> &obj) const {return ref.dot(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x4<TT> &&obj) const {return ref.dot(obj);}
+        };
+        template <typename T> struct cross_operator_expression_t
+        {
+            T ref;
+            template <typename TT> constexpr auto operator/(const Vector::vec2<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec2<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::vec3<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec3<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::vec4<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec4<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x2<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x2<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x2<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x2<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x2<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x2<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x3<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x3<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x3<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x3<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x3<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x3<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x4<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x4<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x4<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x4<TT> &&obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x4<TT> &obj) const {return ref.cross(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x4<TT> &&obj) const {return ref.cross(obj);}
+        };
+        template <typename T> struct mul_operator_expression_t
+        {
+            T ref;
+            template <typename TT> constexpr auto operator/(const Vector::vec2<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec2<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::vec3<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec3<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::vec4<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::vec4<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x2<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x2<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x2<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x2<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x2<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x2<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x3<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x3<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x3<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x3<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x3<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x3<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat2x4<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat2x4<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat3x4<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat3x4<TT> &&obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(const Vector::mat4x4<TT> &obj) const {return ref.mul(obj);}
+            template <typename TT> constexpr auto operator/(Vector::mat4x4<TT> &&obj) const {return ref.mul(obj);}
+        };
+        constexpr struct dot_operator_t {constexpr dot_operator_t(){}} dot;
+        template <typename T> constexpr auto operator/(const Vector::vec2<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::vec2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec2<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::vec2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::vec3<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::vec3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec3<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::vec3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::vec4<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::vec4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec4<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::vec4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x2<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat2x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x2<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat2x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x2<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat3x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x2<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat3x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x2<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat4x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x2<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat4x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x3<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat2x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x3<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat2x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x3<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat3x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x3<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat3x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x3<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat4x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x3<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat4x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x4<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat2x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x4<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat2x4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x4<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat3x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x4<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat3x4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x4<T> &obj, decltype(dot)) {return dot_operator_expression_t<const Vector::mat4x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x4<T> &&obj, decltype(dot)) {return dot_operator_expression_t<Vector::mat4x4<T>>{obj};}
+        constexpr struct cross_operator_t {constexpr cross_operator_t(){}} cross;
+        template <typename T> constexpr auto operator/(const Vector::vec2<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::vec2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec2<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::vec2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::vec3<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::vec3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec3<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::vec3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::vec4<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::vec4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec4<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::vec4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x2<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat2x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x2<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat2x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x2<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat3x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x2<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat3x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x2<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat4x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x2<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat4x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x3<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat2x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x3<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat2x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x3<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat3x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x3<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat3x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x3<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat4x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x3<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat4x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x4<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat2x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x4<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat2x4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x4<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat3x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x4<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat3x4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x4<T> &obj, decltype(cross)) {return cross_operator_expression_t<const Vector::mat4x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x4<T> &&obj, decltype(cross)) {return cross_operator_expression_t<Vector::mat4x4<T>>{obj};}
+        constexpr struct mul_operator_t {constexpr mul_operator_t(){}} mul;
+        template <typename T> constexpr auto operator/(const Vector::vec2<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::vec2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec2<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::vec2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::vec3<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::vec3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec3<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::vec3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::vec4<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::vec4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::vec4<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::vec4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x2<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat2x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x2<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat2x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x2<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat3x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x2<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat3x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x2<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat4x2<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x2<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat4x2<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x3<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat2x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x3<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat2x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x3<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat3x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x3<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat3x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x3<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat4x3<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x3<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat4x3<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat2x4<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat2x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat2x4<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat2x4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat3x4<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat3x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat3x4<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat3x4<T>>{obj};}
+        template <typename T> constexpr auto operator/(const Vector::mat4x4<T> &obj, decltype(mul)) {return mul_operator_expression_t<const Vector::mat4x4<T> &>{obj};}
+        template <typename T> constexpr auto operator/(Vector::mat4x4<T> &&obj, decltype(mul)) {return mul_operator_expression_t<Vector::mat4x4<T>>{obj};}
     }
 
     namespace Misc
     {
-        template <typename T> T pi()
-        {
-            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
-            static const T ret = std::atan((T)1)*4;
-            return ret;
-        }
+        template <typename T> constexpr T pi() {return T(3.14159265358979323846l);}
+        constexpr float       f_pi  = pi<float>();
+        constexpr double      d_pi  = pi<double>();
+        constexpr long double ld_pi = pi<long double>();
 
         template <typename T> T to_rad(T in)
         {
-            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+            static_assert(!std::is_integral<T>::value, "Integral argument makes no sense for this function.");
             return in * pi<T>() / (T)180;
         }
         template <typename T> T to_deg(T in)
         {
-            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+            static_assert(!std::is_integral<T>::value, "Integral argument makes no sense for this function.");
             return in * (T)180 / pi<T>();
         }
 
         template <typename T, typename TT> constexpr T ipow(T a, TT b)
         {
-            static_assert(std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
+            static_assert(std::is_integral<TT>::value, "Non integral power makes no sense for this function.");
             T ret = 1;
-            while (b--)
-            {
+            while (b-- > 0)
                 ret *= a;
-            }
             return ret;
         }
 
-        template <typename T, typename MIN, typename MAX> constexpr T clamp(T val, MIN min, MAX max)
+        template <typename T, typename Min, typename Max> constexpr Utility::enable_if_not_vec_or_mat_t<T,T> clamp(T val, Min min, Max max)
         {
             static_assert(std::is_arithmetic<T>::value &&
-                          std::is_arithmetic<MIN>::value &&
-                          std::is_arithmetic<MAX>::value, "Non arithmetic template parameters make no sense for this function.");
+                          std::is_arithmetic<Min>::value &&
+                          std::is_arithmetic<Max>::value, "Non arithmetic arguments make no sense for this function.");
             if (val < min) return min;
             if (val > max) return max;
             return val;
         }
+        template <typename T, typename Min, typename Max> constexpr Utility::enable_if_vec_or_mat_t<T,T> clamp(T val, Min min, Max max)
+        {
+            return val.apply((typename T::type (*)(typename T::type, Utility::base_type_t<Min>, Utility::base_type_t<Max>))clamp, min, max);
+        }
 
-        template <typename T> constexpr int sign(T val)
+        template <typename T> constexpr Utility::enable_if_not_vec_or_mat_t<T,int> sign(T val)
         {
             return (val > 0) - (val < 0);
+        }
+        template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,Utility::change_base_type_t<T,int>> sign(T val)
+        {
+            return val.apply((int (*)(typename T::type))sign);
         }
 
         template <typename T> constexpr T smoothstep(T x)
         {
-            static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
-            return 3*x*x-2*x*x*x;
+            static_assert(std::is_floating_point<Utility::base_type_t<T>>::value, "Argument type must be floating-point.");
+            return 3 * x*x - 2 * x*x*x;
         }
 
-        template <typename T, typename TT> constexpr T true_div(T a, TT b)
+        template <typename T> Utility::enable_if_not_vec_or_mat_t<T,T> floor(T x)
+        {
+            static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+            return std::floor(x);
+        }
+        template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,T> floor(T val)
+        {
+            return val.apply((typename T::type (*)(typename T::type))floor);
+        }
+
+        template <typename T> Utility::enable_if_not_vec_or_mat_t<T,T> ceil(T x)
+        {
+            static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+            return std::ceil(x);
+        }
+        template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,T> ceil(T val)
+        {
+            return val.apply((typename T::type (*)(typename T::type))ceil);
+        }
+
+        template <typename T> Utility::enable_if_not_vec_or_mat_t<T,T> trunc(T x)
+        {
+            static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+            return std::trunc(x);
+        }
+        template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,T> trunc(T val)
+        {
+            return val.apply((typename T::type (*)(typename T::type))trunc);
+        }
+
+        template <typename T> T frac(T x)
+        {
+            static_assert(std::is_floating_point<Utility::base_type_t<T>>::value, "Argument type must be floating-point.");
+            return x - trunc(x);
+        }
+
+        template <typename T, typename TT> constexpr Utility::enable_if_not_vec_or_mat_t<T,T> true_div(T a, TT b)
         {
             static_assert(std::is_integral<T>::value &&
-                          std::is_integral<TT>::value, "Argument types must be integral.");
+                          std::is_integral<TT>::value, "Parameter types must be integral.");
             if (a >= 0)
                 return a / b;
             else
                 return (a + 1) / b - (b >= 0 ? 1 : -1);
         }
+        template <typename T, typename TT> constexpr Utility::enable_if_vec_or_mat_t<T,T> true_div(T a, TT b)
+        {
+            return a.apply((typename T::type (*)(typename T::type, Utility::base_type_t<TT>))true_div, b);
+        }
 
-        template <typename T, typename TT> constexpr T true_mod(T a, TT b)
+        template <typename T, typename TT> constexpr Utility::enable_if_not_vec_or_mat_t<T,T> true_mod(T a, TT b)
         {
             static_assert(std::is_integral<T>::value &&
-                          std::is_integral<TT>::value, "Argument types must be integral.");
+                          std::is_integral<TT>::value, "Parameter types must be integral.");
             if (a >= 0)
                 return a % b;
             else
                 return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
         }
+        template <typename T, typename TT> constexpr Utility::enable_if_vec_or_mat_t<T,T> true_mod(T a, TT b)
+        {
+            return a.apply((typename T::type (*)(typename T::type, Utility::base_type_t<TT>))true_mod, b);
+        }
+
+        template <typename T, typename TT> constexpr std::enable_if_t<!Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>
+        min(T a, TT b) {return (b > a ? b : a);}
+        template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>
+        min(T a, TT b) {return a.apply((Utility::larger_type_t<Utility::base_type_t<T>,TT> (*)(Utility::base_type_t<T>, TT))min, b);}
+        template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>
+        min(T a, TT b) {return b.apply(a, (Utility::larger_type_t<Utility::base_type_t<T>,Utility::base_type_t<TT>> (*)(Utility::base_type_t<T>, Utility::base_type_t<TT>))min);}
+
+        template <typename T, typename TT> constexpr std::enable_if_t<!Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>
+        max(T a, TT b) {return (b > a ? b : a);}
+        template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>
+        max(T a, TT b) {return a.apply((Utility::larger_type_t<Utility::base_type_t<T>,TT> (*)(Utility::base_type_t<T>, TT))max, b);}
+        template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>
+        max(T a, TT b) {return b.apply(a, (Utility::larger_type_t<Utility::base_type_t<T>,Utility::base_type_t<TT>> (*)(Utility::base_type_t<T>, Utility::base_type_t<TT>))max);}
     }
 }
 
@@ -2049,9 +2236,10 @@ namespace std
     };
 }
 
+using namespace Math::Utility;
 using namespace Math::Vector;
 using namespace Math::Quaternion;
-using namespace Math::CustomOperators;
+using namespace Math::Operators;
 using namespace Math::Misc;
 
 #endif

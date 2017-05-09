@@ -17,6 +17,14 @@ void Boot()
 {
     MarkLocation("Boot");
 
+    fmat3 a1(1,2,3,4,5,6,7,8,9);
+    fmat3 a2(9,8,7,6,5,4,3,2,1);
+
+    //std::cout << max(a1,a2) << '\n';
+    //std::cout << min(a1,a2) << '\n';
+    typename larger_type_t_impl<float, float>::type a;
+    static_assert(sizeof a, "");
+
     while (1)
     {
         Sys::BeginFrame();

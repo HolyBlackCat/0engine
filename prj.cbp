@@ -96,7 +96,7 @@
 		</Build>
 		<Compiler>
 			<Add option="-pedantic-errors" />
-			<Add option="-std=c++14" />
+			<Add option="-std=c++1z" />
 			<Add directory="lib/include" />
 		</Compiler>
 		<Linker>

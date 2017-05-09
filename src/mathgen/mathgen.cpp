@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "1.9.1"
+#define VERSION "2.1.0"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -104,65 +104,101 @@ namespace Gen
     static constexpr int field_names_count = (sizeof field_names) / (sizeof field_names[0]);
 
     static constexpr const char *custom_op_list[]{"dot","cross","mul"};
-    static constexpr char op_delim = '/'; // You shall use / or * or %, others will mess up operator precedence in other existing code.
+    static constexpr char op_delim = '/'; // You shall use / or * or %, other ones will mess up operator precedence in existing code.
 
-    void GenVectorPrototypes()
+    void VectorPrototypes()
     {
-        // Type list
-        static constexpr struct {const char *tag, *name;} types[]
-        {
-            "c",   "char",
-            "uc",  "unsigned char",
-            "sc",  "signed char",
-            "s",   "short",
-            "us",  "unsigned short",
-            "i",   "int",
-            "u",   "unsigned int",
-            "l",   "long",
-            "ul",  "unsigned long",
-            "ll",  "long long",
-            "ull", "unsigned long long",
-            "f",   "float",
-            "d",   "double",
-            "ld",  "long double",
-            "i8",  "int8_t",
-            "u8",  "uint8_t",
-            "i16", "int16_t",
-            "u16", "uint16_t",
-            "i32", "int32_t",
-            "u32", "uint32_t",
-            "i64", "int64_t",
-            "u64", "uint64_t",
-        };
-
-        // Header & type-generic usings
         r R"(
+namespace Vector
+{
 template <unsigned int D, typename T> struct vec;
 template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, T>>;
+}
 )";
-        for (int i = 2; i <= 4; i++)
-            l "template <typename T> using vec" << i << " = vec<" << i << ", T>;\n";
-        for (int h = 2; h <= 4; h++)
-            for (int w = 2; w <= 4; w++)
-                l "template <typename T> using mat" << w << 'x' << h << " = mat<" << w << ',' << h << ",T>;\n";
-        for (int i = 2; i <= 4; i++)
-            l "template <typename T> using mat" << i << " = mat" << i << 'x' << i << "<T>;\n";
+    }
 
-        // Type-prefixed usings
-        for (const auto &it : types)
-        {
-            // Size-generic
-            l "template <unsigned int D> using " << it.tag << "vec = vec<D," << it.name << ">;\n" <<
-              "template <unsigned int W, unsigned int H> using " << it.tag << "mat = mat<W,H," << it.name << ">;\n";
-            // Complete
-            for (int i = 2; i <= 4; i++)
-                l "using " << it.tag << "vec" << i << " = vec<" << i << ',' << it.name << ">;\n";
-            for (int h = 2; h <= 4; h++)
-                for (int w = 2; w <= 4; w++)
-                    l "using " << it.tag << "mat" << w << 'x' << h << " = mat<" << w << ',' << h << ',' << it.name << ">;\n";
-            for (int i = 2; i <= 4; i++)
-                l "using " << it.tag << "mat" << i << " = " << it.tag << "mat" << i << 'x' << i << ";\n";
-        }
+    void Utility()
+    {
+    r R"(
+namespace Utility
+{
+template <typename T> struct floating_point_t_impl {using type = double;};
+template <> struct floating_point_t_impl<float> {using type = float;};
+template <> struct floating_point_t_impl<long double> {using type = long double;};
+template <unsigned int D, typename T> struct floating_point_t_impl<Vector::vec<D,T>> {using type = typename floating_point_t_impl<T>::type;};
+template <typename T> using floating_point_t = typename floating_point_t_impl<T>::type;
+
+template <typename T> struct is_vec_or_mat {static constexpr bool value = 0;};
+template <unsigned int D, typename T> struct is_vec_or_mat<Vector::vec<D,T>> {static constexpr bool value = 1;};
+
+template <typename T> struct is_mat {static constexpr bool value = 0;};
+template <unsigned int W, unsigned int H, typename T> struct is_mat<Vector::mat<W,H,T>> {static constexpr bool value = 1;};
+
+template <typename T> struct is_vec {static constexpr bool value = is_vec_or_mat<T>::value && !is_mat<T>::value;};
+
+template <typename Condition, typename T> using enable_if_vec_or_mat_t = std::enable_if_t<is_vec_or_mat<Condition>::value, T>;
+template <typename Condition, typename T> using enable_if_not_vec_or_mat_t = std::enable_if_t<!is_vec_or_mat<Condition>::value, T>;
+
+template <typename T, typename TT> struct change_base_type_t_impl {using type = TT;};
+template <unsigned int D, typename T, typename TT> struct change_base_type_t_impl<Vector::vec<D,T>,TT> {using type = Vector::vec<D,TT>;};
+template <unsigned int W, unsigned int H, typename T, typename TT> struct change_base_type_t_impl<Vector::mat<W,H,T>,TT> {using type = Vector::mat<W,H,TT>;};
+template <typename T, typename TT> using change_base_type_t = typename change_base_type_t_impl<T,TT>::type;
+
+template <typename T> struct base_type_t_impl {using type = T;};
+template <unsigned int D, typename T> struct base_type_t_impl<Vector::vec<D,T>> {using type = typename Vector::vec<D,T>::type;};
+template <typename T> using base_type_t = typename base_type_t_impl<T>::type;
+
+template <typename ...P> struct larger_type_t_impl {using type = void;};
+template <typename ...P> using larger_type_t = typename larger_type_t_impl<P...>::type;
+template <typename T, typename ...P> struct larger_type_t_impl<T, P...> {using type = larger_type_t<T, larger_type_t<P...>>;};
+template <typename T> struct larger_type_t_impl<T> {using type = T;};
+template <typename T, typename TT> struct larger_type_t_impl<T, TT>
+{
+using type =
+std::conditional_t< std::is_arithmetic<base_type_t<T>>::value && std::is_arithmetic<base_type_t<TT>>::value,
+    std::conditional_t< !is_vec_or_mat<T>::value && !is_vec_or_mat<TT>::value,
+        std::conditional_t< std::is_integral<T>::value == std::is_integral<TT>::value,
+            std::conditional_t< (sizeof (T) == sizeof (TT)),
+                std::conditional_t< std::is_same<T,TT>::value,
+                    T
+                ,
+                    void
+                >
+            ,
+                std::conditional_t< (sizeof (T) > sizeof (TT)),
+                    T
+                ,
+                    TT
+                >
+            >
+        ,
+            std::conditional_t< std::is_floating_point<T>::value,
+                T
+            ,
+                TT
+            >
+        >
+    ,
+        std::conditional_t< is_vec_or_mat<T>::value && is_vec_or_mat<TT>::value,
+            std::conditional_t< std::is_same<change_base_type_t<T,base_type_t<TT>>,TT>::value,
+                change_base_type_t<T, larger_type_t<base_type_t<T>, base_type_t<TT>>>
+            ,
+                void
+            >
+        ,
+            std::conditional_t< is_vec_or_mat<T>::value,
+                change_base_type_t<T, larger_type_t<base_type_t<T>, base_type_t<TT>>>
+            ,
+                change_base_type_t<TT, larger_type_t<base_type_t<T>, base_type_t<TT>>>
+            >
+        >
+    >
+,
+    void
+>;
+};
+}
+)";
     }
 
     void Vector()
@@ -175,20 +211,73 @@ template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, 
                                     *ops_bool[]{"&&","||"},
                                     *ops_as[]{"+=","-=","*=","/=","%=","^=","&=","|=","<<=",">>="};
 
-        // Header & type-generic usings
         r R"(
 namespace Vector
 {
 )";
+
+        { // Declarations
+            // Type list
+            static constexpr struct {const char *tag, *name;} types[]
+            {
+                "c",   "char",
+                "uc",  "unsigned char",
+                "sc",  "signed char",
+                "s",   "short",
+                "us",  "unsigned short",
+                "i",   "int",
+                "u",   "unsigned int",
+                "l",   "long",
+                "ul",  "unsigned long",
+                "ll",  "long long",
+                "ull", "unsigned long long",
+                "f",   "float",
+                "d",   "double",
+                "ld",  "long double",
+                "i8",  "int8_t",
+                "u8",  "uint8_t",
+                "i16", "int16_t",
+                "u16", "uint16_t",
+                "i32", "int32_t",
+                "u32", "uint32_t",
+                "i64", "int64_t",
+                "u64", "uint64_t",
+            };
+
+            // Type-generic usings
+            for (int i = 2; i <= 4; i++)
+                l "template <typename T> using vec" << i << " = vec<" << i << ", T>;\n";
+            for (int h = 2; h <= 4; h++)
+                for (int w = 2; w <= 4; w++)
+                    l "template <typename T> using mat" << w << 'x' << h << " = mat<" << w << ',' << h << ",T>;\n";
+            for (int i = 2; i <= 4; i++)
+                l "template <typename T> using mat" << i << " = mat" << i << 'x' << i << "<T>;\n";
+
+            // Type-prefixed usings
+            for (const auto &it : types)
+            {
+                // Size-generic
+                l "template <unsigned int D> using " << it.tag << "vec = vec<D," << it.name << ">;\n" <<
+                  "template <unsigned int W, unsigned int H> using " << it.tag << "mat = mat<W,H," << it.name << ">;\n";
+                // Complete
+                for (int i = 2; i <= 4; i++)
+                    l "using " << it.tag << "vec" << i << " = vec<" << i << ',' << it.name << ">;\n";
+                for (int h = 2; h <= 4; h++)
+                    for (int w = 2; w <= 4; w++)
+                        l "using " << it.tag << "mat" << w << 'x' << h << " = mat<" << w << ',' << h << ',' << it.name << ">;\n";
+                for (int i = 2; i <= 4; i++)
+                    l "using " << it.tag << "mat" << i << " = " << it.tag << "mat" << i << 'x' << i << ";\n";
+            }
+        }
+        l "\n";
+
         // Specializations
         auto CommonHeader = [&]
         {
             r R"(
-using type = std::remove_reference_t<T>;
-static constexpr bool is_ref = std::is_lvalue_reference<T>::value;
-static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value &&
-              !std::is_const<type>::value && !std::is_volatile<type>::value, "The vector base type must not have any cv qualifiers.");
-static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue references are not allowed.");
+static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
+static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+using type = T;
 )";
         };
         auto Fields = [&](int len, const char *type)
@@ -199,7 +288,7 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
                 for (int j = 0; j < field_names_count; j++)
                 {
                     if (j != 0)
-                        l ',';
+                        l ", ";
                     l field_names[j][i];
                 }
                 l ";};\n";
@@ -208,16 +297,16 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
         auto CommonMembers = [&](int sz)
         {
             // [] operator
-            l "decltype(x) &operator[](int pos) {switch (pos) {";
+            l "template <typename I> T &operator[](I pos) {switch (pos) {";
             for (int i = 0; i < sz; i++)
                 l "case " << i << ": return " << field_names_main[i] << "; ";
-            l "default: static type ret; ret = type{}; return ret;}}\n";
+            l "default: static T ret; ret = {}; return ret;}}\n";
 
             // const [] operator
-            l "constexpr decltype(x) operator[](int pos) const {switch (pos) {";
+            l "template <typename I> constexpr T operator[](I pos) const {switch (pos) {";
             for (int i = 0; i < sz; i++)
                 l "case " << i << ": return " << field_names_main[i] << "; ";
-            l "default: return decltype(x){};}}\n";
+            l "default: return T{};}}\n";
 
             // Cast to bool
             l "constexpr operator bool() const {return ";
@@ -230,24 +319,24 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
 
             // Constructors
             l "constexpr vec() {}\n"; // Default
+            l "explicit constexpr vec(T obj) : "; // Same initializer for each component.
+            for (int i = 0; i < sz; i++)
+            {
+                if (i != 0) l ", ";
+                l field_names_main[i] << "(obj)";
+            }
+            l " {}\n";
             l "constexpr vec("; // Piece-wise
             for (int i = 0; i < sz; i++)
             {
                 if (i != 0) l ", ";
-                l "decltype(x) p" << field_names_main[i];
+                l "decltype(x) p" << field_names_main[i]; // Sic!  decltype(x) is used instead of T on purpose.
             }
             l ") : ";
             for (int i = 0; i < sz; i++)
             {
                 if (i != 0) l ", ";
                 l field_names_main[i] << "(p" << field_names_main[i] << ')';
-            }
-            l " {}\n";
-            l "constexpr vec(type obj) : "; // Same initializer for each component
-            for (int i = 0; i < sz; i++)
-            {
-                if (i != 0) l ", ";
-                l field_names_main[i] << "(obj)";
             }
             l " {}\n";
             l "template <typename TT> constexpr vec(vec" << sz << "<TT> obj) : "; // Casting from different type of vector.
@@ -275,18 +364,18 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
             l ";}\n";
 
             // As array
-            l "constexpr type *as_array() {return (type *)&x; static_assert(!is_ref, \"This function does not work for reference vectors.\");}\n";
-            l "constexpr const type *as_array() const {return (const type *)&x; static_assert(!is_ref, \"This function does not work for reference vectors.\");}\n";
+            l "constexpr T *as_array() {return (T *)this;}\n";
+            l "constexpr const T *as_array() const {return (const T *)this;}\n";
 
             // Interpolate
-            l "template <typename TT, typename TTT> constexpr vec" << sz << "<decltype(type{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec" << sz << "<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}\n";
+            l "template <typename TT, typename TTT> constexpr vec" << sz << "<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec" << sz << "<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}\n";
 
-            // Field replacements
+            // Temporary field changers
             for (int i = 0; i < sz; i++)
             {
                 for (int name = 0; name < field_names_count; name++)
                 {
-                    l "constexpr vec change_" << field_names[name][i] << "(type o) const {return {";
+                    l "constexpr vec set_" << field_names[name][i] << "(T o) const {return {";
                     for (int j = 0; j < sz; j++)
                     {
                         if (j != 0) l ", ";
@@ -296,20 +385,6 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
                     l "};}\n";
                 }
             }
-
-            // Resizers
-            for (int i = 2; i <= 4; i++)
-            {
-                if (sz == i) continue;
-                l "constexpr vec" << i << "<type> to_vec" << i << "() const {return {";
-                for (int j = 0; j < i; j++)
-                {
-                    if (j != 0) l ", ";
-                    if (j < sz) l field_names_main[j];
-                    else l "type{}";
-                }
-                l "};}\n";
-            }
         };
 
         auto MatrixInverse = [&](int sz)
@@ -318,108 +393,108 @@ static_assert(!std::is_rvalue_reference<T>::value, "The vectors of rvalue refere
             {
               case 4:
                 r R"(
-constexpr mat4<type> inverse() const
+constexpr mat4<T> inverse() const
 {
-mat4<type> inv;
-inv.x.x =  y.y * z.z * w.w -
-           y.y * z.w * w.z -
-           z.y * y.z * w.w +
-           z.y * y.w * w.z +
-           w.y * y.z * z.w -
-           w.y * y.w * z.z;
-inv.y.x = -y.x * z.z * w.w +
-           y.x * z.w * w.z +
-           z.x * y.z * w.w -
-           z.x * y.w * w.z -
-           w.x * y.z * z.w +
-           w.x * y.w * z.z;
-inv.z.x =  y.x * z.y * w.w -
-           y.x * z.w * w.y -
-           z.x * y.y * w.w +
-           z.x * y.w * w.y +
-           w.x * y.y * z.w -
-           w.x * y.w * z.y;
-inv.w.x = -y.x * z.y * w.z +
-           y.x * z.z * w.y +
-           z.x * y.y * w.z -
-           z.x * y.z * w.y -
-           w.x * y.y * z.z +
-           w.x * y.z * z.y;
-inv.x.y = -x.y * z.z * w.w +
-           x.y * z.w * w.z +
-           z.y * x.z * w.w -
-           z.y * x.w * w.z -
-           w.y * x.z * z.w +
-           w.y * x.w * z.z;
-inv.y.y =  x.x * z.z * w.w -
-           x.x * z.w * w.z -
-           z.x * x.z * w.w +
-           z.x * x.w * w.z +
-           w.x * x.z * z.w -
-           w.x * x.w * z.z;
-inv.z.y = -x.x * z.y * w.w +
-           x.x * z.w * w.y +
-           z.x * x.y * w.w -
-           z.x * x.w * w.y -
-           w.x * x.y * z.w +
-           w.x * x.w * z.y;
-inv.w.y =  x.x * z.y * w.z -
-           x.x * z.z * w.y -
-           z.x * x.y * w.z +
-           z.x * x.z * w.y +
-           w.x * x.y * z.z -
-           w.x * x.z * z.y;
-inv.x.z =  x.y * y.z * w.w -
-           x.y * y.w * w.z -
-           y.y * x.z * w.w +
-           y.y * x.w * w.z +
-           w.y * x.z * y.w -
-           w.y * x.w * y.z;
-inv.y.z = -x.x * y.z * w.w +
-           x.x * y.w * w.z +
-           y.x * x.z * w.w -
-           y.x * x.w * w.z -
-           w.x * x.z * y.w +
-           w.x * x.w * y.z;
-inv.z.z =  x.x * y.y * w.w -
-           x.x * y.w * w.y -
-           y.x * x.y * w.w +
-           y.x * x.w * w.y +
-           w.x * x.y * y.w -
-           w.x * x.w * y.y;
-inv.w.z = -x.x * y.y * w.z +
-           x.x * y.z * w.y +
-           y.x * x.y * w.z -
-           y.x * x.z * w.y -
-           w.x * x.y * y.z +
-           w.x * x.z * y.y;
-inv.x.w = -x.y * y.z * z.w +
-           x.y * y.w * z.z +
-           y.y * x.z * z.w -
-           y.y * x.w * z.z -
-           z.y * x.z * y.w +
-           z.y * x.w * y.z;
-inv.y.w =  x.x * y.z * z.w -
-           x.x * y.w * z.z -
-           y.x * x.z * z.w +
-           y.x * x.w * z.z +
-           z.x * x.z * y.w -
-           z.x * x.w * y.z;
-inv.z.w = -x.x * y.y * z.w +
-           x.x * y.w * z.y +
-           y.x * x.y * z.w -
-           y.x * x.w * z.y -
-           z.x * x.y * y.w +
-           z.x * x.w * y.y;
-inv.w.w =  x.x * y.y * z.z -
-           x.x * y.z * z.y -
-           y.x * x.y * z.z +
-           y.x * x.z * z.y +
-           z.x * x.y * y.z -
-           z.x * x.z * y.y;
-type det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x + x.w * inv.w.x;
+mat4<T> inv;
+inv.x.x = y.y * z.z * w.w -
+          y.y * z.w * w.z -
+          z.y * y.z * w.w +
+          z.y * y.w * w.z +
+          w.y * y.z * z.w -
+          w.y * y.w * z.z;
+inv.y.x = y.x * z.w * w.z -
+          y.x * z.z * w.w +
+          z.x * y.z * w.w -
+          z.x * y.w * w.z -
+          w.x * y.z * z.w +
+          w.x * y.w * z.z;
+inv.z.x = y.x * z.y * w.w -
+          y.x * z.w * w.y -
+          z.x * y.y * w.w +
+          z.x * y.w * w.y +
+          w.x * y.y * z.w -
+          w.x * y.w * z.y;
+inv.w.x = y.x * z.z * w.y -
+          y.x * z.y * w.z +
+          z.x * y.y * w.z -
+          z.x * y.z * w.y -
+          w.x * y.y * z.z +
+          w.x * y.z * z.y;
+inv.x.y = x.y * z.w * w.z -
+          x.y * z.z * w.w +
+          z.y * x.z * w.w -
+          z.y * x.w * w.z -
+          w.y * x.z * z.w +
+          w.y * x.w * z.z;
+inv.y.y = x.x * z.z * w.w -
+          x.x * z.w * w.z -
+          z.x * x.z * w.w +
+          z.x * x.w * w.z +
+          w.x * x.z * z.w -
+          w.x * x.w * z.z;
+inv.z.y = x.x * z.w * w.y -
+          x.x * z.y * w.w +
+          z.x * x.y * w.w -
+          z.x * x.w * w.y -
+          w.x * x.y * z.w +
+          w.x * x.w * z.y;
+inv.w.y = x.x * z.y * w.z -
+          x.x * z.z * w.y -
+          z.x * x.y * w.z +
+          z.x * x.z * w.y +
+          w.x * x.y * z.z -
+          w.x * x.z * z.y;
+inv.x.z = x.y * y.z * w.w -
+          x.y * y.w * w.z -
+          y.y * x.z * w.w +
+          y.y * x.w * w.z +
+          w.y * x.z * y.w -
+          w.y * x.w * y.z;
+inv.y.z = x.x * y.w * w.z -
+          x.x * y.z * w.w +
+          y.x * x.z * w.w -
+          y.x * x.w * w.z -
+          w.x * x.z * y.w +
+          w.x * x.w * y.z;
+inv.z.z = x.x * y.y * w.w -
+          x.x * y.w * w.y -
+          y.x * x.y * w.w +
+          y.x * x.w * w.y +
+          w.x * x.y * y.w -
+          w.x * x.w * y.y;
+inv.w.z = x.x * y.z * w.y -
+          x.x * y.y * w.z +
+          y.x * x.y * w.z -
+          y.x * x.z * w.y -
+          w.x * x.y * y.z +
+          w.x * x.z * y.y;
+inv.x.w = x.y * y.w * z.z -
+          x.y * y.z * z.w +
+          y.y * x.z * z.w -
+          y.y * x.w * z.z -
+          z.y * x.z * y.w +
+          z.y * x.w * y.z;
+inv.y.w = x.x * y.z * z.w -
+          x.x * y.w * z.z -
+          y.x * x.z * z.w +
+          y.x * x.w * z.z +
+          z.x * x.z * y.w -
+          z.x * x.w * y.z;
+inv.z.w = x.x * y.w * z.y -
+          x.x * y.y * z.w +
+          y.x * x.y * z.w -
+          y.x * x.w * z.y -
+          z.x * x.y * y.w +
+          z.x * x.w * y.y;
+inv.w.w = x.x * y.y * z.z -
+          x.x * y.z * z.y -
+          y.x * x.y * z.z +
+          y.x * x.z * z.y +
+          z.x * x.y * y.z -
+          z.x * x.z * y.y;
+T det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x + x.w * inv.w.x;
 if (det == 0)
-    return mat4<type>::identity();
+    return mat4<T>::identity();
 det = 1.0f / det;
 return inv * det;
 }
@@ -427,30 +502,30 @@ return inv * det;
                 break;
               case 3:
                 r R"(
-constexpr mat3<type> inverse() const
+constexpr mat3<T> inverse() const
 {
-mat3<type> inv;
-inv.x.x =  y.y * z.z -
-           z.y * y.z;
-inv.y.x = -y.x * z.z +
-           z.x * y.z;
-inv.z.x =  y.x * z.y -
-           z.x * y.y;
-inv.x.y = -x.y * z.z +
-           z.y * x.z;
-inv.y.y =  x.x * z.z -
-           z.x * x.z;
-inv.z.y = -x.x * z.y +
-           z.x * x.y;
-inv.x.z =  x.y * y.z -
-           y.y * x.z;
-inv.y.z = -x.x * y.z +
-           y.x * x.z;
-inv.z.z =  x.x * y.y -
-           y.x * x.y;
-type det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x;
+mat3<T> inv;
+inv.x.x = y.y * z.z -
+          z.y * y.z;
+inv.y.x = z.x * y.z -
+          y.x * z.z;
+inv.z.x = y.x * z.y -
+          z.x * y.y;
+inv.x.y = z.y * x.z -
+          x.y * z.z;
+inv.y.y = x.x * z.z -
+          z.x * x.z;
+inv.z.y = z.x * x.y -
+          x.x * z.y;
+inv.x.z = x.y * y.z -
+          y.y * x.z;
+inv.y.z = y.x * x.z -
+          x.x * y.z;
+inv.z.z = x.x * y.y -
+          y.x * x.y;
+T det = x.x * inv.x.x + x.y * inv.y.x + x.z * inv.z.x;
 if (det == 0)
-    return mat3<type>::identity();
+    return mat3<T>::identity();
 det = 1.0f / det;
 return inv * det;
 }
@@ -458,16 +533,16 @@ return inv * det;
                 break;
               case 2:
                 r R"(
-constexpr mat2<type> inverse() const
+constexpr mat2<T> inverse() const
 {
-mat2<type> inv;
+mat2<T> inv;
 inv.x.x =  y.y;
 inv.y.x = -y.x;
 inv.x.y = -x.y;
 inv.y.y =  x.x;
-type det = x.x * inv.x.x + x.y * inv.y.x;
+T det = x.x * inv.x.x + x.y * inv.y.x;
 if (det == 0)
-    return mat2<type>::identity();
+    return mat2<T>::identity();
 det = 1.0f / det;
 return inv * det;
 }
@@ -512,18 +587,14 @@ return inv * det;
             l "};}\n";
         };
 
-        // Prototypes
-        GenVectorPrototypes();
-        l "\n";
-
         { // Vectors
             for (int sz = 2; sz <= 4; sz++)
             {
                 // Header
-                l "template <typename T> struct vec<" << sz << ",T> // vec" << sz <<"\n{\n" <<
-                  "static constexpr int size = " << sz << ";\n";
+                l "template <typename T> struct vec<" << sz << ",T> // vec" << sz <<"\n{\n";
                 CommonHeader();
-                l "static constexpr bool is_floating_point = std::is_floating_point<type>::value;";
+                l "static constexpr int size = " << sz << ";\n";
+                l "static constexpr bool is_floating_point = std::is_floating_point<type>::value;\n";
 
 
                 // Fields
@@ -565,17 +636,82 @@ return inv * det;
                     }
                 }
                 if (sz == 2) // Ratio
-                    l "constexpr decltype(std::sqrt(x/y)) ratio() const {return decltype(std::sqrt(x/y))(x) / decltype(std::sqrt(x/y))(y);}\n"; // std:sqrt is for determining best suitable floating-point type.
+                    l "constexpr Utility::floating_point_t<T> ratio() const {return Utility::floating_point_t<T>(x) / Utility::floating_point_t<T>(y);}\n";
                 // Normalize
-                l "constexpr auto norm() const -> vec" << sz << "<decltype(type{}/len())> {auto l = len(); if (l == 0) return {0}; else return *this / l;}\n";
+                l "constexpr auto norm() const -> vec" << sz << "<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec" << sz << "<T>(0); else return *this / l;}\n";
                 { // Apply
-                    l "template <typename TT> vec" << sz << "<decltype(std::declval<TT>()(x))> apply(TT *func) const {return {";
+                    // No additional parameters
+                    l "template <typename F> constexpr auto apply(F &&func) const -> vec" << sz << "<decltype(func(x))> {return {";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ", ";
                         l "func(" << field_names_main[i] << ")";
                     }
                     l "};}\n";
+                    // Parameter applied on the right
+                    //   scalar pack
+                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) const -> std::enable_if_t<(sizeof...(P)>0),vec" << sz << "<decltype(func(x,params...))>> {return {";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ", ";
+                        l "func(" << field_names_main[i] << ", params...)";
+                    }
+                    l "};}\n";
+                    //   vector pack
+                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const vec" << sz << "<P> &... params) const -> std::enable_if_t<(sizeof...(P)>0),vec" << sz << "<decltype(func(x,params.x...))>> {return {";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ", ";
+                        l "func(" << field_names_main[i] << ", params." << field_names_main[i] << "...)";
+                    }
+                    l "};}\n";
+                    // Parameter applied on the left
+                    //   scalar
+                    l "template <typename F, typename P> constexpr auto apply(P param, F &&func) const -> vec" << sz << "<decltype(func(param,x))> {return {";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ", ";
+                        l "func(param, " << field_names_main[i] << ")";
+                    }
+                    l "};}\n";
+                    //   vector
+                    l "template <typename F, typename P> constexpr auto apply(const vec" << sz << "<P> &param, F &&func) const -> vec" << sz << "<decltype(func(param.x,x))> {return {";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ", ";
+                        l "func(param." << field_names_main[i] << ", " << field_names_main[i] << ")";
+                    }
+                    l "};}\n";
+                }
+                { // Resizers
+                    for (int i = 2; i <= 4; i++)
+                    {
+                        if (sz == i) continue;
+                        l "constexpr vec" << i << "<T> to_vec" << i << "(";
+                        for (int j = sz; j < i; j++)
+                        {
+                            if (j != sz) l ", ";
+                            l "T p" << field_names_main[j];
+                        }
+                        l ") const {return {";
+                        for (int j = 0; j < i; j++)
+                        {
+                            if (j != 0) l ", ";
+                            if (j >= sz) l "p";
+                            l field_names_main[j];
+                        }
+                        l "};}\n";
+                    }
+                    for (int i = sz+1; i <= 4; i++)
+                    {
+                        l "constexpr vec" << i << "<T> to_vec" << i << "() const {return to_vec" << i << "(";
+                        for (int j = sz; j < i; j++)
+                        {
+                            if (j != sz) l ", ";
+                            l "T{}";
+                        }
+                        l ");}\n";
+                    }
                 }
                 { // Bool pack
                     auto BoolFunc = [&](const char *name, const char *bin, bool inverted)
@@ -596,7 +732,22 @@ return inv * det;
                 }
                 for (int i = 1; i <= 4; i++) // Multiplication
                     MatrixMul(sz, i, 1);
-
+                { // Min and max
+                    l "constexpr T min() const {return std::min({";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ',';
+                        l field_names_main[i];
+                    }
+                    l "});}\n";
+                    l "constexpr T max() const {return std::max({";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0) l ',';
+                        l field_names_main[i];
+                    }
+                    l "});}\n";
+                }
 
                 l "};\n";
             }
@@ -607,10 +758,10 @@ return inv * det;
                 for (int w = 2; w <= 4; w++)
                 {
                     // Header
-                    l "template <typename T> struct vec<" << w << ",vec<" << h << ",T>> // mat" << w << 'x' << h << "\n{\n" <<
-                      "static constexpr int width = " << w << ", height = " << h << ";\n";
+                    l "template <typename T> struct vec<" << w << ",vec<" << h << ",T>> // mat" << w << 'x' << h << "\n{\n";
                     CommonHeader();
-                    l "static constexpr bool is_floating_point = vec" << h << "<T>::is_floating_point;";
+                    l "static constexpr int width = " << w << ", height = " << h << ";\n";
+                    l "static constexpr bool is_floating_point = vec" << h << "<T>::is_floating_point;\n";
 
 
                     // Fields
@@ -796,11 +947,46 @@ $       0, 0, v.z};
                         }
                     }
                     { // Apply
-                        l "template <typename TT> mat" << w << 'x' << h << "<decltype(std::declval<TT>()(x.x))> apply(TT *func) const {return {";
+                        // No additional parameters
+                        l "template <typename F> constexpr auto apply(F &&func) const -> mat" << w << 'x' << h << "<decltype(func(x.x))> {return {";
                         for (int i = 0; i < w; i++)
                         {
                             if (i != 0) l ", ";
                             l field_names_main[i] << ".apply(func)";
+                        }
+                        l "};}\n";
+                        // Parameter applied on the right
+                        //   scalar pack
+                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat" << w << 'x' << h << "<decltype(func(x.x,params...))>> {return {";
+                        for (int i = 0; i < w; i++)
+                        {
+                            if (i != 0) l ", ";
+                            l field_names_main[i] << ".apply(func, params...)";
+                        }
+                        l "};}\n";
+                        //   vector pack
+                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, const mat" << w << 'x' << h << "<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat" << w << 'x' << h << "<decltype(func(x.x,params.x.x...))>> {return {";
+                        for (int i = 0; i < w; i++)
+                        {
+                            if (i != 0) l ", ";
+                            l field_names_main[i] << ".apply(func, params." << field_names_main[i] << "...)";
+                        }
+                        l "};}\n";
+                        // Parameter applied on the left
+                        //   scalar
+                        l "template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat" << w << 'x' << h << "<decltype(func(param,x.x))> {return {";
+                        for (int i = 0; i < w; i++)
+                        {
+                            if (i != 0) l ", ";
+                            l field_names_main[i] << ".apply(param, func)";
+                        }
+                        l "};}\n";
+                        //   vector
+                        l "template <typename F, typename P> constexpr auto apply(const mat" << w << 'x' << h << "<P> &param, F &&func) -> mat" << w << 'x' << h << "<decltype(func(param.x.x,x.x))> {return {";
+                        for (int i = 0; i < w; i++)
+                        {
+                            if (i != 0) l ", ";
+                            l field_names_main[i] << ".apply(param." << field_names_main[i] << ", func)";
                         }
                         l "};}\n";
                     }
@@ -823,6 +1009,28 @@ $       0, 0, v.z};
                         BoolFunc("none", "||", 1);
                         BoolFunc("any", "||", 0);
                         BoolFunc("each", "&&", 0);
+                    }
+                    { // Min and max
+                        l "constexpr T min() const {return std::min({";
+                        for (int i = 0; i < w; i++)
+                        {
+                            for (int j = 0; j < h; j++)
+                            {
+                                if (i != 0 || j != 0) l ',';
+                                l field_names_main[i] << '.' << field_names_main[j];
+                            }
+                        }
+                        l "});}\n";
+                        l "constexpr T max() const {return std::max({";
+                        for (int i = 0; i < w; i++)
+                        {
+                            for (int j = 0; j < h; j++)
+                            {
+                                if (i != 0 || j != 0) l ',';
+                                l field_names_main[i] << '.' << field_names_main[j];
+                            }
+                        }
+                        l "});}\n";
                     }
                     if (w == h) MatrixInverse(w); // Inverse
                     for (int i = 1; i <= 4; i++) // Multiplication
@@ -1163,13 +1371,12 @@ using Quaternion = GenericQuaternion<>;
 )";
     }
 
-    void CustomOperators()
+    void Operators()
     {
-        l "namespace CustomOperators\n{\n";
-        l "namespace Internal\n{\n";
+        l "namespace Operators\n{\n";
         for (const char *name : custom_op_list)
         {
-            l "template <typename T> struct " << name << "_tmp\n{\nT ref;\n";
+            l "template <typename T> struct " << name << "_operator_expression_t\n{\nT ref;\n";
             for (int i = 2; i <= 4; i++)
             {
                 l "template <typename TT> constexpr auto operator" << op_delim << "(const Vector::vec" << i << "<TT> &obj) const {return ref." << name << "(obj);}\n";
@@ -1185,22 +1392,20 @@ using Quaternion = GenericQuaternion<>;
             }
             l "};\n";
         }
-        l "}\n\n";
         for (const char *name : custom_op_list)
         {
-            l "namespace Internal {struct " << name << "_type {constexpr " << name << "_type(){}};} ";
-            l "static constexpr Internal::" << name << "_type " << name << ";\n";
+            l "constexpr struct " << name << "_operator_t {constexpr " << name << "_operator_t(){}} " << name << ";\n";
             for (int i = 2; i <= 4; i++)
             {
-                l "template <typename T> constexpr auto operator" << op_delim << "(const Vector::vec" << i << "<T> &obj, decltype(" << name << ")) {return Internal::" << name << "_tmp<const Vector::vec" << i << "<T> &>{obj};}\n";
-                l "template <typename T> constexpr auto operator" << op_delim << "(Vector::vec" << i << "<T> &&obj, decltype(" << name << ")) {return Internal::" << name << "_tmp<Vector::vec" << i << "<T>>{obj};}\n";
+                l "template <typename T> constexpr auto operator" << op_delim << "(const Vector::vec" << i << "<T> &obj, decltype(" << name << ")) {return " << name << "_operator_expression_t<const Vector::vec" << i << "<T> &>{obj};}\n";
+                l "template <typename T> constexpr auto operator" << op_delim << "(Vector::vec" << i << "<T> &&obj, decltype(" << name << ")) {return " << name << "_operator_expression_t<Vector::vec" << i << "<T>>{obj};}\n";
             }
             for (int h = 2; h <= 4; h++)
             {
                 for (int w = 2; w <= 4; w++)
                 {
-                    l "template <typename T> constexpr auto operator" << op_delim << "(const Vector::mat" << w << 'x' << h << "<T> &obj, decltype(" << name << ")) {return Internal::" << name << "_tmp<const Vector::mat" << w << 'x' << h << "<T> &>{obj};}\n";
-                    l "template <typename T> constexpr auto operator" << op_delim << "(Vector::mat" << w << 'x' << h << "<T> &&obj, decltype(" << name << ")) {return Internal::" << name << "_tmp<Vector::mat" << w << 'x' << h << "<T>>{obj};}\n";
+                    l "template <typename T> constexpr auto operator" << op_delim << "(const Vector::mat" << w << 'x' << h << "<T> &obj, decltype(" << name << ")) {return " << name << "_operator_expression_t<const Vector::mat" << w << 'x' << h << "<T> &>{obj};}\n";
+                    l "template <typename T> constexpr auto operator" << op_delim << "(Vector::mat" << w << 'x' << h << "<T> &&obj, decltype(" << name << ")) {return " << name << "_operator_expression_t<Vector::mat" << w << 'x' << h << "<T>>{obj};}\n";
                 }
             }
         }
@@ -1212,75 +1417,136 @@ using Quaternion = GenericQuaternion<>;
         r R"(
 namespace Misc
 {
-template <typename T> T pi()
-{
-static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
-static const T ret = std::atan((T)1)*4;
-return ret;
-}
+template <typename T> constexpr T pi() {return T(3.14159265358979323846l);}
+constexpr float       f_pi  = pi<float>();
+constexpr double      d_pi  = pi<double>();
+constexpr long double ld_pi = pi<long double>();
 
 template <typename T> T to_rad(T in)
 {
-static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+static_assert(!std::is_integral<T>::value, "Integral argument makes no sense for this function.");
 return in * pi<T>() / (T)180;
 }
 template <typename T> T to_deg(T in)
 {
-static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
+static_assert(!std::is_integral<T>::value, "Integral argument makes no sense for this function.");
 return in * (T)180 / pi<T>();
 }
 
 template <typename T, typename TT> constexpr T ipow(T a, TT b)
 {
-static_assert(std::is_integral<TT>::value, "Non integral template parameters make no sense for this function.");
+static_assert(std::is_integral<TT>::value, "Non integral power makes no sense for this function.");
 T ret = 1;
-while (b--)
-{
-ret *= a;
-}
+while (b-- > 0)
+    ret *= a;
 return ret;
 }
 
-template <typename T, typename MIN, typename MAX> constexpr T clamp(T val, MIN min, MAX max)
+template <typename T, typename Min, typename Max> constexpr Utility::enable_if_not_vec_or_mat_t<T,T> clamp(T val, Min min, Max max)
 {
 static_assert(std::is_arithmetic<T>::value &&
-              std::is_arithmetic<MIN>::value &&
-              std::is_arithmetic<MAX>::value, "Non arithmetic template parameters make no sense for this function.");
+              std::is_arithmetic<Min>::value &&
+              std::is_arithmetic<Max>::value, "Non arithmetic arguments make no sense for this function.");
 if (val < min) return min;
 if (val > max) return max;
 return val;
 }
+template <typename T, typename Min, typename Max> constexpr Utility::enable_if_vec_or_mat_t<T,T> clamp(T val, Min min, Max max)
+{
+return val.apply((typename T::type (*)(typename T::type, Utility::base_type_t<Min>, Utility::base_type_t<Max>))clamp, min, max);
+}
 
-template <typename T> constexpr int sign(T val)
+template <typename T> constexpr Utility::enable_if_not_vec_or_mat_t<T,int> sign(T val)
 {
 return (val > 0) - (val < 0);
+}
+template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,Utility::change_base_type_t<T,int>> sign(T val)
+{
+return val.apply((int (*)(typename T::type))sign);
 }
 
 template <typename T> constexpr T smoothstep(T x)
 {
-static_assert(!std::is_integral<T>::value, "Integral template parameter makes no sense for this function.");
-return 3*x*x-2*x*x*x;
+static_assert(std::is_floating_point<Utility::base_type_t<T>>::value, "Argument type must be floating-point.");
+return 3 * x*x - 2 * x*x*x;
 }
 
-template <typename T, typename TT> constexpr T true_div(T a, TT b)
+template <typename T> Utility::enable_if_not_vec_or_mat_t<T,T> floor(T x)
+{
+static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+return std::floor(x);
+}
+template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,T> floor(T val)
+{
+return val.apply((typename T::type (*)(typename T::type))floor);
+}
+
+template <typename T> Utility::enable_if_not_vec_or_mat_t<T,T> ceil(T x)
+{
+static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+return std::ceil(x);
+}
+template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,T> ceil(T val)
+{
+return val.apply((typename T::type (*)(typename T::type))ceil);
+}
+
+template <typename T> Utility::enable_if_not_vec_or_mat_t<T,T> trunc(T x)
+{
+static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+return std::trunc(x);
+}
+template <typename T> constexpr Utility::enable_if_vec_or_mat_t<T,T> trunc(T val)
+{
+return val.apply((typename T::type (*)(typename T::type))trunc);
+}
+
+template <typename T> T frac(T x)
+{
+static_assert(std::is_floating_point<Utility::base_type_t<T>>::value, "Argument type must be floating-point.");
+return x - trunc(x);
+}
+
+template <typename T, typename TT> constexpr Utility::enable_if_not_vec_or_mat_t<T,T> true_div(T a, TT b)
 {
 static_assert(std::is_integral<T>::value &&
-              std::is_integral<TT>::value, "Argument types must be integral.");
+              std::is_integral<TT>::value, "Parameter types must be integral.");
 if (a >= 0)
     return a / b;
 else
     return (a + 1) / b - (b >= 0 ? 1 : -1);
 }
+template <typename T, typename TT> constexpr Utility::enable_if_vec_or_mat_t<T,T> true_div(T a, TT b)
+{
+return a.apply((typename T::type (*)(typename T::type, Utility::base_type_t<TT>))true_div, b);
+}
 
-template <typename T, typename TT> constexpr T true_mod(T a, TT b)
+template <typename T, typename TT> constexpr Utility::enable_if_not_vec_or_mat_t<T,T> true_mod(T a, TT b)
 {
 static_assert(std::is_integral<T>::value &&
-              std::is_integral<TT>::value, "Argument types must be integral.");
+              std::is_integral<TT>::value, "Parameter types must be integral.");
 if (a >= 0)
     return a % b;
 else
     return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
 }
+template <typename T, typename TT> constexpr Utility::enable_if_vec_or_mat_t<T,T> true_mod(T a, TT b)
+{
+return a.apply((typename T::type (*)(typename T::type, Utility::base_type_t<TT>))true_mod, b);
+}
+)";
+    const char *min_max[] {"min", "max"};
+    for (const char *it : min_max)
+    {
+        l '\n';
+        l "template <typename T, typename TT> constexpr std::enable_if_t<!Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>\n";
+        l it << "(T a, TT b) {return (b > a ? b : a);}\n";
+        l "template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>\n";
+        l it << "(T a, TT b) {return a.apply((Utility::larger_type_t<Utility::base_type_t<T>,TT> (*)(Utility::base_type_t<T>, TT))" << it << ", b);}\n";
+        l "template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>\n";
+        l it << "(T a, TT b) {return b.apply(a, (Utility::larger_type_t<Utility::base_type_t<T>,Utility::base_type_t<TT>> (*)(Utility::base_type_t<T>, Utility::base_type_t<TT>))" << it << ");}\n";
+    }
+    r R"(
 }
 )";
     }
@@ -1325,9 +1591,10 @@ int main()
 
 // Version )" VERSION R"( by HolyBlackCat
 
-#include <functional>
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <ostream>
 #include <type_traits>
 #include <utility>
@@ -1336,11 +1603,15 @@ int main()
 namespace Math
 {
 )";
+    Gen::VectorPrototypes();
+    l "\n";
+    Gen::Utility();
+    l "\n";
     Gen::Vector();
     l "\n";
     Gen::Quaternion();
     l "\n";
-    Gen::CustomOperators();
+    Gen::Operators();
     l "\n";
     Gen::Misc();
     r R"(
@@ -1350,9 +1621,10 @@ namespace Math
     Gen::StdSpecializations();
     r R"(
 
+using namespace Math::Utility;
 using namespace Math::Vector;
 using namespace Math::Quaternion;
-using namespace Math::CustomOperators;
+using namespace Math::Operators;
 using namespace Math::Misc;
 
 #endif
