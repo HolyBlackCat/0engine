@@ -155,44 +155,45 @@ template <typename T> struct larger_type_t_impl<T> {using type = T;};
 template <typename T, typename TT> struct larger_type_t_impl<T, TT>
 {
 using type =
-std::conditional_t< std::is_arithmetic<base_type_t<T>>::value && std::is_arithmetic<base_type_t<TT>>::value,
-    std::conditional_t< !is_vec_or_mat<T>::value && !is_vec_or_mat<TT>::value,
-        std::conditional_t< std::is_integral<T>::value == std::is_integral<TT>::value,
-            std::conditional_t< (sizeof (T) == sizeof (TT)),
-                std::conditional_t< std::is_same<T,TT>::value,
-                    T
-                ,
-                    void
-                >
+std::conditional_t< std::is_arithmetic<T>::value && std::is_arithmetic<TT>::value,
+    std::conditional_t< std::is_integral<T>::value == std::is_integral<TT>::value,
+        std::conditional_t< (sizeof (T) == sizeof (TT)),
+            std::conditional_t< std::is_same<T,TT>::value,
+                T
             ,
-                std::conditional_t< (sizeof (T) > sizeof (TT)),
-                    T
-                ,
-                    TT
-                >
+                void
             >
         ,
-            std::conditional_t< std::is_floating_point<T>::value,
+            std::conditional_t< (sizeof (T) > sizeof (TT)),
                 T
             ,
                 TT
             >
         >
     ,
-        std::conditional_t< is_vec_or_mat<T>::value && is_vec_or_mat<TT>::value,
-            std::conditional_t< std::is_same<change_base_type_t<T,base_type_t<TT>>,TT>::value,
-                change_base_type_t<T, larger_type_t<base_type_t<T>, base_type_t<TT>>>
-            ,
-                void
-            >
+        std::conditional_t< std::is_floating_point<T>::value,
+            T
         ,
-            std::conditional_t< is_vec_or_mat<T>::value,
-                change_base_type_t<T, larger_type_t<base_type_t<T>, base_type_t<TT>>>
-            ,
-                change_base_type_t<TT, larger_type_t<base_type_t<T>, base_type_t<TT>>>
-            >
+            TT
         >
     >
+,
+    void
+>;
+};
+template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<Vector::vec<D,T>, TT>
+{
+using type = change_base_type_t<Vector::vec<D,T>, larger_type_t<typename Vector::vec<D,T>::type, TT>>;
+};
+template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<TT, Vector::vec<D,T>>
+{
+using type = change_base_type_t<Vector::vec<D,T>, larger_type_t<typename Vector::vec<D,T>::type, TT>>;
+};
+template <unsigned int D1, unsigned int D2, typename T, typename TT> struct larger_type_t_impl<Vector::vec<D1,T>, Vector::vec<D2,TT>>
+{
+using type =
+std::conditional_t< std::is_same<change_base_type_t<Vector::vec<D1,T>, base_type_t<Vector::vec<D2,TT>>>, Vector::vec<D2,TT>>::value,
+    change_base_type_t<Vector::vec<D1,T>, larger_type_t<base_type_t<Vector::vec<D1,T>>, base_type_t<Vector::vec<D2,TT>>>>
 ,
     void
 >;
@@ -1535,16 +1536,22 @@ template <typename T, typename TT> constexpr Utility::enable_if_vec_or_mat_t<T,T
 return a.apply((typename T::type (*)(typename T::type, Utility::base_type_t<TT>))true_mod, b);
 }
 )";
-    const char *min_max[] {"min", "max"};
-    for (const char *it : min_max)
+    struct
+    {
+        const char *name, *logic;
+    }
+    min_max[] {{"min","a > b ? b : a"},
+               {"max","b > a ? b : a"}};
+
+    for (const auto &it : min_max)
     {
         l '\n';
         l "template <typename T, typename TT> constexpr std::enable_if_t<!Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>\n";
-        l it << "(T a, TT b) {return (b > a ? b : a);}\n";
+        l it.name << "(T a, TT b) {return (" << it.logic << ");}\n";
         l "template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<T>::value && !Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>\n";
-        l it << "(T a, TT b) {return a.apply((Utility::larger_type_t<Utility::base_type_t<T>,TT> (*)(Utility::base_type_t<T>, TT))" << it << ", b);}\n";
+        l it.name << "(T a, TT b) {return a.apply((Utility::larger_type_t<Utility::base_type_t<T>,TT> (*)(Utility::base_type_t<T>, TT))" << it.name << ", b);}\n";
         l "template <typename T, typename TT> constexpr std::enable_if_t<Utility::is_vec_or_mat<TT>::value, Utility::larger_type_t<T,TT>>\n";
-        l it << "(T a, TT b) {return b.apply(a, (Utility::larger_type_t<Utility::base_type_t<T>,Utility::base_type_t<TT>> (*)(Utility::base_type_t<T>, Utility::base_type_t<TT>))" << it << ");}\n";
+        l it.name << "(T a, TT b) {return b.apply(a, (Utility::larger_type_t<Utility::base_type_t<T>,Utility::base_type_t<TT>> (*)(Utility::base_type_t<T>, Utility::base_type_t<TT>))" << it.name << ");}\n";
     }
     r R"(
 }
