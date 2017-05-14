@@ -427,11 +427,12 @@
 	"exceptions.h"
 	"system.h"
 
-1494459998 z:\projects\c++\lx\src\math.h
+1494799997 z:\projects\c++\lx\src\math.h
 	<algorithm>
 	<cmath>
 	<cstdint>
 	<functional>
+	<ios>
 	<ostream>
 	<type_traits>
 	<utility>
@@ -442,7 +443,7 @@
 1486158765 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1494458334 source:z:\projects\c++\lx\src\logic.cpp
+1494460036 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
 
 1465479696 z:\projects\c++\lx\src\logic.h
@@ -506,7 +507,7 @@
 	"lib/z.h"
 	"window.h"
 
-1492471043 z:\projects\c++\lx\src\graphics.h
+1494800034 z:\projects\c++\lx\src\graphics.h
 	<cstddef>
 	<cstring>
 	<initializer_list>

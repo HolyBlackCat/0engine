@@ -1386,7 +1386,7 @@ namespace Graphics
 
         TextureCube() {}
         TextureCube(Side side, const ImageData &data)     {SetData(side, data);}
-        TextureCube(Side side, ivec2 size, void *ptr = 0) {SetData(side, size, ptr);}
+        TextureCube(Side side, int size, void *ptr = 0) {SetData(side, size, ptr);}
         TextureCube(const ImageData *sides) {SetData(sides);}
         TextureCube(int sz, void **sides = 0)   {SetData(sz, sides);}
         void SetData(Side side, const ImageData &data)
