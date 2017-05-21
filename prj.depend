@@ -427,7 +427,7 @@
 	"exceptions.h"
 	"system.h"
 
-1494799997 z:\projects\c++\lx\src\math.h
+1495403790 z:\projects\c++\lx\src\math.h
 	<algorithm>
 	<cmath>
 	<cstdint>
@@ -443,7 +443,7 @@
 1486158765 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1494460036 source:z:\projects\c++\lx\src\logic.cpp
+1495403825 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
 
 1465479696 z:\projects\c++\lx\src\logic.h

@@ -17,12 +17,6 @@ void Boot()
 {
     MarkLocation("Boot");
 
-    imat2 a1(1,2,3,4);
-    fmat2 a2(9,8.5,7,6);
-
-    std::cout << max(a1,a2) << '\n';
-    std::cout << min(a1,a2) << '\n';
-
     while (1)
     {
         Sys::BeginFrame();

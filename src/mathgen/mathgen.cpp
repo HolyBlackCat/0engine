@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.2.0"
+#define VERSION "2.2.2"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -140,7 +140,7 @@ template <typename Condition, typename T> using enable_if_not_vec_or_mat_t = std
 template <typename T> struct is_io_stream {static constexpr bool value = std::is_base_of<std::ios_base,T>::value;};
 
 template <typename T> constexpr bool is_custom_operator_impl(short) {return 0;}
-template <typename T, typename = decltype(T::is_custom_operator__())> constexpr bool is_custom_operator_impl(int) {return 1;}
+template <typename T, typename = typename T::custom_operator_tag> constexpr bool is_custom_operator_impl(int) {return 1;}
 template <typename T> struct is_custom_operator {static constexpr bool value = is_custom_operator_impl<T>(0);};
 
 template <typename Condition, typename T> using enable_if_not_special_t = std::enable_if_t<!is_io_stream<Condition>::value && !is_custom_operator<Condition>::value, T>;
@@ -1052,10 +1052,10 @@ $       0, 0, v.z};
         // Operators
         for (int sz = 2; sz <= 4; sz++)
         {
-            for (const char *const &op : ops_bin) // Note the &.
+            for (const char *op : ops_bin) // Note the &.
             {
                 // vec @ vec
-                l "template <typename T1, typename T2> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return {";
+                l "template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1236,77 +1236,37 @@ vec4<T> vec;
 constexpr quat() : vec{0,0,0,1} {}
 constexpr quat(const vec4<T> &o) : vec(o) {}
 
-static quat from_norm_axis_and_angle(const vec3<T> &v, T angle)
+static quat around_norm_axis(const vec3<T> &v, T angle)
 {
 return quat({v.x * std::sin(angle / 2.f), v.y * std::sin(angle / 2.f), v.z * std::sin(angle / 2.f), std::cos(angle / 2.f)});
 }
-static quat from_axis_and_angle(const vec3<T> &v, T angle)
+static quat around_axis(const vec3<T> &v, T angle)
 {
-return from_norm_axis_and_angle(v.norm(), angle);
+return around_norm_axis(v.norm(), angle);
 }
 
-quat norm() const
-{
-return quat(vec.norm());
-}
-
-void make_norm()
+void normalize()
 {
 vec = vec.norm();
 }
 
-constexpr quat operator+(const quat &o) const {return quat(vec + o.vec);}
-constexpr quat &operator+=(const quat &o) {vec += o.vec; return *this;}
-constexpr quat operator-(const quat &o) const {return quat(vec - o.vec);}
-constexpr quat &operator-=(const quat &o) {vec -= o.vec; return *this;}
-
-quat operator-() const {return quat(-vec.x, -vec.y, -vec.z, vec.w);}
-quat operator*(const quat &o) const
+template <typename TT> constexpr quat<larger_type_t<T,TT>> mul(const quat<TT> &o) const
 {
-return quat(vec.w*o.vec.x + vec.x*o.vec.w + vec.y*o.vec.z - vec.z*o.vec.y,
-            vec.w*o.vec.y - vec.x*o.vec.z + vec.y*o.vec.w + vec.z*o.vec.x,
-            vec.w*o.vec.z + vec.x*o.vec.y - vec.y*o.vec.x + vec.z*o.vec.w,
-            vec.w*o.vec.w - vec.x*o.vec.x - vec.y*o.vec.y - vec.z*o.vec.z);
-}
-quat &operator*=(const quat &o)
-{
-vec = {vec.w*o.vec.x + vec.x*o.vec.w + vec.y*o.vec.z - vec.z*o.vec.y,
-$      vec.w*o.vec.y - vec.x*o.vec.z + vec.y*o.vec.w + vec.z*o.vec.x,
-$      vec.w*o.vec.z + vec.x*o.vec.y - vec.y*o.vec.x + vec.z*o.vec.w,
-$      vec.w*o.vec.w - vec.x*o.vec.x - vec.y*o.vec.y - vec.z*o.vec.z};
-return *this;
-}
-T dot(const quat &o) const
-{
-return vec.dot(o.vec);
-}
-T len_sqr() const
-{
-return vec.len_sqr();
-}
-T len() const
-{
-return vec.len();
+return quat({vec.w*o.vec.x + vec.x*o.vec.w + vec.y*o.vec.z - vec.z*o.vec.y,
+$            vec.w*o.vec.y - vec.x*o.vec.z + vec.y*o.vec.w + vec.z*o.vec.x,
+$            vec.w*o.vec.z + vec.x*o.vec.y - vec.y*o.vec.x + vec.z*o.vec.w,
+$            vec.w*o.vec.w - vec.x*o.vec.x - vec.y*o.vec.y - vec.z*o.vec.z});
 }
 quat combine(const quat &o, T fac) const
 {
 return quat(vec.interpolate(o.vec, fac));
 }
 
-bool operator==(const quat &o) const
-{
-return vec == o.vec;
-}
-bool operator!=(const quat &o) const
-{
-return vec != o.vec;
-}
-
 vec3<T> get_axis() const
 {
 return vec.to_vec3().norm();
 }
-vec3<T> get_not_norm_axis() const
+constexpr vec3<T> get_not_norm_axis() const
 {
 return vec.to_vec3();
 }
@@ -1315,12 +1275,12 @@ T get_angle() const
 return std::atan2(vec.to_vec3().len(), vec.w) * 2;
 }
 
-template <typename TT> quat mult_angle(TT n) const
+quat set_angle(T n) const
 {
-return from_axis_and_angle(get_not_norm_axis(), get_angle() * n);
+return from_axis_and_angle(get_not_norm_axis(), n);
 }
 
-template <typename TT> vec3<TT> apply(const vec3<TT> &in) const // 24x [*|/]  17x [+|-]
+template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const vec3<TT> &in) const // Complexity: 24x`*` 17x`+-`
 {
 float newx = vec.w*in.x + vec.y*in.z - vec.z*in.y;
 float newy = vec.w*in.y - vec.x*in.z + vec.z*in.x;
@@ -1331,29 +1291,17 @@ return {newx*vec.w + neww*vec.x - newy*vec.z + newz*vec.y,
 $       neww*vec.y + newx*vec.z + newy*vec.w - newz*vec.x,
 $       neww*vec.z - newx*vec.y + newy*vec.x + newz*vec.w};
 }
-template <typename TT> vec4<TT> apply(const vec4<TT> &in) const // 24x [*|/]  17x [+|-]
-{
-float newx = vec.w*in.x + vec.y*in.z - vec.z*in.y;
-float newy = vec.w*in.y - vec.x*in.z + vec.z*in.x;
-float newz = vec.w*in.z + vec.x*in.y - vec.y*in.x;
-float neww = vec.x*in.x + vec.y*in.y + vec.z*in.z;
 
-return {newx*vec.w + neww*vec.x - newy*vec.z + newz*vec.y,
-$       neww*vec.y + newx*vec.z + newy*vec.w - newz*vec.x,
-$       neww*vec.z - newx*vec.y + newy*vec.x + newz*vec.w,
-$       in.w};
+template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const vec4<TT> &in) const // Leaves in.w unchanged. Complexity: 24x`*` 17x`+-`
+{
+    return mul(in.to_vec3).to_vec4(in.w);
 }
 
-mat3<T> get_matrix_from_normalized() const // 18x [*|/]  12x [+|-]    +    mult: 9x [*|/]  6x [+|-]
+constexpr mat3<T> matrix() const // The quaternion must be normalized! Complexity: 18x`*` 12x`+-` (+ multiplication 9x`*` 6x`+-`)
 {
 return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y + 2*vec.z*vec.w, 2*vec.x*vec.z - 2*vec.y*vec.w,
 $       2*vec.x*vec.y - 2*vec.z*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z, 2*vec.y*vec.z + 2*vec.x*vec.w,
 $       2*vec.x*vec.z + 2*vec.y*vec.w, 2*vec.y*vec.z - 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.y*vec.y};
-}
-mat3<T> normalize_and_get_matrix() // 18x [*|/]  12x [+|-]    +    mult: 9x [*|/]  6x [+|-]
-{
-make_norm();
-return get_matrix_from_normalized();
 }
 };
 
@@ -1369,17 +1317,23 @@ using ldquat = quat<long double>;
         l "inline namespace Operators\n{\n";
         for (const char *name : custom_op_list)
         {
-            l "template <typename T> struct " << name << "_operator_impl_expression_t\n{\nT first_arg;\n";
-            l "template <unsigned int D, typename TT> constexpr auto operator" << op_delim << "(const vec<D,TT> &obj) const {return first_arg." << name << "(obj);}\n";
-            l "template <unsigned int D, typename TT> constexpr auto operator" << op_delim << "(vec<D,TT> &&obj) const {return first_arg." << name << "((decltype(obj) &&) obj);}\n";
+            l "template <typename T> struct " << name << "_operator_impl_expression_t\n";
+            l "{\n";
+            l "T first_arg;\n";
+            l "using custom_operator_tag = void;\n";
+            l "template <typename TT> constexpr auto operator" << op_delim << "(TT &&obj) const {return first_arg." << name << "((TT &&) obj);}\n";
             l "};\n";
         }
         l '\n';
         for (const char *name : custom_op_list)
         {
-            l "constexpr struct " << name << "_operator_impl_t {constexpr " << name << "_operator_impl_t(){} static constexpr void is_custom_operator__(){}} " << name << ";\n";
-            l "template <unsigned int D, typename T> constexpr auto operator" << op_delim << "(const vec<D,T> &obj, decltype(" << name << ")) {return " << name << "_operator_impl_expression_t<const vec<D,T> &>{obj};}\n";
-            l "template <unsigned int D, typename T> constexpr auto operator" << op_delim << "(vec<D,T> &&obj, decltype(" << name << ")) {return " << name << "_operator_impl_expression_t<vec<D,T>>{(decltype(obj) &&) obj};}\n";
+            l "struct " << name << "_operator_impl_t\n";
+            l "{\n";
+            l "using custom_operator_tag = void;\n";
+            l "constexpr " << name << "_operator_impl_t(){}\n";
+            l "};\n";
+            l "constexpr " << name << "_operator_impl_t " << name << ";\n";
+            l "template <typename T> constexpr auto operator" << op_delim << "(T &&obj, decltype(" << name << ")) {return " << name << "_operator_impl_expression_t<T>{(T &&) obj};}\n";
         }
         l "}\n";
     }
