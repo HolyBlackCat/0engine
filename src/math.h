@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.2.2 by HolyBlackCat
+// Version 2.3.0 by HolyBlackCat
 
 #include <algorithm>
 #include <cmath>
@@ -544,10 +544,10 @@ namespace Math
             constexpr bool none() const {return !(x || y);}
             constexpr bool any() const {return x || y;}
             constexpr bool each() const {return x && y;}
-            template <typename TT> constexpr decltype(T{}*TT{}+T{}*TT{}) mul(const vec2<TT> &o) const {return {x*o.x+y*o.y};}
-            template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y};}
-            template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y};}
-            template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat4x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y, x*o.w.x+y*o.w.y};}
+            template <typename TT> constexpr larger_type_t<T,TT> mul(const vec2<TT> &o) const {return {x*o.x+y*o.y};}
+            template <typename TT> constexpr vec2<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y};}
+            template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y};}
+            template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y, x*o.w.x+y*o.w.y};}
             constexpr T min() const {return std::min({x,y});}
             constexpr T max() const {return std::max({x,y});}
         };
@@ -598,10 +598,10 @@ namespace Math
             constexpr bool none() const {return !(x || y || z);}
             constexpr bool any() const {return x || y || z;}
             constexpr bool each() const {return x && y && z;}
-            template <typename TT> constexpr decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}) mul(const vec3<TT> &o) const {return {x*o.x+y*o.y+z*o.z};}
-            template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z};}
-            template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z};}
-            template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z, x*o.w.x+y*o.w.y+z*o.w.z};}
+            template <typename TT> constexpr larger_type_t<T,TT> mul(const vec3<TT> &o) const {return {x*o.x+y*o.y+z*o.z};}
+            template <typename TT> constexpr vec2<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z};}
+            template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z};}
+            template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z, x*o.w.x+y*o.w.y+z*o.w.z};}
             constexpr T min() const {return std::min({x,y,z});}
             constexpr T max() const {return std::max({x,y,z});}
         };
@@ -654,10 +654,10 @@ namespace Math
             constexpr bool none() const {return !(x || y || z || w);}
             constexpr bool any() const {return x || y || z || w;}
             constexpr bool each() const {return x && y && z && w;}
-            template <typename TT> constexpr decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{}) mul(const vec4<TT> &o) const {return {x*o.x+y*o.y+z*o.z+w*o.w};}
-            template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w};}
-            template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w};}
-            template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w, x*o.w.x+y*o.w.y+z*o.w.z+w*o.w.w};}
+            template <typename TT> constexpr larger_type_t<T,TT> mul(const vec4<TT> &o) const {return {x*o.x+y*o.y+z*o.z+w*o.w};}
+            template <typename TT> constexpr vec2<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w};}
+            template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w};}
+            template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w, x*o.w.x+y*o.w.y+z*o.w.z+w*o.w.w};}
             constexpr T min() const {return std::min({x,y,z,w});}
             constexpr T max() const {return std::max({x,y,z,w});}
         };
@@ -688,8 +688,8 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
-            constexpr vec(type xx, type xy, type yx, type yy) : x(xx,xy), y(yx,yy) {}
-            constexpr mat2x2<type> transpose() const {return {x.x,y.x,x.y,y.y};}
+            constexpr vec(type xx, type yx, type xy, type yy) : x(xx,xy), y(yx,yy) {}
+            constexpr mat2x2<type> transpose() const {return {x.x,x.y,y.x,y.y};}
             static constexpr vec identity() {return {1, 0, 0, 1};}
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y};}
             static constexpr vec ortho2D(const vec2<type> &sz)
@@ -703,32 +703,32 @@ namespace Math
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 type c = std::cos(angle);
                 type s = std::sin(angle);
-                return {c, s,
-                        -s, c};
+                return {c, -s,
+                        s, c};
             }
             static constexpr vec scale2D(const vec2<type> &v)
             {
                 return {v.x, 0,
                         0, v.y};
             }
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,0,0};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,0,0,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,0,y.x,y.y,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,0,y.x,y.y,0,0,0,1};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,0,0,1};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,0,y.x,y.y,0,0,0,1,0,0,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,0,0,1,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,0,0,1,0,0,0,0,1};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,0,0,1,0};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,0,0,1,0,0,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat2x2<decltype(func(x.x))> {return {x.apply(func), y.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x2<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x2<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x2<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat2x2<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat2x2<P> &param, F &&func) -> mat2x2<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func)};}
-            constexpr bool none() const {return !(x.x || x.y || y.x || y.y);}
-            constexpr bool any() const {return x.x || x.y || y.x || y.y;}
-            constexpr bool each() const {return x.x && x.y && y.x && y.y;}
+            constexpr bool none() const {return !(x.x || y.x || x.y || y.y);}
+            constexpr bool any() const {return x.x || y.x || x.y || y.y;}
+            constexpr bool each() const {return x.x && y.x && x.y && y.y;}
             constexpr T min() const {return std::min({x.x,x.y,y.x,y.y});}
             constexpr T max() const {return std::max({x.x,x.y,y.x,y.y});}
             constexpr mat2<T> inverse() const
@@ -744,10 +744,10 @@ namespace Math
                 det = 1.0f / det;
                 return inv * det;
             }
-            template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{})> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y};}
-            template <typename TT> constexpr mat2x2<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y};}
-            template <typename TT> constexpr mat3x2<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y};}
-            template <typename TT> constexpr mat4x2<decltype(T{}*TT{}+T{}*TT{})> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.w.x+y.y*o.w.y};}
+            template <typename TT> constexpr vec2<larger_type_t<T,TT>> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y};}
+            template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y};}
+            template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y};}
+            template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y};}
         };
         template <typename T> struct vec<3,vec<2,T>> // mat3x2
         {
@@ -780,45 +780,44 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
-            constexpr vec(type xx, type xy, type yx, type yy, type zx, type zy) : x(xx,xy), y(yx,yy), z(zx,zy) {}
-            constexpr mat2x3<type> transpose() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
-            static constexpr vec identity() {return {1, 0, 0, 1, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0};}
+            constexpr vec(type xx, type yx, type zx, type xy, type yy, type zy) : x(xx,xy), y(yx,yy), z(zx,zy) {}
+            constexpr mat2x3<type> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
+            static constexpr vec identity() {return {1, 0, 0, 0, 1, 0};}
+            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x2();}
             static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
-                return {2 / (max.x - min.x), 0,
-                        0, 2 / (max.y - min.y),
-                        (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y)};
+                return {2 / (max.x - min.x), 0, (min.x + max.x) / (min.x - max.x),
+                        0, 2 / (max.y - min.y), (min.y + max.y) / (min.y - max.y)};
             }
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x2();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat3x2();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,0,y.x,y.y,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,0,y.x,y.y,0,z.x,z.y,1};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,0,y.x,y.y,0,z.x,z.y,1,0,0,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0,0,0,0,1};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,0,0,1,0};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1,0,0,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat3x2<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x2<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x2<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x2<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat3x2<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat3x2<P> &param, F &&func) -> mat3x2<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func)};}
-            constexpr bool none() const {return !(x.x || x.y || y.x || y.y || z.x || z.y);}
-            constexpr bool any() const {return x.x || x.y || y.x || y.y || z.x || z.y;}
-            constexpr bool each() const {return x.x && x.y && y.x && y.y && z.x && z.y;}
+            constexpr bool none() const {return !(x.x || y.x || z.x || x.y || y.y || z.y);}
+            constexpr bool any() const {return x.x || y.x || z.x || x.y || y.y || z.y;}
+            constexpr bool each() const {return x.x && y.x && z.x && x.y && y.y && z.y;}
             constexpr T min() const {return std::min({x.x,x.y,y.x,y.y,z.x,z.y});}
             constexpr T max() const {return std::max({x.x,x.y,y.x,y.y,z.x,z.y});}
-            template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z};}
-            template <typename TT> constexpr mat2x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z};}
-            template <typename TT> constexpr mat3x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z};}
-            template <typename TT> constexpr mat4x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z};}
+            template <typename TT> constexpr vec2<larger_type_t<T,TT>> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z};}
+            template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z};}
+            template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z};}
+            template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z};}
         };
         template <typename T> struct vec<4,vec<2,T>> // mat4x2
         {
@@ -855,39 +854,39 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
-            constexpr vec(type xx, type xy, type yx, type yy, type zx, type zy, type wx, type wy) : x(xx,xy), y(yx,yy), z(zx,zy), w(wx,wy) {}
-            constexpr mat2x4<type> transpose() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
-            static constexpr vec identity() {return {1, 0, 0, 1, 0, 0, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
+            constexpr vec(type xx, type yx, type zx, type wx, type xy, type yy, type zy, type wy) : x(xx,xy), y(yx,yy), z(zx,zy), w(wx,wy) {}
+            constexpr mat2x4<type> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y};}
+            static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0};}
+            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x2();}
             static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x2();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x2();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x2();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,0,y.x,y.y,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,0,y.x,y.y,0,z.x,z.y,1};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,0,y.x,y.y,0,z.x,z.y,1,w.x,w.y,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,0,0,y.x,y.y,0,0,z.x,z.y,1,0,w.x,w.y,0,1};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,0,0,1,0};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1,0,0,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,0,0,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat4x2<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x2<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...), w.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x2<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x2<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...), w.apply(func, params.w...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat4x2<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func), w.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat4x2<P> &param, F &&func) -> mat4x2<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func), w.apply(param.w, func)};}
-            constexpr bool none() const {return !(x.x || x.y || y.x || y.y || z.x || z.y || w.x || w.y);}
-            constexpr bool any() const {return x.x || x.y || y.x || y.y || z.x || z.y || w.x || w.y;}
-            constexpr bool each() const {return x.x && x.y && y.x && y.y && z.x && z.y && w.x && w.y;}
+            constexpr bool none() const {return !(x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y);}
+            constexpr bool any() const {return x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y;}
+            constexpr bool each() const {return x.x && y.x && z.x && w.x && x.y && y.y && z.y && w.y;}
             constexpr T min() const {return std::min({x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y});}
             constexpr T max() const {return std::max({x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y});}
-            template <typename TT> constexpr vec2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w};}
-            template <typename TT> constexpr mat2x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w};}
-            template <typename TT> constexpr mat3x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w};}
-            template <typename TT> constexpr mat4x2<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w};}
+            template <typename TT> constexpr vec2<larger_type_t<T,TT>> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w};}
+            template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w};}
+            template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w};}
+            template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w};}
         };
         template <typename T> struct vec<2,vec<3,T>> // mat2x3
         {
@@ -916,38 +915,38 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
-            constexpr vec(type xx, type xy, type xz, type yx, type yy, type yz) : x(xx,xy,xz), y(yx,yy,yz) {}
-            constexpr mat3x2<type> transpose() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
-            static constexpr vec identity() {return {1, 0, 0, 0, 1, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0};}
+            constexpr vec(type xx, type yx, type xy, type yy, type xz, type yz) : x(xx,xy,xz), y(yx,yy,yz) {}
+            constexpr mat3x2<type> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
+            static constexpr vec identity() {return {1, 0, 0, 1, 0, 0};}
+            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat2x3();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat2x3();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat2x3();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,0,0};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,0,0,0,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,0,0,1};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,0,0,1,0,0,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,0,0,1,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,0,0,1,0,0,0,0,1};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1,0,0,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat2x3<decltype(func(x.x))> {return {x.apply(func), y.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x3<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x3<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x3<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat2x3<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat2x3<P> &param, F &&func) -> mat2x3<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func)};}
-            constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z);}
-            constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z;}
-            constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z;}
+            constexpr bool none() const {return !(x.x || y.x || x.y || y.y || x.z || y.z);}
+            constexpr bool any() const {return x.x || y.x || x.y || y.y || x.z || y.z;}
+            constexpr bool each() const {return x.x && y.x && x.y && y.y && x.z && y.z;}
             constexpr T min() const {return std::min({x.x,x.y,x.z,y.x,y.y,y.z});}
             constexpr T max() const {return std::max({x.x,x.y,x.z,y.x,y.y,y.z});}
-            template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{})> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y, x.z*o.x+y.z*o.y};}
-            template <typename TT> constexpr mat2x3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y};}
-            template <typename TT> constexpr mat3x3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.z*o.z.x+y.z*o.z.y};}
-            template <typename TT> constexpr mat4x3<decltype(T{}*TT{}+T{}*TT{})> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.z*o.z.x+y.z*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.w.x+y.y*o.w.y, x.z*o.w.x+y.z*o.w.y};}
+            template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y, x.z*o.x+y.z*o.y};}
+            template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y};}
+            template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y};}
+            template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y};}
         };
         template <typename T> struct vec<3,vec<3,T>> // mat3x3
         {
@@ -980,8 +979,8 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
-            constexpr vec(type xx, type xy, type xz, type yx, type yy, type yz, type zx, type zy, type zz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz) {}
-            constexpr mat3x3<type> transpose() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
+            constexpr vec(type xx, type yx, type zx, type xy, type yy, type zy, type xz, type yz, type zz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz) {}
+            constexpr mat3x3<type> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1};}
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1};}
             static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z};}
@@ -993,9 +992,9 @@ namespace Math
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 type c = std::cos(angle);
                 type s = std::sin(angle);
-                return {in.x * in.x * (1 - c) + c, in.y * in.x * (1 - c) + in.z * s, in.x * in.z * (1 - c) - in.y * s,
-                        in.x * in.y * (1 - c) - in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) + in.x * s,
-                        in.x * in.z * (1 - c) + in.y * s, in.y * in.z * (1 - c) - in.x * s, in.z * in.z * (1 - c) + c};
+                return {in.x * in.x * (1 - c) + c, in.x * in.y * (1 - c) - in.z * s, in.x * in.z * (1 - c) + in.y * s,
+                        in.y * in.x * (1 - c) + in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) - in.x * s,
+                        in.x * in.z * (1 - c) - in.y * s, in.y * in.z * (1 - c) + in.x * s, in.z * in.z * (1 - c) + c};
             }
             static constexpr vec rotate(const vec3<type> &in, type angle)
             {
@@ -1009,24 +1008,24 @@ namespace Math
                         0, v.y, 0,
                         0, 0, v.z};
             }
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,0,0,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,0,0,0,1};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,0,0,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat3x3<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x3<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x3<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x3<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat3x3<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat3x3<P> &param, F &&func) -> mat3x3<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func)};}
-            constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z);}
-            constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z;}
-            constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z && z.x && z.y && z.z;}
+            constexpr bool none() const {return !(x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z);}
+            constexpr bool any() const {return x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z;}
+            constexpr bool each() const {return x.x && y.x && z.x && x.y && y.y && z.y && x.z && y.z && z.z;}
             constexpr T min() const {return std::min({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z});}
             constexpr T max() const {return std::max({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z});}
             constexpr mat3<T> inverse() const
@@ -1056,10 +1055,10 @@ namespace Math
                 det = 1.0f / det;
                 return inv * det;
             }
-            template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z, x.z*o.x+y.z*o.y+z.z*o.z};}
-            template <typename TT> constexpr mat2x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z};}
-            template <typename TT> constexpr mat3x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z};}
-            template <typename TT> constexpr mat4x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z};}
+            template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z, x.z*o.x+y.z*o.y+z.z*o.z};}
+            template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z};}
+            template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z};}
+            template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z};}
         };
         template <typename T> struct vec<4,vec<3,T>> // mat4x3
         {
@@ -1096,28 +1095,26 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
-            constexpr vec(type xx, type xy, type xz, type yx, type yy, type yz, type zx, type zy, type zz, type wx, type wy, type wz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz), w(wx,wy,wz) {}
-            constexpr mat3x4<type> transpose() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z};}
-            static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1, 0, 0, 0};}
-            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z, 0, 0, 0};}
+            constexpr vec(type xx, type yx, type zx, type wx, type xy, type yy, type zy, type wy, type xz, type yz, type zz, type wz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz), w(wx,wy,wz) {}
+            constexpr mat3x4<type> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
+            static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0};}
+            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0};}
+            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x3();}
             static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x3();}
             static constexpr vec ortho(const vec2<type> &sz, type near, type far)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
-                return {2 / sz.x, 0, 0,
-                        0, 2 / sz.y, 0,
-                        0, 0, 2 / (near - far),
-                        0, 0, (near + far) / (near - far)};
+                return {2 / sz.x, 0, 0, 0,
+                        0, 2 / sz.y, 0, 0,
+                        0, 0, 2 / (near - far), (near + far) / (near - far)};
             }
             static constexpr vec ortho(const vec2<type> &min, const vec2<type> &max, type near, type far)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
-                return {2 / (max.x - min.x), 0, 0,
-                        0, 2 / (max.y - min.y), 0,
-                        0, 0, 2 / (near - far),
-                        (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y), (near + far) / (near - far)};
+                return {2 / (max.x - min.x), 0, 0, (min.x + max.x) / (min.x - max.x),
+                        0, 2 / (max.y - min.y), 0, (min.y + max.y) / (min.y - max.y),
+                        0, 0, 2 / (near - far), (near + far) / (near - far)};
             }
             static constexpr vec look_at(const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up)
             {
@@ -1125,48 +1122,46 @@ namespace Math
                 vec3<T> v3 = (src-dst).norm();
                 vec3<T> v1 = local_up.cross(v3).norm();
                 vec3<T> v2 = v3.cross(v1);
-                return {v1.x, v2.x, v3.x,
-                        v1.y, v2.y, v3.y,
-                        v1.z, v2.z, v3.z,
-                        -src.x*v1.x - src.y*v1.y - src.z*v1.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z};
+                return {v1.x, v1.y, v1.z, -src.x*v1.x - src.y*v1.y - src.z*v1.z,
+                        v2.x, v2.y, v2.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z,
+                        v3.x, v3.y, v3.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z};
             }
             static constexpr vec translate(const vec3<type> &in)
             {
-                return {1, 0, 0,
-                        0, 1, 0,
-                        0, 0, 1,
-                        in.x, in.y, in.z};
+                return {1, 0, 0, in.x,
+                        0, 1, 0, in.y,
+                        0, 0, 1, in.z};
             }
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x3();}
             static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat4x3();}
             static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat4x3();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x3();}
             static constexpr vec scale(const vec3<type> &v) {return mat3x3<type>::scale(v).to_mat4x3();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,w.x,w.y,w.z,1};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,0,0,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z,0,0,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat4x3<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x3<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...), w.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x3<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x3<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...), w.apply(func, params.w...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat4x3<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func), w.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat4x3<P> &param, F &&func) -> mat4x3<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func), w.apply(param.w, func)};}
-            constexpr bool none() const {return !(x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z || w.x || w.y || w.z);}
-            constexpr bool any() const {return x.x || x.y || x.z || y.x || y.y || y.z || z.x || z.y || z.z || w.x || w.y || w.z;}
-            constexpr bool each() const {return x.x && x.y && x.z && y.x && y.y && y.z && z.x && z.y && z.z && w.x && w.y && w.z;}
+            constexpr bool none() const {return !(x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z);}
+            constexpr bool any() const {return x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z;}
+            constexpr bool each() const {return x.x && y.x && z.x && w.x && x.y && y.y && z.y && w.y && x.z && y.z && z.z && w.z;}
             constexpr T min() const {return std::min({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z});}
             constexpr T max() const {return std::max({x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z});}
-            template <typename TT> constexpr vec3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w, x.z*o.x+y.z*o.y+z.z*o.z+w.z*o.w};}
-            template <typename TT> constexpr mat2x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w};}
-            template <typename TT> constexpr mat3x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w};}
-            template <typename TT> constexpr mat4x3<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w};}
+            template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w, x.z*o.x+y.z*o.y+z.z*o.z+w.z*o.w};}
+            template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w};}
+            template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w};}
+            template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w};}
         };
         template <typename T> struct vec<2,vec<4,T>> // mat2x4
         {
@@ -1195,38 +1190,38 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
-            constexpr vec(type xx, type xy, type xz, type xw, type yx, type yy, type yz, type yw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw) {}
-            constexpr mat4x2<type> transpose() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
-            static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0};}
+            constexpr vec(type xx, type yx, type xy, type yy, type xz, type yz, type xw, type yw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw) {}
+            constexpr mat4x2<type> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
+            static constexpr vec identity() {return {1, 0, 0, 1, 0, 0, 0, 0};}
+            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat2x4();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat2x4();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat2x4();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,0,0};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,0,0,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,0,0,1};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,0,0,1,0,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,0,0,1,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,0,0,1,0,0,0,0,1};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1,x.w,y.w,0};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0,x.w,y.w,0,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat2x4<decltype(func(x.x))> {return {x.apply(func), y.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x4<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x4<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat2x4<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat2x4<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat2x4<P> &param, F &&func) -> mat2x4<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func)};}
-            constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w);}
-            constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w;}
-            constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w;}
+            constexpr bool none() const {return !(x.x || y.x || x.y || y.y || x.z || y.z || x.w || y.w);}
+            constexpr bool any() const {return x.x || y.x || x.y || y.y || x.z || y.z || x.w || y.w;}
+            constexpr bool each() const {return x.x && y.x && x.y && y.y && x.z && y.z && x.w && y.w;}
             constexpr T min() const {return std::min({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w});}
             constexpr T max() const {return std::max({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w});}
-            template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{})> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y, x.z*o.x+y.z*o.y, x.w*o.x+y.w*o.y};}
-            template <typename TT> constexpr mat2x4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.w*o.x.x+y.w*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.w*o.y.x+y.w*o.y.y};}
-            template <typename TT> constexpr mat3x4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.w*o.x.x+y.w*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.w*o.y.x+y.w*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.z*o.z.x+y.z*o.z.y, x.w*o.z.x+y.w*o.z.y};}
-            template <typename TT> constexpr mat4x4<decltype(T{}*TT{}+T{}*TT{})> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.y*o.x.x+y.y*o.x.y, x.z*o.x.x+y.z*o.x.y, x.w*o.x.x+y.w*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.y.x+y.y*o.y.y, x.z*o.y.x+y.z*o.y.y, x.w*o.y.x+y.w*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.z.x+y.y*o.z.y, x.z*o.z.x+y.z*o.z.y, x.w*o.z.x+y.w*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.w.x+y.y*o.w.y, x.z*o.w.x+y.z*o.w.y, x.w*o.w.x+y.w*o.w.y};}
+            template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const vec2<TT> &o) const {return {x.x*o.x+y.x*o.y, x.y*o.x+y.y*o.y, x.z*o.x+y.z*o.y, x.w*o.x+y.w*o.y};}
+            template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y};}
+            template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y};}
+            template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y, x.w*o.w.x+y.w*o.w.y};}
         };
         template <typename T> struct vec<3,vec<4,T>> // mat3x4
         {
@@ -1259,11 +1254,11 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
-            constexpr vec(type xx, type xy, type xz, type xw, type yx, type yy, type yz, type yw, type zx, type zy, type zz, type zw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw) {}
-            constexpr mat4x3<type> transpose() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,x.w,y.w,z.w};}
-            static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0};}
-            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0};}
+            constexpr vec(type xx, type yx, type zx, type xy, type yy, type zy, type xz, type yz, type zz, type xw, type yw, type zw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw) {}
+            constexpr mat4x3<type> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
+            static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};}
+            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1, 0, 0, 0};}
+            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z, 0, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x4();}
             static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat3x4();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x4();}
@@ -1271,31 +1266,31 @@ namespace Math
             static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat3x4();}
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat3x4();}
             static constexpr vec scale(const vec3<type> &v) {return mat3x3<type>::scale(v).to_mat3x4();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,0,0,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,0,0,0,1};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
+            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0,x.w,y.w,z.w,1};}
             constexpr mat4<type> to_mat4() const {return to_mat4x4();}
             template <typename F> constexpr auto apply(F &&func) const -> mat3x4<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x4<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x4<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat3x4<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat3x4<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat3x4<P> &param, F &&func) -> mat3x4<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func)};}
-            constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w);}
-            constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w;}
-            constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w && z.x && z.y && z.z && z.w;}
+            constexpr bool none() const {return !(x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z || x.w || y.w || z.w);}
+            constexpr bool any() const {return x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z || x.w || y.w || z.w;}
+            constexpr bool each() const {return x.x && y.x && z.x && x.y && y.y && z.y && x.z && y.z && z.z && x.w && y.w && z.w;}
             constexpr T min() const {return std::min({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w});}
             constexpr T max() const {return std::max({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w});}
-            template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z, x.z*o.x+y.z*o.y+z.z*o.z, x.w*o.x+y.w*o.y+z.w*o.z};}
-            template <typename TT> constexpr mat2x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z};}
-            template <typename TT> constexpr mat3x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z};}
-            template <typename TT> constexpr mat4x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z};}
+            template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const vec3<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z, x.y*o.x+y.y*o.y+z.y*o.z, x.z*o.x+y.z*o.y+z.z*o.z, x.w*o.x+y.w*o.y+z.w*o.z};}
+            template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z};}
+            template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z};}
+            template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z};}
         };
         template <typename T> struct vec<4,vec<4,T>> // mat4x4
         {
@@ -1332,8 +1327,8 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
-            constexpr vec(type xx, type xy, type xz, type xw, type yx, type yy, type yz, type yw, type zx, type zy, type zz, type zw, type wx, type wy, type wz, type ww) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw), w(wx,wy,wz,ww) {}
-            constexpr mat4x4<type> transpose() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z,x.w,y.w,z.w,w.w};}
+            constexpr vec(type xx, type yx, type zx, type wx, type xy, type yy, type zy, type wy, type xz, type yz, type zz, type wz, type xw, type yw, type zw, type ww) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw), w(wx,wy,wz,ww) {}
+            constexpr mat4x4<type> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
             static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, 1};}
@@ -1351,31 +1346,31 @@ namespace Math
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 yfov = (T)1 / std::tan(yfov / 2);
-                return {yfov / wh_aspect , 0    , 0                             , 0  ,
-                        0                , yfov , 0                             , 0  ,
-                        0                , 0    , (near + far) / (near - far)   , -1 ,
-                        0                , 0    , 2 * near * far / (near - far) , 0  };
+                return {yfov / wh_aspect , 0    , 0                           , 0                             ,
+                        0                , yfov , 0                           , 0                             ,
+                        0                , 0    , (near + far) / (near - far) , 2 * near * far / (near - far) ,
+                        0                , 0    , -1                          , 0                             };
             }
             static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x4();}
             static constexpr vec scale(const vec3<type> &v) {return mat3x3<type>::scale(v).to_mat4x4();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,x.y,y.x,y.y};}
+            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
+            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
+            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
             constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
+            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z};}
+            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
+            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,x.w,y.w,z.w};}
             template <typename F> constexpr auto apply(F &&func) const -> mat4x4<decltype(func(x.x))> {return {x.apply(func), y.apply(func), z.apply(func), w.apply(func)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x4<decltype(func(x.x,params...))>> {return {x.apply(func, params...), y.apply(func, params...), z.apply(func, params...), w.apply(func, params...)};}
             template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x4<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat4x4<decltype(func(x.x,params.x.x...))>> {return {x.apply(func, params.x...), y.apply(func, params.y...), z.apply(func, params.z...), w.apply(func, params.w...)};}
             template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat4x4<decltype(func(param,x.x))> {return {x.apply(param, func), y.apply(param, func), z.apply(param, func), w.apply(param, func)};}
             template <typename F, typename P> constexpr auto apply(const mat4x4<P> &param, F &&func) -> mat4x4<decltype(func(param.x.x,x.x))> {return {x.apply(param.x, func), y.apply(param.y, func), z.apply(param.z, func), w.apply(param.w, func)};}
-            constexpr bool none() const {return !(x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w || w.x || w.y || w.z || w.w);}
-            constexpr bool any() const {return x.x || x.y || x.z || x.w || y.x || y.y || y.z || y.w || z.x || z.y || z.z || z.w || w.x || w.y || w.z || w.w;}
-            constexpr bool each() const {return x.x && x.y && x.z && x.w && y.x && y.y && y.z && y.w && z.x && z.y && z.z && z.w && w.x && w.y && w.z && w.w;}
+            constexpr bool none() const {return !(x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z || x.w || y.w || z.w || w.w);}
+            constexpr bool any() const {return x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z || x.w || y.w || z.w || w.w;}
+            constexpr bool each() const {return x.x && y.x && z.x && w.x && x.y && y.y && z.y && w.y && x.z && y.z && z.z && w.z && x.w && y.w && z.w && w.w;}
             constexpr T min() const {return std::min({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w});}
             constexpr T max() const {return std::max({x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w});}
             constexpr mat4<T> inverse() const
@@ -1483,40 +1478,40 @@ namespace Math
                 det = 1.0f / det;
                 return inv * det;
             }
-            template <typename TT> constexpr vec4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w, x.z*o.x+y.z*o.y+z.z*o.z+w.z*o.w, x.w*o.x+y.w*o.y+z.w*o.z+w.w*o.w};}
-            template <typename TT> constexpr mat2x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w};}
-            template <typename TT> constexpr mat3x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w};}
-            template <typename TT> constexpr mat4x4<decltype(T{}*TT{}+T{}*TT{}+T{}*TT{}+T{}*TT{})> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z+w.w*o.w.w};}
+            template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const vec4<TT> &o) const {return {x.x*o.x+y.x*o.y+z.x*o.z+w.x*o.w, x.y*o.x+y.y*o.y+z.y*o.z+w.y*o.w, x.z*o.x+y.z*o.y+z.z*o.z+w.z*o.w, x.w*o.x+y.w*o.y+z.w*o.z+w.w*o.w};}
+            template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w};}
+            template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w};}
+            template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z+w.w*o.w.w};}
         };
 
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const vec2<T2> &second) {return {first.x+second.x,first.y+second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const vec2<T2> &second) {return {first.x+second.x,first.y+second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const T2 &second) {return {first.x+second,first.y+second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}+T2{})> operator+(const T1 &first, const vec2<T2> &second) {return {first+second.x,first+second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}-T2{})> operator-(const vec2<T1> &first, const vec2<T2> &second) {return {first.x-second.x,first.y-second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}-T2{})> operator-(const vec2<T1> &first, const vec2<T2> &second) {return {first.x-second.x,first.y-second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}-T2{})> operator-(const vec2<T1> &first, const T2 &second) {return {first.x-second,first.y-second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}-T2{})> operator-(const T1 &first, const vec2<T2> &second) {return {first-second.x,first-second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}*T2{})> operator*(const vec2<T1> &first, const vec2<T2> &second) {return {first.x*second.x,first.y*second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}*T2{})> operator*(const vec2<T1> &first, const vec2<T2> &second) {return {first.x*second.x,first.y*second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}*T2{})> operator*(const vec2<T1> &first, const T2 &second) {return {first.x*second,first.y*second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}*T2{})> operator*(const T1 &first, const vec2<T2> &second) {return {first*second.x,first*second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}/T2{})> operator/(const vec2<T1> &first, const vec2<T2> &second) {return {first.x/second.x,first.y/second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}/T2{})> operator/(const vec2<T1> &first, const vec2<T2> &second) {return {first.x/second.x,first.y/second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}/T2{})> operator/(const vec2<T1> &first, const T2 &second) {return {first.x/second,first.y/second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}/T2{})> operator/(const T1 &first, const vec2<T2> &second) {return {first/second.x,first/second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}%T2{})> operator%(const vec2<T1> &first, const vec2<T2> &second) {return {first.x%second.x,first.y%second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}%T2{})> operator%(const vec2<T1> &first, const vec2<T2> &second) {return {first.x%second.x,first.y%second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}%T2{})> operator%(const vec2<T1> &first, const T2 &second) {return {first.x%second,first.y%second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}%T2{})> operator%(const T1 &first, const vec2<T2> &second) {return {first%second.x,first%second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}^T2{})> operator^(const vec2<T1> &first, const vec2<T2> &second) {return {first.x^second.x,first.y^second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}^T2{})> operator^(const vec2<T1> &first, const vec2<T2> &second) {return {first.x^second.x,first.y^second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}^T2{})> operator^(const vec2<T1> &first, const T2 &second) {return {first.x^second,first.y^second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}^T2{})> operator^(const T1 &first, const vec2<T2> &second) {return {first^second.x,first^second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}&T2{})> operator&(const vec2<T1> &first, const vec2<T2> &second) {return {first.x&second.x,first.y&second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}&T2{})> operator&(const vec2<T1> &first, const vec2<T2> &second) {return {first.x&second.x,first.y&second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}&T2{})> operator&(const vec2<T1> &first, const T2 &second) {return {first.x&second,first.y&second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}&T2{})> operator&(const T1 &first, const vec2<T2> &second) {return {first&second.x,first&second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}|T2{})> operator|(const vec2<T1> &first, const vec2<T2> &second) {return {first.x|second.x,first.y|second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}|T2{})> operator|(const vec2<T1> &first, const vec2<T2> &second) {return {first.x|second.x,first.y|second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}|T2{})> operator|(const vec2<T1> &first, const T2 &second) {return {first.x|second,first.y|second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}|T2{})> operator|(const T1 &first, const vec2<T2> &second) {return {first|second.x,first|second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}>>T2{})> operator>>(const vec2<T1> &first, const vec2<T2> &second) {return {first.x>>second.x,first.y>>second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}>>T2{})> operator>>(const vec2<T1> &first, const vec2<T2> &second) {return {first.x>>second.x,first.y>>second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}>>T2{})> operator>>(const vec2<T1> &first, const T2 &second) {return {first.x>>second,first.y>>second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}>>T2{})> operator>>(const T1 &first, const vec2<T2> &second) {return {first>>second.x,first>>second.y};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}<<T2{})> operator<<(const vec2<T1> &first, const vec2<T2> &second) {return {first.x<<second.x,first.y<<second.y};}
+        template <typename T1, typename T2> constexpr vec2<decltype(T1{}<<T2{})> operator<<(const vec2<T1> &first, const vec2<T2> &second) {return {first.x<<second.x,first.y<<second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}<<T2{})> operator<<(const vec2<T1> &first, const T2 &second) {return {first.x<<second,first.y<<second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec2<decltype(T1{}<<T2{})> operator<<(const T1 &first, const vec2<T2> &second) {return {first<<second.x,first<<second.y};}
         template <typename T> constexpr vec2<decltype(~T{})> operator~(const vec2<T> &object) {return {~object.x,~object.y};}
@@ -1572,34 +1567,34 @@ namespace Math
         template <typename T1, typename T2> constexpr bool operator!=(const vec2<T1> &first, const vec2<T2> &second) {return (first.x != second.x) || (first.y != second.y);}
         template <typename T1, typename T2> constexpr bool operator!=(const vec2<T1> &first, const T2 &second) {return (first.x != second) || (first.y != second);}
         template <typename T1, typename T2> constexpr bool operator!=(const T1 &first, const vec2<T2> &second) {return (first != second.x) || (first != second.y);}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}+T2{})> operator+(const vec3<T1> &first, const vec3<T2> &second) {return {first.x+second.x,first.y+second.y,first.z+second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}+T2{})> operator+(const vec3<T1> &first, const vec3<T2> &second) {return {first.x+second.x,first.y+second.y,first.z+second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}+T2{})> operator+(const vec3<T1> &first, const T2 &second) {return {first.x+second,first.y+second,first.z+second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}+T2{})> operator+(const T1 &first, const vec3<T2> &second) {return {first+second.x,first+second.y,first+second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}-T2{})> operator-(const vec3<T1> &first, const vec3<T2> &second) {return {first.x-second.x,first.y-second.y,first.z-second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}-T2{})> operator-(const vec3<T1> &first, const vec3<T2> &second) {return {first.x-second.x,first.y-second.y,first.z-second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}-T2{})> operator-(const vec3<T1> &first, const T2 &second) {return {first.x-second,first.y-second,first.z-second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}-T2{})> operator-(const T1 &first, const vec3<T2> &second) {return {first-second.x,first-second.y,first-second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}*T2{})> operator*(const vec3<T1> &first, const vec3<T2> &second) {return {first.x*second.x,first.y*second.y,first.z*second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}*T2{})> operator*(const vec3<T1> &first, const vec3<T2> &second) {return {first.x*second.x,first.y*second.y,first.z*second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}*T2{})> operator*(const vec3<T1> &first, const T2 &second) {return {first.x*second,first.y*second,first.z*second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}*T2{})> operator*(const T1 &first, const vec3<T2> &second) {return {first*second.x,first*second.y,first*second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}/T2{})> operator/(const vec3<T1> &first, const vec3<T2> &second) {return {first.x/second.x,first.y/second.y,first.z/second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}/T2{})> operator/(const vec3<T1> &first, const vec3<T2> &second) {return {first.x/second.x,first.y/second.y,first.z/second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}/T2{})> operator/(const vec3<T1> &first, const T2 &second) {return {first.x/second,first.y/second,first.z/second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}/T2{})> operator/(const T1 &first, const vec3<T2> &second) {return {first/second.x,first/second.y,first/second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}%T2{})> operator%(const vec3<T1> &first, const vec3<T2> &second) {return {first.x%second.x,first.y%second.y,first.z%second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}%T2{})> operator%(const vec3<T1> &first, const vec3<T2> &second) {return {first.x%second.x,first.y%second.y,first.z%second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}%T2{})> operator%(const vec3<T1> &first, const T2 &second) {return {first.x%second,first.y%second,first.z%second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}%T2{})> operator%(const T1 &first, const vec3<T2> &second) {return {first%second.x,first%second.y,first%second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}^T2{})> operator^(const vec3<T1> &first, const vec3<T2> &second) {return {first.x^second.x,first.y^second.y,first.z^second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}^T2{})> operator^(const vec3<T1> &first, const vec3<T2> &second) {return {first.x^second.x,first.y^second.y,first.z^second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}^T2{})> operator^(const vec3<T1> &first, const T2 &second) {return {first.x^second,first.y^second,first.z^second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}^T2{})> operator^(const T1 &first, const vec3<T2> &second) {return {first^second.x,first^second.y,first^second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}&T2{})> operator&(const vec3<T1> &first, const vec3<T2> &second) {return {first.x&second.x,first.y&second.y,first.z&second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}&T2{})> operator&(const vec3<T1> &first, const vec3<T2> &second) {return {first.x&second.x,first.y&second.y,first.z&second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}&T2{})> operator&(const vec3<T1> &first, const T2 &second) {return {first.x&second,first.y&second,first.z&second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}&T2{})> operator&(const T1 &first, const vec3<T2> &second) {return {first&second.x,first&second.y,first&second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}|T2{})> operator|(const vec3<T1> &first, const vec3<T2> &second) {return {first.x|second.x,first.y|second.y,first.z|second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}|T2{})> operator|(const vec3<T1> &first, const vec3<T2> &second) {return {first.x|second.x,first.y|second.y,first.z|second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}|T2{})> operator|(const vec3<T1> &first, const T2 &second) {return {first.x|second,first.y|second,first.z|second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}|T2{})> operator|(const T1 &first, const vec3<T2> &second) {return {first|second.x,first|second.y,first|second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}>>T2{})> operator>>(const vec3<T1> &first, const vec3<T2> &second) {return {first.x>>second.x,first.y>>second.y,first.z>>second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}>>T2{})> operator>>(const vec3<T1> &first, const vec3<T2> &second) {return {first.x>>second.x,first.y>>second.y,first.z>>second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}>>T2{})> operator>>(const vec3<T1> &first, const T2 &second) {return {first.x>>second,first.y>>second,first.z>>second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}>>T2{})> operator>>(const T1 &first, const vec3<T2> &second) {return {first>>second.x,first>>second.y,first>>second.z};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}<<T2{})> operator<<(const vec3<T1> &first, const vec3<T2> &second) {return {first.x<<second.x,first.y<<second.y,first.z<<second.z};}
+        template <typename T1, typename T2> constexpr vec3<decltype(T1{}<<T2{})> operator<<(const vec3<T1> &first, const vec3<T2> &second) {return {first.x<<second.x,first.y<<second.y,first.z<<second.z};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec3<decltype(T1{}<<T2{})> operator<<(const vec3<T1> &first, const T2 &second) {return {first.x<<second,first.y<<second,first.z<<second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec3<decltype(T1{}<<T2{})> operator<<(const T1 &first, const vec3<T2> &second) {return {first<<second.x,first<<second.y,first<<second.z};}
         template <typename T> constexpr vec3<decltype(~T{})> operator~(const vec3<T> &object) {return {~object.x,~object.y,~object.z};}
@@ -1655,34 +1650,34 @@ namespace Math
         template <typename T1, typename T2> constexpr bool operator!=(const vec3<T1> &first, const vec3<T2> &second) {return (first.x != second.x) || (first.y != second.y) || (first.z != second.z);}
         template <typename T1, typename T2> constexpr bool operator!=(const vec3<T1> &first, const T2 &second) {return (first.x != second) || (first.y != second) || (first.z != second);}
         template <typename T1, typename T2> constexpr bool operator!=(const T1 &first, const vec3<T2> &second) {return (first != second.x) || (first != second.y) || (first != second.z);}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}+T2{})> operator+(const vec4<T1> &first, const vec4<T2> &second) {return {first.x+second.x,first.y+second.y,first.z+second.z,first.w+second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}+T2{})> operator+(const vec4<T1> &first, const vec4<T2> &second) {return {first.x+second.x,first.y+second.y,first.z+second.z,first.w+second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}+T2{})> operator+(const vec4<T1> &first, const T2 &second) {return {first.x+second,first.y+second,first.z+second,first.w+second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}+T2{})> operator+(const T1 &first, const vec4<T2> &second) {return {first+second.x,first+second.y,first+second.z,first+second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}-T2{})> operator-(const vec4<T1> &first, const vec4<T2> &second) {return {first.x-second.x,first.y-second.y,first.z-second.z,first.w-second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}-T2{})> operator-(const vec4<T1> &first, const vec4<T2> &second) {return {first.x-second.x,first.y-second.y,first.z-second.z,first.w-second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}-T2{})> operator-(const vec4<T1> &first, const T2 &second) {return {first.x-second,first.y-second,first.z-second,first.w-second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}-T2{})> operator-(const T1 &first, const vec4<T2> &second) {return {first-second.x,first-second.y,first-second.z,first-second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}*T2{})> operator*(const vec4<T1> &first, const vec4<T2> &second) {return {first.x*second.x,first.y*second.y,first.z*second.z,first.w*second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}*T2{})> operator*(const vec4<T1> &first, const vec4<T2> &second) {return {first.x*second.x,first.y*second.y,first.z*second.z,first.w*second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}*T2{})> operator*(const vec4<T1> &first, const T2 &second) {return {first.x*second,first.y*second,first.z*second,first.w*second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}*T2{})> operator*(const T1 &first, const vec4<T2> &second) {return {first*second.x,first*second.y,first*second.z,first*second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}/T2{})> operator/(const vec4<T1> &first, const vec4<T2> &second) {return {first.x/second.x,first.y/second.y,first.z/second.z,first.w/second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}/T2{})> operator/(const vec4<T1> &first, const vec4<T2> &second) {return {first.x/second.x,first.y/second.y,first.z/second.z,first.w/second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}/T2{})> operator/(const vec4<T1> &first, const T2 &second) {return {first.x/second,first.y/second,first.z/second,first.w/second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}/T2{})> operator/(const T1 &first, const vec4<T2> &second) {return {first/second.x,first/second.y,first/second.z,first/second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}%T2{})> operator%(const vec4<T1> &first, const vec4<T2> &second) {return {first.x%second.x,first.y%second.y,first.z%second.z,first.w%second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}%T2{})> operator%(const vec4<T1> &first, const vec4<T2> &second) {return {first.x%second.x,first.y%second.y,first.z%second.z,first.w%second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}%T2{})> operator%(const vec4<T1> &first, const T2 &second) {return {first.x%second,first.y%second,first.z%second,first.w%second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}%T2{})> operator%(const T1 &first, const vec4<T2> &second) {return {first%second.x,first%second.y,first%second.z,first%second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}^T2{})> operator^(const vec4<T1> &first, const vec4<T2> &second) {return {first.x^second.x,first.y^second.y,first.z^second.z,first.w^second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}^T2{})> operator^(const vec4<T1> &first, const vec4<T2> &second) {return {first.x^second.x,first.y^second.y,first.z^second.z,first.w^second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}^T2{})> operator^(const vec4<T1> &first, const T2 &second) {return {first.x^second,first.y^second,first.z^second,first.w^second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}^T2{})> operator^(const T1 &first, const vec4<T2> &second) {return {first^second.x,first^second.y,first^second.z,first^second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}&T2{})> operator&(const vec4<T1> &first, const vec4<T2> &second) {return {first.x&second.x,first.y&second.y,first.z&second.z,first.w&second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}&T2{})> operator&(const vec4<T1> &first, const vec4<T2> &second) {return {first.x&second.x,first.y&second.y,first.z&second.z,first.w&second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}&T2{})> operator&(const vec4<T1> &first, const T2 &second) {return {first.x&second,first.y&second,first.z&second,first.w&second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}&T2{})> operator&(const T1 &first, const vec4<T2> &second) {return {first&second.x,first&second.y,first&second.z,first&second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}|T2{})> operator|(const vec4<T1> &first, const vec4<T2> &second) {return {first.x|second.x,first.y|second.y,first.z|second.z,first.w|second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}|T2{})> operator|(const vec4<T1> &first, const vec4<T2> &second) {return {first.x|second.x,first.y|second.y,first.z|second.z,first.w|second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}|T2{})> operator|(const vec4<T1> &first, const T2 &second) {return {first.x|second,first.y|second,first.z|second,first.w|second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}|T2{})> operator|(const T1 &first, const vec4<T2> &second) {return {first|second.x,first|second.y,first|second.z,first|second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}>>T2{})> operator>>(const vec4<T1> &first, const vec4<T2> &second) {return {first.x>>second.x,first.y>>second.y,first.z>>second.z,first.w>>second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}>>T2{})> operator>>(const vec4<T1> &first, const vec4<T2> &second) {return {first.x>>second.x,first.y>>second.y,first.z>>second.z,first.w>>second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}>>T2{})> operator>>(const vec4<T1> &first, const T2 &second) {return {first.x>>second,first.y>>second,first.z>>second,first.w>>second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}>>T2{})> operator>>(const T1 &first, const vec4<T2> &second) {return {first>>second.x,first>>second.y,first>>second.z,first>>second.w};}
-        template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}<<T2{})> operator<<(const vec4<T1> &first, const vec4<T2> &second) {return {first.x<<second.x,first.y<<second.y,first.z<<second.z,first.w<<second.w};}
+        template <typename T1, typename T2> constexpr vec4<decltype(T1{}<<T2{})> operator<<(const vec4<T1> &first, const vec4<T2> &second) {return {first.x<<second.x,first.y<<second.y,first.z<<second.z,first.w<<second.w};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec4<decltype(T1{}<<T2{})> operator<<(const vec4<T1> &first, const T2 &second) {return {first.x<<second,first.y<<second,first.z<<second,first.w<<second};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec4<decltype(T1{}<<T2{})> operator<<(const T1 &first, const vec4<T2> &second) {return {first<<second.x,first<<second.y,first<<second.z,first<<second.w};}
         template <typename T> constexpr vec4<decltype(~T{})> operator~(const vec4<T> &object) {return {~object.x,~object.y,~object.z,~object.w};}
@@ -1817,9 +1812,9 @@ namespace Math
 
             constexpr mat3<T> matrix() const // The quaternion must be normalized! Complexity: 18x`*` 12x`+-` (+ multiplication 9x`*` 6x`+-`)
             {
-                return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y + 2*vec.z*vec.w, 2*vec.x*vec.z - 2*vec.y*vec.w,
-                        2*vec.x*vec.y - 2*vec.z*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z, 2*vec.y*vec.z + 2*vec.x*vec.w,
-                        2*vec.x*vec.z + 2*vec.y*vec.w, 2*vec.y*vec.z - 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.y*vec.y};
+                return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y - 2*vec.z*vec.w, 2*vec.x*vec.z + 2*vec.y*vec.w,
+                        2*vec.x*vec.y + 2*vec.z*vec.w, 2*vec.y*vec.z - 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z,
+                        2*vec.x*vec.z - 2*vec.y*vec.w, 2*vec.y*vec.z + 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.y*vec.y};
             }
         };
 

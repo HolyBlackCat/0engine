@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.2.2"
+#define VERSION "2.3.0"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -65,6 +65,7 @@ void Print(const char *ptr)
           case '$':
             if (new_line)
                 Indent(-4);
+            break;
           default:
             if (new_line)
                 Indent();
@@ -575,13 +576,10 @@ return inv * det;
                 return Jo(field_names_main[x], '.', field_names_main[y]);
             };
 
-            std::string str = "decltype(T{}*TT{}";
-            for (int i = 1; i < x1y2; i++) str += "+T{}*TT{}";
-            str += ')';
-            l "template <typename TT> constexpr " << Ma(str.c_str(), x2, y1) << " mul(const " << Ma("TT", x2, x1y2) << " &o) const {return {";
-            for (int w = 0; w < x2; w++)
+            l "template <typename TT> constexpr " << Ma("larger_type_t<T,TT>", x2, y1) << " mul(const " << Ma("TT", x2, x1y2) << " &o) const {return {";
+            for (int h = 0; h < y1; h++)
             {
-                for (int h = 0; h < y1; h++)
+                for (int w = 0; w < x2; w++)
                 {
                     if (h != 0 || w != 0) l ", ";
                     for (int i = 0; i < x1y2; i++)
@@ -779,9 +777,9 @@ return inv * det;
                     CommonMembers(w);
                     { // Additional ctors
                         l "constexpr vec("; // Full set of initializers
-                        for (int ww = 0; ww < w; ww++)
+                        for (int hh = 0; hh < h; hh++)
                         {
-                            for (int hh = 0; hh < h; hh++)
+                            for (int ww = 0; ww < w; ww++)
                             {
                                 if (ww != 0 || hh != 0) l ", ";
                                 l "type " << field_names_main[ww] << field_names_main[hh];
@@ -803,9 +801,9 @@ return inv * det;
                     }
                     { // Transpose
                         l "constexpr mat" << h << 'x' << w << "<type> transpose() const {return {";
-                        for (int hh = 0; hh < h; hh++)
+                        for (int ww = 0; ww < w; ww++)
                         {
-                            for (int ww = 0; ww < w; ww++)
+                            for (int hh = 0; hh < h; hh++)
                             {
                                 if (ww != 0 || hh != 0) l ',';
                                 l field_names_main[ww] << '.' << field_names_main[hh];
@@ -815,9 +813,9 @@ return inv * det;
                     }
                     { // Static pseudo-constructors
                         l "static constexpr vec identity() {return {"; // Identity
-                        for (int ww = 0; ww < w; ww++)
+                        for (int hh = 0; hh < h; hh++)
                         {
-                            for (int hh = 0; hh < h; hh++)
+                            for (int ww = 0; ww < w; ww++)
                             {
                                 if (ww != 0 || hh != 0) l ", ";
                                 if (ww == hh) l '1';
@@ -830,9 +828,9 @@ return inv * det;
                         {
                             if (i > std::min(w,h)) break;
                             l "static constexpr vec dia(const vec" << i << "<type> &v) {return {";
-                            for (int ww = 0; ww < w; ww++)
+                            for (int hh = 0; hh < h; hh++)
                             {
-                                for (int hh = 0; hh < h; hh++)
+                                for (int ww = 0; ww < w; ww++)
                                 {
                                     if (ww != 0 || hh != 0) l ", ";
                                     if (ww == hh)
@@ -862,59 +860,54 @@ return {2 / sz.x, 0,
 $       0, 2 / sz.y};
 )");
                         MatrixPseudoCtorCascade(3, 2, "ortho2D", "const vec2<type> &min, const vec2<type> &max", "min, max", R"(
-return {2 / (max.x - min.x), 0,
-$       0, 2 / (max.y - min.y),
-$       (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y)};
+return {2 / (max.x - min.x), 0, (min.x + max.x) / (min.x - max.x),
+$       0, 2 / (max.y - min.y), (min.y + max.y) / (min.y - max.y)};
 )");
                         MatrixPseudoCtorCascade(4, 3, "ortho", "const vec2<type> &sz, type near, type far", "sz, near, far", R"(
-return {2 / sz.x, 0, 0,
-$       0, 2 / sz.y, 0,
-$       0, 0, 2 / (near - far),
-$       0, 0, (near + far) / (near - far)};
+return {2 / sz.x, 0, 0, 0,
+$       0, 2 / sz.y, 0, 0,
+$       0, 0, 2 / (near - far), (near + far) / (near - far)};
 )");
                         MatrixPseudoCtorCascade(4, 3, "ortho", "const vec2<type> &min, const vec2<type> &max, type near, type far", "min, max, near, far", R"(
-return {2 / (max.x - min.x), 0, 0,
-$       0, 2 / (max.y - min.y), 0,
-$       0, 0, 2 / (near - far),
-$       (min.x + max.x) / (min.x - max.x), (min.y + max.y) / (min.y - max.y), (near + far) / (near - far)};
+return {2 / (max.x - min.x), 0, 0, (min.x + max.x) / (min.x - max.x),
+$       0, 2 / (max.y - min.y), 0, (min.y + max.y) / (min.y - max.y),
+$       0, 0, 2 / (near - far), (near + far) / (near - far)};
 )");
                         MatrixPseudoCtorCascade(4, 3, "look_at", "const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up", "src, dst, local_up", R"(
 vec3<T> v3 = (src-dst).norm();
 vec3<T> v1 = local_up.cross(v3).norm();
 vec3<T> v2 = v3.cross(v1);
-return {v1.x, v2.x, v3.x,
-$       v1.y, v2.y, v3.y,
-$       v1.z, v2.z, v3.z,
-$       -src.x*v1.x - src.y*v1.y - src.z*v1.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z};
+return {v1.x, v1.y, v1.z, -src.x*v1.x - src.y*v1.y - src.z*v1.z,
+$       v2.x, v2.y, v2.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z,
+$       v3.x, v3.y, v3.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z};
 )");
                         MatrixPseudoCtorCascade(4, 3, "translate", "const vec3<type> &in", "in", R"(
-return {1, 0, 0,
-$       0, 1, 0,
-$       0, 0, 1,
-$       in.x, in.y, in.z};
+return {1, 0, 0, in.x,
+$       0, 1, 0, in.y,
+$       0, 0, 1, in.z};
 )", 0);
                         MatrixPseudoCtorCascade(2, 2, "rotate2D", "type angle", "angle", R"(
 type c = std::cos(angle);
 type s = std::sin(angle);
-return {c, s,
-$       -s, c};
+return {c, -s,
+$       s, c};
 )");
                         MatrixPseudoCtorCascade(3, 3, "rotate_with_normalized_axis", "const vec3<type> &in, type angle", "in, angle", R"(
 type c = std::cos(angle);
 type s = std::sin(angle);
-return {in.x * in.x * (1 - c) + c, in.y * in.x * (1 - c) + in.z * s, in.x * in.z * (1 - c) - in.y * s,
-$       in.x * in.y * (1 - c) - in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) + in.x * s,
-$       in.x * in.z * (1 - c) + in.y * s, in.y * in.z * (1 - c) - in.x * s, in.z * in.z * (1 - c) + c};
+return {in.x * in.x * (1 - c) + c, in.x * in.y * (1 - c) - in.z * s, in.x * in.z * (1 - c) + in.y * s,
+$       in.y * in.x * (1 - c) + in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) - in.x * s,
+$       in.x * in.z * (1 - c) - in.y * s, in.y * in.z * (1 - c) + in.x * s, in.z * in.z * (1 - c) + c};
 )");
                         MatrixPseudoCtorCascade(3, 3, "rotate", "const vec3<type> &in, type angle", "in, angle", R"(
 return rotate_with_normalized_axis(in.norm(), angle);
 )");
                         MatrixPseudoCtorCascade(4, 4, "perspective", "type yfov, type wh_aspect, type near, type far", "yfov, wh_aspect, near, far", R"(
 yfov = (T)1 / std::tan(yfov / 2);
-return {yfov / wh_aspect , 0    , 0                             , 0  ,
-$       0                , yfov , 0                             , 0  ,
-$       0                , 0    , (near + far) / (near - far)   , -1 ,
-$       0                , 0    , 2 * near * far / (near - far) , 0  };
+return {yfov / wh_aspect , 0    , 0                           , 0                             ,
+$       0                , yfov , 0                           , 0                             ,
+$       0                , 0    , (near + far) / (near - far) , 2 * near * far / (near - far) ,
+$       0                , 0    , -1                          , 0                             };
 )");
                         MatrixPseudoCtorCascade(2, 2, "scale2D", "const vec2<type> &v", "v", R"(
 return {v.x, 0,
@@ -933,9 +926,9 @@ $       0, 0, v.z};
                             {
                                 if (www == w && hhh == h) continue;
                                 l "constexpr mat" << www << 'x' << hhh << "<type> to_mat" << www << 'x' << hhh << "() const {return {";
-                                for (int ww = 0; ww < www; ww++)
+                                for (int hh = 0; hh < hhh; hh++)
                                 {
-                                    for (int hh = 0; hh < hhh; hh++)
+                                    for (int ww = 0; ww < www; ww++)
                                     {
                                         if (ww != 0 || hh != 0) l ',';
                                         if (ww < w && hh < h)
@@ -1002,9 +995,9 @@ $       0, 0, v.z};
                         {
                             l "constexpr bool " << name << "() const {return ";
                             if (inverted) l "!(";
-                            for (int ww = 0; ww < w; ww++)
+                            for (int hh = 0; hh < h; hh++)
                             {
-                                for (int hh = 0; hh < h; hh++)
+                                for (int ww = 0; ww < w; ww++)
                                 {
                                     if (ww != 0 || hh != 0) l ' ' << bin << ' ';
                                     l field_names_main[ww] << '.' << field_names_main[hh];
@@ -1052,10 +1045,10 @@ $       0, 0, v.z};
         // Operators
         for (int sz = 2; sz <= 4; sz++)
         {
-            for (const char *op : ops_bin) // Note the &.
+            for (const char *op : ops_bin)
             {
                 // vec @ vec
-                l "template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return {";
+                l "template <typename T1, typename T2> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1299,9 +1292,9 @@ template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const vec4<TT> &i
 
 constexpr mat3<T> matrix() const // The quaternion must be normalized! Complexity: 18x`*` 12x`+-` (+ multiplication 9x`*` 6x`+-`)
 {
-return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y + 2*vec.z*vec.w, 2*vec.x*vec.z - 2*vec.y*vec.w,
-$       2*vec.x*vec.y - 2*vec.z*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z, 2*vec.y*vec.z + 2*vec.x*vec.w,
-$       2*vec.x*vec.z + 2*vec.y*vec.w, 2*vec.y*vec.z - 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.y*vec.y};
+return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y - 2*vec.z*vec.w, 2*vec.x*vec.z + 2*vec.y*vec.w,
+$       2*vec.x*vec.y + 2*vec.z*vec.w, 2*vec.y*vec.z - 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z,
+$       2*vec.x*vec.z - 2*vec.y*vec.w, 2*vec.y*vec.z + 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.y*vec.y};
 }
 };
 
