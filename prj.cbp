@@ -59,6 +59,7 @@
 				<Option use_console_runner="0" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-D_GLIBCXX_DEBUG" />
 				</Compiler>
 			</Target>
 			<Target title="Profile">
@@ -96,7 +97,7 @@
 		</Build>
 		<Compiler>
 			<Add option="-pedantic-errors" />
-			<Add option="-std=c++14" />
+			<Add option="-std=c++17" />
 			<Add directory="lib/include" />
 		</Compiler>
 		<Linker>

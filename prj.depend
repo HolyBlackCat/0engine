@@ -427,7 +427,7 @@
 	"exceptions.h"
 	"system.h"
 
-1495403790 z:\projects\c++\lx\src\math.h
+1495666221 z:\projects\c++\lx\src\math.h
 	<algorithm>
 	<cmath>
 	<cstdint>
@@ -443,8 +443,10 @@
 1486158765 source:z:\projects\c++\lx\src\utils.cpp
 	"utils.h"
 
-1495403825 source:z:\projects\c++\lx\src\logic.cpp
+1495665983 source:z:\projects\c++\lx\src\logic.cpp
 	"master.h"
+	<fstream>
+	<iomanip>
 
 1465479696 z:\projects\c++\lx\src\logic.h
 	"lib_sdl.h"
@@ -2296,7 +2298,7 @@
 1486171257 source:z:\projects\remote\jam\src\game\menu.cpp
 	"main.h"
 
-1485908240 z:\projects\c++\lx\lib\include\glfl\glfl.h
+1495576660 z:\projects\c++\lx\lib\include\glfl\glfl.h
 	<cstdint>
 	<iostream>
 	<string>
@@ -2305,15 +2307,16 @@
 	"glfl_proxy_proto__.h"
 	"glfl_simple_proto__.h"
 
-1485908240 z:\projects\c++\lx\lib\include\glfl\glfl_proxy_proto__.h
+1495576660 z:\projects\c++\lx\lib\include\glfl\glfl_proxy_proto__.h
 
-1485908240 z:\projects\c++\lx\lib\include\glfl\glfl_simple_proto__.h
+1495576660 z:\projects\c++\lx\lib\include\glfl\glfl_simple_proto__.h
 
-1485908240 source:z:\projects\c++\lx\lib\glfl.cpp
+1495576660 source:z:\projects\c++\lx\lib\glfl.cpp
 	"GLFL/glfl.h"
 	"GLFL/glfl_func_indices.h"
+	<iostream>
 
-1485908240 z:\projects\c++\lx\lib\include\glfl\glfl_func_indices.h
+1495576660 z:\projects\c++\lx\lib\include\glfl\glfl_func_indices.h
 
 1486158765 z:\projects\c++\lx\src\lib\sdl.h
 	<SDL2/SDL.h>
