@@ -1,5 +1,5 @@
 #include "../os.h"
-#ifndef LXINTERNAL_OS_MAC
+#ifndef E0INTERNAL_OS_MAC
 #  include <AL/al.h>
 #  include <AL/alc.h>
 #else

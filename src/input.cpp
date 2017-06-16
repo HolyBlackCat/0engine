@@ -1,7 +1,7 @@
 #include <cstring>
 #include <vector>
 
-#define LXINTERNAL_INPUT_H_SPECIAL_ACCESS
+#define E0INTERNAL_INPUT_H_SPECIAL_ACCESS
 #include "input.h"
 
 #include "system.h"

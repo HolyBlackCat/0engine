@@ -12,7 +12,7 @@
 
 namespace Audio
 {
-    #ifdef LXINTERNAL_AUDIO_H_SPECIAL_ACCESS
+    #ifdef E0INTERNAL_AUDIO_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
     void Tick();

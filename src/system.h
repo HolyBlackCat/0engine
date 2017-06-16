@@ -62,7 +62,7 @@ namespace Sys
         int Count();
         const char *const *Array(); // -1 th item is the executable name.
 
-        #define LXINTERNAL_BUILTIN_ARGS_LIST \
+        #define E0INTERNAL_BUILTIN_ARGS_LIST \
             ARG( help                       , void   ) \
             ARG( display_num                , int    ) \
             ARG( opengl_version             , ivec2  ) \
@@ -83,14 +83,14 @@ namespace Sys
         // Functions
 
         #define ARG(name, type) bool name();
-        LXINTERNAL_BUILTIN_ARGS_LIST
+        E0INTERNAL_BUILTIN_ARGS_LIST
         #undef ARG
 
         namespace Values
         {
             using std::string;
             #define ARG(name, type) type name();
-            LXINTERNAL_BUILTIN_ARGS_LIST
+            E0INTERNAL_BUILTIN_ARGS_LIST
             #undef ARG
         }
     }

@@ -128,7 +128,7 @@ namespace Audio
 
     void Tick()
     {
-        #define LXINTERNAL_UPD(param, type_seq, al_enum, expr_postfix) if (data.a.param != data.a_prev.param) {data.a_prev.param = data.a.param; alSource##type_seq(data.handle, al_enum, data.a.param expr_postfix);}
+        #define E0INTERNAL_UPD(param, type_seq, al_enum, expr_postfix) if (data.a.param != data.a_prev.param) {data.a_prev.param = data.a.param; alSource##type_seq(data.handle, al_enum, data.a.param expr_postfix);}
 
         for (int i = 0; i < mono_manager.CurrentSize(); i++)
         {
@@ -170,14 +170,14 @@ namespace Audio
                 alSourcei(data.handle, AL_LOOPING, data.a.mode == SourceMode::loop);
             }
 
-            LXINTERNAL_UPD(ref_distance,      f, AL_REFERENCE_DISTANCE,   );
-            LXINTERNAL_UPD(max_distance,      f, AL_MAX_DISTANCE,         );
-            LXINTERNAL_UPD(rolloff_factor,    f, AL_ROLLOFF_FACTOR,       );
-            LXINTERNAL_UPD(volume,            f, AL_GAIN,                 ); // These are for stereo srcs too.
-            LXINTERNAL_UPD(pitch,             f, AL_PITCH,                ); //
-            LXINTERNAL_UPD(pos,               fv, AL_POSITION, .as_array());
-            LXINTERNAL_UPD(vel,               fv, AL_VELOCITY, .as_array());
-            LXINTERNAL_UPD(relative_position, i, AL_SOURCE_RELATIVE,      );
+            E0INTERNAL_UPD(ref_distance,      f, AL_REFERENCE_DISTANCE,   );
+            E0INTERNAL_UPD(max_distance,      f, AL_MAX_DISTANCE,         );
+            E0INTERNAL_UPD(rolloff_factor,    f, AL_ROLLOFF_FACTOR,       );
+            E0INTERNAL_UPD(volume,            f, AL_GAIN,                 ); // These are for stereo srcs too.
+            E0INTERNAL_UPD(pitch,             f, AL_PITCH,                ); //
+            E0INTERNAL_UPD(pos,               fv, AL_POSITION, .as_array());
+            E0INTERNAL_UPD(vel,               fv, AL_VELOCITY, .as_array());
+            E0INTERNAL_UPD(relative_position, i, AL_SOURCE_RELATIVE,      );
 
             if (data.container_dead && (data.a.mode != SourceMode::once || data.playing == 0))
             {
@@ -220,8 +220,8 @@ namespace Audio
                 alSourcei(data.handle, AL_LOOPING, data.a.mode == SourceMode::loop);
             }
 
-            LXINTERNAL_UPD(volume,            f, AL_GAIN,                 );
-            LXINTERNAL_UPD(pitch,             f, AL_PITCH,                );
+            E0INTERNAL_UPD(volume,            f, AL_GAIN,                 );
+            E0INTERNAL_UPD(pitch,             f, AL_PITCH,                );
 
             if (data.container_dead && (data.a.mode != SourceMode::once || data.playing == 0))
             {
@@ -230,7 +230,7 @@ namespace Audio
             }
         }
 
-        #undef LXINTERNAL_UPD
+        #undef E0INTERNAL_UPD
 
         ForceErrorCheck();
     }

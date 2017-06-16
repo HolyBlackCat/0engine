@@ -70,17 +70,17 @@ namespace Exceptions
         using Base = Type;
     }
 
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_1(m, a0                     )  m(a0)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_2(m, a0,a1                  )  m(a0) , m(a1)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_3(m, a0,a1,a2               )  m(a0) , m(a1) , m(a2)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_4(m, a0,a1,a2,a3            )  m(a0) , m(a1) , m(a2) , m(a3)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_5(m, a0,a1,a2,a3,a4         )  m(a0) , m(a1) , m(a2) , m(a3) , m(a4)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_6(m, a0,a1,a2,a3,a4,a5      )  m(a0) , m(a1) , m(a2) , m(a3) , m(a4) , m(a5)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_7(m, a0,a1,a2,a3,a4,a5,a6   )  m(a0) , m(a1) , m(a2) , m(a3) , m(a4) , m(a5) , m(a6)
-    #define LXINTERNAL_EXCEPTION_FOR_EACH_8(m, a0,a1,a2,a3,a4,a5,a6,a7)  m(a0) , m(a1) , m(a2) , m(a3) , m(a4) , m(a5) , m(a6) , m(a7)
-    #define LXINTERNAL_EXCEPTION_ARGS(name) const char *name##_
-    #define LXINTERNAL_EXCEPTION_ASSIGN(name) ret.name = name##_
-    #define LXINTERNAL_EXCEPTION_COMMA ,
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_1(m, a0                     )  m(a0)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_2(m, a0,a1                  )  m(a0) , m(a1)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_3(m, a0,a1,a2               )  m(a0) , m(a1) , m(a2)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_4(m, a0,a1,a2,a3            )  m(a0) , m(a1) , m(a2) , m(a3)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_5(m, a0,a1,a2,a3,a4         )  m(a0) , m(a1) , m(a2) , m(a3) , m(a4)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_6(m, a0,a1,a2,a3,a4,a5      )  m(a0) , m(a1) , m(a2) , m(a3) , m(a4) , m(a5)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_7(m, a0,a1,a2,a3,a4,a5,a6   )  m(a0) , m(a1) , m(a2) , m(a3) , m(a4) , m(a5) , m(a6)
+    #define E0INTERNAL_EXCEPTION_FOR_EACH_8(m, a0,a1,a2,a3,a4,a5,a6,a7)  m(a0) , m(a1) , m(a2) , m(a3) , m(a4) , m(a5) , m(a6) , m(a7)
+    #define E0INTERNAL_EXCEPTION_ARGS(name) const char *name##_
+    #define E0INTERNAL_EXCEPTION_ASSIGN(name) ret.name = name##_
+    #define E0INTERNAL_EXCEPTION_COMMA ,
 
     #define NEW_EXCEPTION(name, desc, field_c, ...) \
         struct name##_t final : Base \
@@ -96,10 +96,10 @@ namespace Exceptions
             } \
         }; \
         \
-        [[noreturn]] inline void name(LXINTERNAL_EXCEPTION_FOR_EACH_##field_c(LXINTERNAL_EXCEPTION_ARGS, __VA_ARGS__)) \
+        [[noreturn]] inline void name(E0INTERNAL_EXCEPTION_FOR_EACH_##field_c(E0INTERNAL_EXCEPTION_ARGS, __VA_ARGS__)) \
         { \
             name##_t ret; \
-            LXINTERNAL_EXCEPTION_FOR_EACH_##field_c(LXINTERNAL_EXCEPTION_ASSIGN, __VA_ARGS__); \
+            E0INTERNAL_EXCEPTION_FOR_EACH_##field_c(E0INTERNAL_EXCEPTION_ASSIGN, __VA_ARGS__); \
             ret.update_description(); \
             throw ret; \
         }

@@ -9,11 +9,11 @@
 #include <unordered_map>
 #include <string>
 
-#define LXINTERNAL_WINDOW_H_SPECIAL_ACCESS
-#define LXINTERNAL_GRAPHICS_H_SPECIAL_ACCESS
-#define LXINTERNAL_AUDIO_H_SPECIAL_ACCESS
-#define LXINTERNAL_NETWORK_H_SPECIAL_ACCESS
-#define LXINTERNAL_SDL_NO_UNDEF_MAIN
+#define E0INTERNAL_WINDOW_H_SPECIAL_ACCESS
+#define E0INTERNAL_GRAPHICS_H_SPECIAL_ACCESS
+#define E0INTERNAL_AUDIO_H_SPECIAL_ACCESS
+#define E0INTERNAL_NETWORK_H_SPECIAL_ACCESS
+#define E0INTERNAL_SDL_NO_UNDEF_MAIN
 
 #include "system.h"
 
@@ -137,7 +137,7 @@ namespace Sys
         namespace Internal
         {
             #define ARG(name, type) static bool name;
-            LXINTERNAL_BUILTIN_ARGS_LIST
+            E0INTERNAL_BUILTIN_ARGS_LIST
             #undef ARG
 
             namespace Values
@@ -149,7 +149,7 @@ namespace Sys
                 #define ARG_ivec4(name)  static ivec4 name;
                 #define ARG_string(name) static std::string name;
                 #define ARG(name, type) ARG_##type(name)
-                LXINTERNAL_BUILTIN_ARGS_LIST
+                E0INTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
                 #undef ARG_bool
                 #undef ARG_int
@@ -163,7 +163,7 @@ namespace Sys
         // Functions
 
         #define ARG(name, type) bool name() {return Internal::name;}
-        LXINTERNAL_BUILTIN_ARGS_LIST
+        E0INTERNAL_BUILTIN_ARGS_LIST
         #undef ARG
 
         namespace Values
@@ -175,7 +175,7 @@ namespace Sys
             #define ARG_ivec4(name)  ivec4 name() {return Internal::Values::name;}
             #define ARG_string(name) std::string name() {return Internal::Values::name;}
             #define ARG(name, type) ARG_##type(name)
-            LXINTERNAL_BUILTIN_ARGS_LIST
+            E0INTERNAL_BUILTIN_ARGS_LIST
             #undef ARG_void
             #undef ARG_bool
             #undef ARG_int
@@ -352,7 +352,7 @@ namespace Sys
                 #define ARG_ivec4(name)  CheckIvecArg(#name, 4, Array()[i], Internal::Values::name.as_array())
                 #define ARG_string(name) CheckStringArg(#name, Array()[i], &Internal::Values::name)
                 #define ARG(name, type) if (ARG_##type(name)) {Internal::name = 1; continue;}
-                LXINTERNAL_BUILTIN_ARGS_LIST
+                E0INTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
                 #undef ARG_bool
                 #undef ARG_int
@@ -383,7 +383,7 @@ namespace Sys
                             default: buf += it; break; \
                         } \
                     }
-                LXINTERNAL_BUILTIN_ARGS_LIST
+                E0INTERNAL_BUILTIN_ARGS_LIST
                 #undef ARG_void
                 #undef ARG_bool
                 #undef ARG_int

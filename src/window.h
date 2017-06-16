@@ -7,7 +7,7 @@
 
 namespace Window
 {
-    #ifdef LXINTERNAL_WINDOW_H_SPECIAL_ACCESS
+    #ifdef E0INTERNAL_WINDOW_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
     void Tick();

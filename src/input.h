@@ -11,7 +11,7 @@
 
 namespace Input
 {
-    #ifdef LXINTERNAL_INPUT_H_SPECIAL_ACCESS
+    #ifdef E0INTERNAL_INPUT_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
     void ResetKeyboardBuffer(); // This is for when keyboard layout changes.

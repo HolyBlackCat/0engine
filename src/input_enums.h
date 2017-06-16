@@ -17,116 +17,116 @@ namespace Input
      *  Key_#_$()           # = one_of(Alt,Ctrl,Shift,GUI)      $ = one_of(L,R)
      */
 
-    #define LXINTERNAL_S(x, y) template <> constexpr inline KeyID Key<(x)>() {return SDL_SCANCODE_##y;}
-    #define LXINTERNAL_SS(x, y, z) LXINTERNAL_S(x, z) LXINTERNAL_S(y, z)
+    #define E0INTERNAL_S(x, y) template <> constexpr inline KeyID Key<(x)>() {return SDL_SCANCODE_##y;}
+    #define E0INTERNAL_SS(x, y, z) E0INTERNAL_S(x, z) E0INTERNAL_S(y, z)
     template <char N> constexpr inline KeyID Key();
-    LXINTERNAL_S(' ', SPACE)
-    LXINTERNAL_SS('0', ')', 0) //
-    LXINTERNAL_SS('1', '!', 1) //
-    LXINTERNAL_SS('2', '@', 2) //
-    LXINTERNAL_SS('3', '#', 3) //
-    LXINTERNAL_SS('4', '$', 4) //
-    LXINTERNAL_SS('5', '%', 5)  //
-    LXINTERNAL_SS('6', '^', 6)  //
-    LXINTERNAL_SS('7', '&', 7)  //
-    LXINTERNAL_SS('8', '*', 8)  //
-    LXINTERNAL_SS('9', '(', 9)  //
-    LXINTERNAL_SS('A', 'a', A) //
-    LXINTERNAL_SS('B', 'b', B) //
-    LXINTERNAL_SS('C', 'c', C) //
-    LXINTERNAL_SS('D', 'd', D) //
-    LXINTERNAL_SS('E', 'e', E) //
-    LXINTERNAL_SS('F', 'f', F)  //
-    LXINTERNAL_SS('G', 'g', G)  //
-    LXINTERNAL_SS('H', 'h', H)  //
-    LXINTERNAL_SS('I', 'i', I)  //
-    LXINTERNAL_SS('J', 'j', J)  //
-    LXINTERNAL_SS('K', 'k', K) //
-    LXINTERNAL_SS('L', 'l', L) //
-    LXINTERNAL_SS('M', 'm', M) //
-    LXINTERNAL_SS('N', 'n', N) //
-    LXINTERNAL_SS('O', 'o', O) //
-    LXINTERNAL_SS('P', 'p', P)  //
-    LXINTERNAL_SS('Q', 'q', Q)  //
-    LXINTERNAL_SS('R', 'r', R)  //
-    LXINTERNAL_SS('S', 's', S)  //
-    LXINTERNAL_SS('T', 't', T)  //
-    LXINTERNAL_SS('U', 'u', U) //
-    LXINTERNAL_SS('V', 'v', V) //
-    LXINTERNAL_SS('W', 'w', W) //
-    LXINTERNAL_SS('X', 'x', X) //
-    LXINTERNAL_SS('Y', 'y', Y) //
-    LXINTERNAL_SS('Z', 'z', Z)  //
-    LXINTERNAL_SS('\'','"', APOSTROPHE)
-    LXINTERNAL_SS(',', '<', COMMA)
-    LXINTERNAL_SS('.', '>', PERIOD)
-    LXINTERNAL_SS('-', '_', MINUS)
-    LXINTERNAL_SS('=', '+', EQUALS)
-    LXINTERNAL_SS(';', ':', SEMICOLON)
-    LXINTERNAL_SS('/', '?', SLASH)
-    LXINTERNAL_SS('[', '{', LEFTBRACKET)
-    LXINTERNAL_SS(']', '}', RIGHTBRACKET)
-    LXINTERNAL_SS('\\','|', BACKSLASH)
-    LXINTERNAL_SS('`', '~', GRAVE)
-    #undef LXINTERNAL_S
-    #undef LXINTERNAL_SS
+    E0INTERNAL_S(' ', SPACE)
+    E0INTERNAL_SS('0', ')', 0) //
+    E0INTERNAL_SS('1', '!', 1) //
+    E0INTERNAL_SS('2', '@', 2) //
+    E0INTERNAL_SS('3', '#', 3) //
+    E0INTERNAL_SS('4', '$', 4) //
+    E0INTERNAL_SS('5', '%', 5)  //
+    E0INTERNAL_SS('6', '^', 6)  //
+    E0INTERNAL_SS('7', '&', 7)  //
+    E0INTERNAL_SS('8', '*', 8)  //
+    E0INTERNAL_SS('9', '(', 9)  //
+    E0INTERNAL_SS('A', 'a', A) //
+    E0INTERNAL_SS('B', 'b', B) //
+    E0INTERNAL_SS('C', 'c', C) //
+    E0INTERNAL_SS('D', 'd', D) //
+    E0INTERNAL_SS('E', 'e', E) //
+    E0INTERNAL_SS('F', 'f', F)  //
+    E0INTERNAL_SS('G', 'g', G)  //
+    E0INTERNAL_SS('H', 'h', H)  //
+    E0INTERNAL_SS('I', 'i', I)  //
+    E0INTERNAL_SS('J', 'j', J)  //
+    E0INTERNAL_SS('K', 'k', K) //
+    E0INTERNAL_SS('L', 'l', L) //
+    E0INTERNAL_SS('M', 'm', M) //
+    E0INTERNAL_SS('N', 'n', N) //
+    E0INTERNAL_SS('O', 'o', O) //
+    E0INTERNAL_SS('P', 'p', P)  //
+    E0INTERNAL_SS('Q', 'q', Q)  //
+    E0INTERNAL_SS('R', 'r', R)  //
+    E0INTERNAL_SS('S', 's', S)  //
+    E0INTERNAL_SS('T', 't', T)  //
+    E0INTERNAL_SS('U', 'u', U) //
+    E0INTERNAL_SS('V', 'v', V) //
+    E0INTERNAL_SS('W', 'w', W) //
+    E0INTERNAL_SS('X', 'x', X) //
+    E0INTERNAL_SS('Y', 'y', Y) //
+    E0INTERNAL_SS('Z', 'z', Z)  //
+    E0INTERNAL_SS('\'','"', APOSTROPHE)
+    E0INTERNAL_SS(',', '<', COMMA)
+    E0INTERNAL_SS('.', '>', PERIOD)
+    E0INTERNAL_SS('-', '_', MINUS)
+    E0INTERNAL_SS('=', '+', EQUALS)
+    E0INTERNAL_SS(';', ':', SEMICOLON)
+    E0INTERNAL_SS('/', '?', SLASH)
+    E0INTERNAL_SS('[', '{', LEFTBRACKET)
+    E0INTERNAL_SS(']', '}', RIGHTBRACKET)
+    E0INTERNAL_SS('\\','|', BACKSLASH)
+    E0INTERNAL_SS('`', '~', GRAVE)
+    #undef E0INTERNAL_S
+    #undef E0INTERNAL_SS
     template <char N> constexpr inline KeyID Key_Num();
-    #define LXINTERNAL_S(x, y) template <> constexpr inline KeyID Key_Num<(x)>() {return SDL_SCANCODE_KP_##y;}
-    LXINTERNAL_S('=', EQUALS)
-    LXINTERNAL_S('0', 0)
-    LXINTERNAL_S('1', 1)
-    LXINTERNAL_S('2', 2)
-    LXINTERNAL_S('3', 3)
-    LXINTERNAL_S('4', 4)
-    LXINTERNAL_S('5', 5)
-    LXINTERNAL_S('6', 6)
-    LXINTERNAL_S('7', 7)
-    LXINTERNAL_S('8', 8)
-    LXINTERNAL_S('9', 9)
-    LXINTERNAL_S('.', PERIOD)
-    LXINTERNAL_S(',', PERIOD)
-    LXINTERNAL_S('+', PLUS)
-    LXINTERNAL_S('-', MINUS)
-    LXINTERNAL_S('*', MULTIPLY)
-    LXINTERNAL_S('/', DIVIDE)
-    #undef LXINTERNAL_S
-    #define LXINTERNAL_F(x) template <> constexpr inline KeyID Key_F<(x)>() {return SDL_SCANCODE_F##x;}
+    #define E0INTERNAL_S(x, y) template <> constexpr inline KeyID Key_Num<(x)>() {return SDL_SCANCODE_KP_##y;}
+    E0INTERNAL_S('=', EQUALS)
+    E0INTERNAL_S('0', 0)
+    E0INTERNAL_S('1', 1)
+    E0INTERNAL_S('2', 2)
+    E0INTERNAL_S('3', 3)
+    E0INTERNAL_S('4', 4)
+    E0INTERNAL_S('5', 5)
+    E0INTERNAL_S('6', 6)
+    E0INTERNAL_S('7', 7)
+    E0INTERNAL_S('8', 8)
+    E0INTERNAL_S('9', 9)
+    E0INTERNAL_S('.', PERIOD)
+    E0INTERNAL_S(',', PERIOD)
+    E0INTERNAL_S('+', PLUS)
+    E0INTERNAL_S('-', MINUS)
+    E0INTERNAL_S('*', MULTIPLY)
+    E0INTERNAL_S('/', DIVIDE)
+    #undef E0INTERNAL_S
+    #define E0INTERNAL_F(x) template <> constexpr inline KeyID Key_F<(x)>() {return SDL_SCANCODE_F##x;}
     template <unsigned int N> constexpr inline KeyID Key_F();
-    LXINTERNAL_F(1 ) LXINTERNAL_F(2 ) LXINTERNAL_F(3 ) LXINTERNAL_F(4 ) LXINTERNAL_F(5 ) LXINTERNAL_F(6 )
-    LXINTERNAL_F(7 ) LXINTERNAL_F(8 ) LXINTERNAL_F(9 ) LXINTERNAL_F(10) LXINTERNAL_F(11) LXINTERNAL_F(12)
-    LXINTERNAL_F(13) LXINTERNAL_F(14) LXINTERNAL_F(15) LXINTERNAL_F(16) LXINTERNAL_F(17) LXINTERNAL_F(18)
-    LXINTERNAL_F(19) LXINTERNAL_F(20) LXINTERNAL_F(21) LXINTERNAL_F(22) LXINTERNAL_F(23) LXINTERNAL_F(24)
-    #undef LXINTERNAL_F
-    #define LXINTERNAL_C(x, y) constexpr inline KeyID Key_##x() {return SDL_SCANCODE_##y;}
-    LXINTERNAL_C(Num_Enter, KP_ENTER)
-    LXINTERNAL_C(Menu, MENU)
-    LXINTERNAL_C(Esc, ESCAPE)
-    LXINTERNAL_C(Enter, RETURN)
-    LXINTERNAL_C(Tab, TAB)
-    LXINTERNAL_C(Backspace, BACKSPACE)
-    LXINTERNAL_C(Insert, INSERT)
-    LXINTERNAL_C(Delete, DELETE)
-    LXINTERNAL_C(Up, UP)
-    LXINTERNAL_C(Down, DOWN)
-    LXINTERNAL_C(Left, LEFT)
-    LXINTERNAL_C(Right, RIGHT)
-    LXINTERNAL_C(PageUp, PAGEUP)
-    LXINTERNAL_C(PageDown, PAGEDOWN)
-    LXINTERNAL_C(Home, HOME)
-    LXINTERNAL_C(End, END)
-    LXINTERNAL_C(CapsLock, CAPSLOCK)
-    LXINTERNAL_C(ScrollLock, SCROLLLOCK)
-    LXINTERNAL_C(NumLock, NUMLOCKCLEAR)
-    LXINTERNAL_C(PrintScreen, PRINTSCREEN)
-    LXINTERNAL_C(Pause, PAUSE)
-    LXINTERNAL_C(Space, SPACE)
-    #define LXINTERNAL_CMOD(x, y) LXINTERNAL_C(x##_L, L##y) LXINTERNAL_C(x##_R, R##y)
-    LXINTERNAL_CMOD(Alt, ALT)
-    LXINTERNAL_CMOD(Ctrl, CTRL)
-    LXINTERNAL_CMOD(Shift, SHIFT)
-    LXINTERNAL_CMOD(GUI, GUI)
-    #undef LXINTERNAL_CMOD
-    #undef LXINTERNAL_C
+    E0INTERNAL_F(1 ) E0INTERNAL_F(2 ) E0INTERNAL_F(3 ) E0INTERNAL_F(4 ) E0INTERNAL_F(5 ) E0INTERNAL_F(6 )
+    E0INTERNAL_F(7 ) E0INTERNAL_F(8 ) E0INTERNAL_F(9 ) E0INTERNAL_F(10) E0INTERNAL_F(11) E0INTERNAL_F(12)
+    E0INTERNAL_F(13) E0INTERNAL_F(14) E0INTERNAL_F(15) E0INTERNAL_F(16) E0INTERNAL_F(17) E0INTERNAL_F(18)
+    E0INTERNAL_F(19) E0INTERNAL_F(20) E0INTERNAL_F(21) E0INTERNAL_F(22) E0INTERNAL_F(23) E0INTERNAL_F(24)
+    #undef E0INTERNAL_F
+    #define E0INTERNAL_C(x, y) constexpr inline KeyID Key_##x() {return SDL_SCANCODE_##y;}
+    E0INTERNAL_C(Num_Enter, KP_ENTER)
+    E0INTERNAL_C(Menu, MENU)
+    E0INTERNAL_C(Esc, ESCAPE)
+    E0INTERNAL_C(Enter, RETURN)
+    E0INTERNAL_C(Tab, TAB)
+    E0INTERNAL_C(Backspace, BACKSPACE)
+    E0INTERNAL_C(Insert, INSERT)
+    E0INTERNAL_C(Delete, DELETE)
+    E0INTERNAL_C(Up, UP)
+    E0INTERNAL_C(Down, DOWN)
+    E0INTERNAL_C(Left, LEFT)
+    E0INTERNAL_C(Right, RIGHT)
+    E0INTERNAL_C(PageUp, PAGEUP)
+    E0INTERNAL_C(PageDown, PAGEDOWN)
+    E0INTERNAL_C(Home, HOME)
+    E0INTERNAL_C(End, END)
+    E0INTERNAL_C(CapsLock, CAPSLOCK)
+    E0INTERNAL_C(ScrollLock, SCROLLLOCK)
+    E0INTERNAL_C(NumLock, NUMLOCKCLEAR)
+    E0INTERNAL_C(PrintScreen, PRINTSCREEN)
+    E0INTERNAL_C(Pause, PAUSE)
+    E0INTERNAL_C(Space, SPACE)
+    #define E0INTERNAL_CMOD(x, y) E0INTERNAL_C(x##_L, L##y) E0INTERNAL_C(x##_R, R##y)
+    E0INTERNAL_CMOD(Alt, ALT)
+    E0INTERNAL_CMOD(Ctrl, CTRL)
+    E0INTERNAL_CMOD(Shift, SHIFT)
+    E0INTERNAL_CMOD(GUI, GUI)
+    #undef E0INTERNAL_CMOD
+    #undef E0INTERNAL_C
 }
 
 #endif
