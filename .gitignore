@@ -3,3 +3,5 @@ android-project/libs/*
 android-project/apk/*
 bin/*.exe
 obj/
+*.depend
+*.layout
