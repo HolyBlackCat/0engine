@@ -16,20 +16,20 @@ namespace Network
 
     struct Address : IPaddress
     {
-        operator const char *() const
+        operator std::string() const
         {
             if (Utils::big_endian)
-                return Jo((host & 0xff000000) >> 24, '.',
-                          (host & 0xff0000) >> 16, '.',
-                          (host & 0xff00) >> 8, '.',
-                          (host & 0xff), ':',
-                          port);
+                return Str((host & 0xff000000) >> 24, '.',
+                           (host & 0xff0000) >> 16, '.',
+                           (host & 0xff00) >> 8, '.',
+                           (host & 0xff), ':',
+                           port);
             else
-                return Jo((host & 0xff), '.',
-                          (host & 0xff00) >> 8, '.',
-                          (host & 0xff0000) >> 16, '.',
-                          (host & 0xff000000) >> 24, ':',
-                          SDL_Swap16(port));
+                return Str((host & 0xff), '.',
+                           (host & 0xff00) >> 8, '.',
+                           (host & 0xff0000) >> 16, '.',
+                           (host & 0xff000000) >> 24, ':',
+                           SDL_Swap16(port));
         }
 
         Address()
@@ -42,10 +42,10 @@ namespace Network
             host = o.host;
             port = o.port;
         }
-        Address(const char *host, uint16_t port)
+        Address(std::string host, uint16_t port)
         {
-            if (SDLNet_ResolveHost(this, host, port))
-                Exceptions::Network::CantResolve(Jo("Unable to resolve a host name: ", (host ? host : "<null>"), ':', port));
+            if (SDLNet_ResolveHost(this, host.c_str(), port))
+                Exceptions::Network::CantResolve(Str("Unable to resolve a host name: ", (host[0] ? host : "<null>"), ':', port));
         }
     };
 
@@ -127,7 +127,7 @@ namespace Network
                 if (!socket)
                 {
                     SDLNet_FreeSocketSet(set);
-                    Exceptions::Network::CantCreateServer(Jo(server_port));
+                    Exceptions::Network::CantCreateServer(Str(server_port));
                 }
                 if (!SDLNet_TCP_AddSocket(set, socket))
                     Sys::Error("Can't add a server socket to a set.");
@@ -136,7 +136,7 @@ namespace Network
             {
                 socket = SDLNet_TCP_Open(&address);
                 if (!socket)
-                    Exceptions::Network::CantCreateServer(Jo(server_port));
+                    Exceptions::Network::CantCreateServer(Str(server_port));
                 set = SDLNet_AllocSocketSet(1);
                 if (!set)
                     Sys::Error("Can't allocate a socket set.");

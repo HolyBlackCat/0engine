@@ -10,7 +10,7 @@
 
 namespace Input
 {
-    static Utils::Array<uint32_t> board, board_pr, board_re;
+    static std::vector<uint32_t> board, board_pr, board_re;
     static KeyID any_key_down_id, any_key_pr_id, any_key_re_id;
     static ivec2 mouse_pos, mouse_pos_prev, mouse_shift;
     static uint32_t mouse_buttons, mouse_buttons_pr, mouse_buttons_re;
@@ -66,8 +66,8 @@ namespace Input
         board_int_size = (board_size + 31) / 32;
         for (auto *it : {&board, &board_pr, &board_re})
         {
-            it->alloc(board_int_size);
-            ClearBits(*it);
+            it->resize(board_int_size);
+            ClearBits(it->data());
         }
     }
 
@@ -85,19 +85,19 @@ namespace Input
     void Cleanup()
     {
         ExecuteThisOnce();
-        board.free();
-        board_pr.free();
-        board_re.free();
+        board.clear();
+        board_pr.clear();
+        board_re.clear();
     }
 
     void MoveKeyDown(KeyID id)
     {
-        SetBit(board_pr, id);
+        SetBit(board_pr.data(), id);
         any_key_pr_id = id;
     }
     void MoveKeyUp(KeyID id)
     {
-        SetBit(board_re, id);
+        SetBit(board_re.data(), id);
         any_key_re_id = id;
     }
 
@@ -136,8 +136,8 @@ namespace Input
             SDL_WarpMouseInWindow(Window::Handle(), mouse_movement_dst.x, mouse_movement_dst.y);
         }
 
-        ClearBits(board_pr);
-        ClearBits(board_re);
+        ClearBits(board_pr.data());
+        ClearBits(board_re.data());
         any_key_down_id = 0;
         any_key_pr_id = 0;
         any_key_re_id = 0;
@@ -176,9 +176,9 @@ namespace Input
     }
 
 
-    bool KeyDown    (KeyID id) {return GetBit(board, id);}
-    bool KeyPressed (KeyID id) {return GetBit(board_pr, id);}
-    bool KeyReleased(KeyID id) {return GetBit(board_re, id);}
+    bool KeyDown    (KeyID id) {return GetBit(board.data(), id);}
+    bool KeyPressed (KeyID id) {return GetBit(board_pr.data(), id);}
+    bool KeyReleased(KeyID id) {return GetBit(board_re.data(), id);}
     KeyID KeyCount() {return board_size;}
     KeyID AnyKeyDown    () {return any_key_down_id;}
     KeyID AnyKeyPressed () {return any_key_pr_id;}

@@ -2,6 +2,7 @@
 #define UTILS_H_INCLUDED
 
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -10,7 +11,6 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -20,9 +20,10 @@
 
 #include "lib/sdl.h"
 #include "exceptions.h"
+#include "strings.h"
 #include "system.h"
 
-#define ExecuteThisOnce() do {static bool flag = 0; if (flag) ::Sys::Error(Jo("At function ", __func__, ": Statement at " __FILE__ ":", __LINE__, " was illegally executed twice.")); flag = 1;} while (0)
+#define ExecuteThisOnce() do {static bool flag = 0; if (flag) ::Sys::Error(Str("At function ", __func__, ": Statement at " __FILE__ ":", __LINE__, " was illegally executed twice.")); flag = 1;} while (0)
 #define ExecuteThisOnceQuiet() do {static bool flag = 0; if (flag) ::Sys::Exit(); flag = 1;} while (0)
 #define Textify(...) #__VA_ARGS__
 
@@ -36,246 +37,89 @@ namespace Utils
         template <typename T, typename ...P> struct TypeAt<0, T, P...> {using type = T;};
     }
 
-    template <typename T> class Array
-    {
-        static_assert(std::is_const<T>::value == 0, "Mutable arrays of const values are not supported, use const arrays instead.");
-
-        T *data;
-        std::size_t sz;
-
-      public:
-        using type = T;
-
-        void alloc(std::size_t new_size) // You can call this safely at any time.
-        {
-            if (data)
-                delete [] data;
-            sz = new_size;
-            data = new T[sz];
-        }
-        void free() // You can call this safely at any time.
-        {
-            if (data)
-            {
-                delete [] data;
-                data = 0;
-            }
-            sz = 0;
-        }
-
-        std::size_t size() const
-        {
-            return sz;
-        }
-
-        std::size_t bytesize() const
-        {
-            return sz * sizeof (T);
-        }
-
-        T &operator*() {return *data;}
-        const T &operator*() const {return *data;}
-        operator T *() {return data;}
-        operator const T *() const {return data;}
-
-        T *begin() {return data;}
-        T *end() {return data+sz;}
-        const T *begin() const {return data;}
-        const T *end() const {return data+sz;}
-
-        Array()
-        {
-            data = 0; sz = 0;
-        }
-        Array(std::size_t size) : Array()
-        {
-            alloc(size);
-        }
-        Array(std::initializer_list<T> list) : Array()
-        {
-            alloc(list.size());
-            for (std::size_t i = 0; i < list.size(); i++)
-                (*this)[i] = list.begin()[i];
-        }
-
-        Array(const Array &o) : Array()
-        {
-            alloc(o.sz);
-            for (std::size_t i = 0; i < o.sz; i++)
-                (*this)[i] = o[i];
-        }
-        Array(Array &&o)
-        {
-            data = o.data;
-            sz = o.sz;
-            o.data = 0;
-            o.sz = 0;
-        }
-        Array &operator=(const Array &o)
-        {
-            if (&o == this)
-                return *this;
-            alloc(o.sz);
-            for (std::size_t i = 0; i < o.sz; i++)
-                (*this)[i] = o[i];
-            return *this;
-        }
-        Array &operator=(Array &&o)
-        {
-            if (&o == this)
-                return *this;
-            if (data)
-                delete [] data;
-            data = o.data;
-            sz = o.sz;
-            o.data = 0;
-            o.sz = 0;
-            return *this;
-        }
-
-        ~Array()
-        {
-            if (data)
-                delete [] data;
-        }
-    };
-
-    // Sizeless array.
-    template <typename T> class Buffer
-    {
-        static_assert(std::is_const<T>::value == 0, "Mutable arrays of const values are not supported, use const arrays instead.");
-
-        T *data;
-
-      public:
-        using type = T;
-
-        void alloc(std::size_t new_size) // You can call this safely at any time.
-        {
-            if (data)
-                delete [] data;
-            data = new T[new_size];
-        }
-        void free() // You can call this safely at any time.
-        {
-            if (data)
-            {
-                delete [] data;
-                data = 0;
-            }
-        }
-
-        T &operator*() {return *data;}
-        const T &operator*() const {return *data;}
-        operator T *() {return data;}
-        operator const T *() const {return data;}
-
-        Buffer()
-        {
-            data = 0;
-        }
-        Buffer(std::size_t size)
-        {
-            data = new T[size];
-        }
-        Buffer(std::initializer_list<T> list)
-        {
-            data = new T[list.size()];
-            for (std::size_t i = 0; i < list.size(); i++)
-                (*this)[i] = list.begin()[i];
-        }
-
-        Buffer(Buffer &&o)
-        {
-            data = o.data;
-            o.data = 0;
-        }
-        Buffer &operator=(Buffer &&o)
-        {
-            if (&o == this)
-                return *this;
-            if (data)
-                delete [] data;
-            data = o.data;
-            o.data = 0;
-            return *this;
-        }
-
-        ~Buffer()
-        {
-            if (data)
-                delete [] data;
-        }
-    };
-
     template <typename T> class Object
     {
-        T *ptr;
+        static_assert(noexcept(std::declval<T>().~T()), "Object destructor must be noexcept.");
+
+        bool alive;
+        std::aligned_storage_t<sizeof(T), alignof(T)> data;
 
       public:
-        Object() : ptr(0) {}
-        Object(const Object &o) : ptr(new T(o)) {}
-        Object(Object &&o) : ptr(new T((T &&) o)) {}
+        constexpr Object() : alive(0) {}
+        Object(const Object &o)
+        {
+            alive = 0;
+            if (o.alive)
+            {
+                ::new (&data) T(*o);
+                alive = 1;
+            }
+        }
+        Object(Object &&o)
+        {
+            alive = 0;
+            if (o.alive)
+            {
+                ::new (&data) T((T &&)*o);
+                alive = 1;
+            }
+        }
         Object &operator=(const Object &o)
         {
             if (&o == this)
                 return *this;
-            if (!o.ptr)
+
+            if (!alive)
             {
-                if (ptr) delete ptr;
-                return *this;
-            }
-            if (ptr)
-            {
-                ptr->~T();
-                new (ptr) T(o);
+                ::new (&data) T(*o);
+                alive = 1;
             }
             else
-                ptr = new T(o);
+            {
+                **this = *o;
+            }
+
             return *this;
         }
         Object &operator=(Object &&o)
         {
             if (&o == this)
                 return *this;
-            if (!o.ptr)
+
+            if (!alive)
             {
-                if (ptr) delete ptr;
-                return *this;
-            }
-            if (ptr)
-            {
-                ptr->~T();
-                new (ptr) T((T &&)o);
+                ::new (&data) T((T &&)*o);
+                alive = 1;
             }
             else
-                ptr = new T((T &&)o);
+            {
+                **this = (T &&)*o;
+            }
+
             return *this;
         }
         ~Object()
         {
-            if (ptr) delete ptr;
+            if (alive)
+                (*this)->~T();
         }
 
-              T *operator->()       {return ptr;}
-        const T *operator->() const {return ptr;}
+        operator       T *()       {assert(alive); return (      T *)&data;}
+        operator const T *() const {assert(alive); return (const T *)&data;}
 
-        operator       T *()       {return ptr;}
-        operator const T *() const {return ptr;}
+              T *operator->()       {assert(alive); return (      T *)&data;}
+        const T *operator->() const {assert(alive); return (const T *)&data;}
 
-        template <typename ...P> void alloc(P &&... p)
+        template <typename ...P> void create(P &&... p)
         {
-            if (ptr)
-            {
-                ptr->~T();
-                new (ptr) T((P &&) p...);
-            }
-            else
-                ptr = new T((P &&) p...);
+            destroy();
+            ::new (&data) T((P &&)p...);
         }
-        void free()
+        void destroy()
         {
-            if (ptr) delete ptr;
+            if (alive)
+                (*this)->~T();
+            alive = 0;
         }
     };
 
@@ -300,175 +144,13 @@ namespace Utils
 
     inline namespace SysInfo
     {
-        static constexpr bool char_is_signed = char(-1) < 0;
-        static constexpr bool big_endian = SDL_BYTEORDER == SDL_BIG_ENDIAN;
+        inline constexpr bool char_is_signed = std::numeric_limits<char>::is_signed;
+        inline constexpr bool big_endian = SDL_BYTEORDER == SDL_BIG_ENDIAN;
     }
 
-    template <typename T> class Ring
+    namespace Encodings
     {
-        Array<T> array;
-        int pos, size;
-      public:
-        Ring(int sz)
-        {
-            pos = 0;
-            size = sz;
-            array.alloc(size);
-        }
-        T *operator->() {return array + pos;}
-        const T *operator->() const {return array + pos;}
-        operator T *() {return array + pos;}
-        operator const T *() const {return array + pos;}
-        T &operator[](std::size_t n) {return array[(pos + n) % size];}
-        const T &operator[](std::size_t n) const {return array[(pos + n) % size];}
-
-        T &Rotate() // Rotates the ring and returns a referene to previous head.
-        {
-            T *ret = array + pos;
-            pos = (pos + 1) % size;
-            return *ret;
-        }
-
-        int Size() const
-        {
-            return size;
-        }
-    };
-
-    inline namespace Strings
-    {
-        namespace Internal
-        {
-            extern std::stringstream ss;
-            extern const std::stringstream::fmtflags stdfmt;
-        }
-
-        // Jo() resets stringstream flags before performing concatenation.
-        // Jo_() does not.
-
-        template <typename ...P> const char *Jo_(P &&... p)
-        {
-            static Ring<std::string> buf(32);
-            Internal::ss.clear();
-            Internal::ss.str("");
-            std::initializer_list<int>{(Internal::ss << p, 0)...};
-            *buf = Internal::ss.str();
-            return buf.Rotate().c_str();
-        }
-
-        template <typename ...P> const char *Jo(P &&... p)
-        {
-            Internal::ss.flags(Internal::stdfmt);
-            return Jo_((P &&) p...);
-        }
-
-        inline const char *FixEdges(const char *txt) // Removes non-printable chars and spaces from start and end of a string.
-        {
-            static Ring<std::string> buf(32);
-            while ((unsigned char)*txt <= ' ' || *txt == 127)
-            {
-                if (!*txt)
-                {
-                    *buf = "";
-                    return buf.Rotate().c_str();
-                }
-                txt++;
-            }
-
-            const char *end = txt;
-            while (*end)
-                end++;
-            do
-                end--;
-            while ((unsigned char)*end <= ' ' || *end == 127);
-            end++;
-
-            *buf = std::string(txt, end);
-            return buf.Rotate().c_str();
-        }
-
-        inline namespace UTF8
-        {
-            inline bool u8firstbyte(const char *ptr) // Check if a pointed byte is a first byte of a symbol.
-            {
-                return !(*ptr & 0x80) || (*ptr & 0xc0) == 0xc0;
-            }
-
-            inline std::size_t u8strlen(const char *ptr)
-            {
-                std::size_t ret = 0;
-                while (*ptr)
-                {
-                    if (u8firstbyte(ptr))
-                        ret++;
-                    ptr++;
-                }
-                return ret;
-            }
-
-            inline const char *u8next(const char *ptr)
-            {
-                while (*ptr)
-                {
-                    ptr++;
-                    if (u8firstbyte(ptr))
-                        break;
-                }
-                return ptr;
-            }
-
-            constexpr uint16_t u8invalidchar = 0xffff;
-
-            inline uint16_t u8decode(const char *ptr, const char **next = 0) // 0xffff is returned if the value is out of range.
-            {
-                static constexpr uint8_t bits[5]{0b10000000,
-                                                 0b11000000,
-                                                 0b11100000,
-                                                 0b11110000,
-                                                 0b11111000};
-                static constexpr uint8_t inv_bits[5]{0b01111111,
-                                                     0b00111111,
-                                                     0b00011111,
-                                                     0b00001111,
-                                                     0b00000111};
-
-                if ((*ptr & bits[0]) == 0)
-                {
-                    if (next) *next = ptr + 1;
-                    return *ptr & inv_bits[0];
-                }
-
-                uint16_t ret;
-                for (int i = 1; i < 4; i++)
-                {
-                    if ((*ptr & bits[i+1]) == bits[i])
-                    {
-                        ret = *ptr & inv_bits[i+1];
-                        for (int j = 0; j < i; j++)
-                        {
-                            ptr++;
-                            if (!*ptr)
-                            {
-                                if (next) *next = ptr;
-                                return u8invalidchar;
-                            }
-                            ret = (ret << 6) | (*ptr & inv_bits[1]);
-                        }
-                        if (next) *next = ptr + 1;
-                        return ret;
-                    }
-                }
-
-                if (next) *next = u8next(ptr);
-
-                return u8invalidchar;
-            }
-        }
-
-        namespace Encodings
-        {
-            const uint16_t (&cp1251())[256];
-        }
+        const uint16_t (&cp1251())[256];
     }
 
     template <typename ID = uint32_t, typename Index = ID> class PoolManager
@@ -477,8 +159,8 @@ namespace Utils
         static_assert(std::is_integral<ID>::value && std::is_integral<Index>::value, "Integral types must be used.");
 
         Index size, pos;
-        Utils::Array<ID> pool;
-        Utils::Array<Index> locs;
+        std::vector<ID> pool;
+        std::vector<Index> locs;
 
         PoolManager(const PoolManager &) = delete;
         PoolManager(PoolManager &&) = delete;
@@ -495,12 +177,12 @@ namespace Utils
         void Resize(Index pool_size)
         {
             if ((unsigned long long)pool_size > ipow<unsigned long long>(2, sizeof (Index) * 8))
-                Sys::Error(Jo("Requested size (", pool_size, ") of a pool manager is larger than the pool type (", sizeof (Index)," bytes, ", ipow<unsigned long long>(2, sizeof (Index) * 8), " possible values) can support."));
+                Sys::Error(Str("Requested size (", pool_size, ") of a pool manager is larger than the pool type (", sizeof (Index)," bytes, ", ipow<unsigned long long>(2, sizeof (Index) * 8), " possible values) can support."));
 
             size = pool_size;
             pos = 0;
-            pool.alloc(size);
-            locs.alloc(size);
+            pool.resize(size);
+            locs.resize(size);
             for (Index i = 0; i < pool_size; i++)
                 pool[i] = locs[i] = (Index)i;
         }
@@ -538,11 +220,11 @@ namespace Utils
         {
             return pos;
         }
-        const ID *Pool() const // First CurrentSize() ids in it are allocated, next (MaxSize()-CurrentSize()) ids in it are free.
+        const std::vector<ID> &Pool() const // First CurrentSize() ids in it are allocated, next (MaxSize()-CurrentSize()) ids in it are free.
         {
             return pool;
         }
-        const Index *Indexes() const // Use Indexes()[id] to get a position of id inside of the Pool(). 0 <= id < MaxSize().
+        const std::vector<Index> &Indexes() const // Use Indexes()[id] to get a position of id inside of the Pool(). 0 <= id < MaxSize().
         {
             return locs;
         }
@@ -640,23 +322,23 @@ namespace Utils
         {
             Close();
             name = "Memory location at ";
-            name += Jo("0x", std::hex, std::setw(2 * sizeof (void *)), std::setfill('0'), (std::uintptr_t)mem);
-            name += Jo(" of size ", size, " opened for reading/writing");
+            name += Str("0x", std::hex, std::setw(2 * sizeof (void *)), std::setfill('0'), (std::uintptr_t)mem);
+            name += Str(" of size ", size, " opened for reading/writing");
             rwops = SDL_RWFromMem(mem, size);
             if (!rwops)
-                Exceptions::IO::CantOpen(name.c_str(), FixEdges(SDL_GetError()));
+                Exceptions::IO::CantOpen(name, SDL_GetError());
         }
         void OpenConstMemory(const void *mem, int size)
         {
             Close();
             name = "Memory location at ";
-            name += Jo("0x", std::hex, std::setw(2 * sizeof (void *)), std::setfill('0'), (std::uintptr_t)mem);
-            name += Jo(" of size ", size, " opened for reading");
+            name += Str("0x", std::hex, std::setw(2 * sizeof (void *)), std::setfill('0'), (std::uintptr_t)mem);
+            name += Str(" of size ", size, " opened for reading");
             rwops = SDL_RWFromConstMem(mem, size);
             if (!rwops)
-                Exceptions::IO::CantOpen(name.c_str(), FixEdges(SDL_GetError()));
+                Exceptions::IO::CantOpen(name, SDL_GetError());
         }
-        void OpenFile(const char *fname, Type type, Mode mode)
+        void OpenFile(std::string fname, Type type, Mode mode)
         {
             #if OnWindows
 
@@ -799,21 +481,21 @@ namespace Utils
             int mode_id = int(mode)%3;
             char mode_ch = "rwa"[mode_id];
             const char *mode_names[] {"reading","writing","appending"};
-            name = Jo("File \"", fname, "\" opened for ", mode_names[mode_id], (bin ? " binary" : " text"), (plus ? " extended." : "."));
+            name = Str("File \"", fname, "\" opened for ", mode_names[mode_id], (bin ? " binary" : " text"), (plus ? " extended." : "."));
             char m[4]{mode_ch,
                       (plus || bin ? (plus ? '+' : 'b') : '\0'),
                       (plus && bin ? 'b' : '\0'),
                       '\0'};
-            rwops = SDL_RWFromFile(fname, m);
+            rwops = SDL_RWFromFile(fname.c_str(), m);
             if (!rwops)
-                Exceptions::IO::CantOpen(name.c_str(), FixEdges(SDL_GetError()));
+                Exceptions::IO::CantOpen(name, SDL_GetError());
         }
 
-        void OpenTextFile(const char *name, Mode mode)
+        void OpenTextFile(std::string name, Mode mode)
         {
             OpenFile(name, Type::text, mode);
         }
-        void OpenBinaryFile(const char *name, Mode mode)
+        void OpenBinaryFile(std::string name, Mode mode)
         {
             OpenFile(name, Type::binary, mode);
         }
@@ -830,17 +512,17 @@ namespace Utils
             ret.OpenConstMemory(mem, size);
             return (IO &&)ret;
         }
-        static IO FromFile(const char *name, Type type, Mode mode)
+        static IO FromFile(std::string name, Type type, Mode mode)
         {
             IO ret;
             ret.OpenFile(name, type, mode);
             return (IO &&)ret;
         }
-        static IO FromTextFile(const char *name, Mode mode)
+        static IO FromTextFile(std::string name, Mode mode)
         {
             return FromFile(name, Type::text, mode);
         }
-        static IO FromBinaryFile(const char *name, Mode mode)
+        static IO FromBinaryFile(std::string name, Mode mode)
         {
             return FromFile(name, Type::binary, mode);
         }
@@ -895,12 +577,12 @@ namespace Utils
         template <typename T> void ReadEx(T *dst, std::size_t count) const
         {
             if (Read<T>(dst, count) != count)
-                Exceptions::IO::BadOperation(name.c_str(), "Reading", FixEdges(SDL_GetError()));
+                Exceptions::IO::BadOperation(name, "Reading", SDL_GetError());
         }
         template <typename T> void WriteEx(const T *src, std::size_t count) const
         {
             if (Write<T>(src, count) != count)
-                Exceptions::IO::BadOperation(name.c_str(), "Writing", FixEdges(SDL_GetError()));
+                Exceptions::IO::BadOperation(name, "Writing", SDL_GetError());
         }
 
         // For singular objects.
@@ -940,7 +622,7 @@ namespace Utils
         }
 
         const SDL_RWops *RWops() const {return rwops;}
-        const char *Name() const {return name.c_str();}
+        std::string Name() const {return name;}
         bool Opened() const {return rwops;}
         IO &&Move() {return (IO &&)*this;}
 
@@ -980,28 +662,28 @@ namespace Utils
     struct TextInput : IO
     {
         TextInput() {}
-        TextInput(const char *fname) : IO(IO::FromTextFile(fname, IO::Mode::read)) {}
+        TextInput(std::string fname) : IO(IO::FromTextFile(fname, IO::Mode::read)) {}
         TextInput(const void *mem, int size) : IO(IO::FromConstMemory(mem, size)) {}
         TextInput &&Move() {return (TextInput &&)*this;}
     };
     struct BinaryInput : IO
     {
         BinaryInput() {}
-        BinaryInput(const char *fname) : IO(IO::FromBinaryFile(fname, IO::Mode::read)) {}
+        BinaryInput(std::string fname) : IO(IO::FromBinaryFile(fname, IO::Mode::read)) {}
         BinaryInput(const void *mem, int size) : IO(IO::FromConstMemory(mem, size)) {}
         BinaryInput &&Move() {return (BinaryInput &&)*this;}
     };
     struct TextOutput : IO
     {
         TextOutput() {}
-        TextOutput(const char *fname) : IO(IO::FromTextFile(fname, IO::Mode::write)) {}
+        TextOutput(std::string fname) : IO(IO::FromTextFile(fname, IO::Mode::write)) {}
         TextOutput(void *mem, int size) : IO(IO::FromMemory(mem, size)) {}
         TextOutput &&Move() {return (TextOutput &&)*this;}
     };
     struct BinaryOutput : IO
     {
         BinaryOutput() {}
-        BinaryOutput(const char *fname) : IO(IO::FromBinaryFile(fname, IO::Mode::write)) {}
+        BinaryOutput(std::string fname) : IO(IO::FromBinaryFile(fname, IO::Mode::write)) {}
         BinaryOutput(void *mem, int size) : IO(IO::FromMemory(mem, size)) {}
         BinaryOutput &&Move() {return (BinaryOutput &&)*this;}
     };
@@ -1089,10 +771,6 @@ namespace Utils
     }
 }
 
-using Utils::Jo;
-using Utils::Jo_;
-using Utils::FixEdges;
-using namespace Utils::Strings::UTF8;
 using namespace Utils::Proxy;
 
 #endif

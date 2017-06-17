@@ -142,9 +142,9 @@ namespace Graphics
 
     void ForceErrorCheck();
 
-    inline bool ExtensionSupported(const char *name)
+    inline bool ExtensionSupported(std::string name)
     {
-        return (bool)SDL_GL_ExtensionSupported(name);
+        return (bool)SDL_GL_ExtensionSupported(name.c_str());
     }
 
     inline namespace Templates
@@ -317,7 +317,7 @@ namespace Graphics
             static unsigned int id = 0;
             glGenBuffers(1, &vbo);
             if (!vbo)
-                Sys::Error(Jo("glGenBuffers() failed for VertexArray #", id, '!'));
+                Sys::Error(Str("glGenBuffers() failed for VertexArray #", id, '!'));
             id++;
         }
         VertexArray(ArrayView<T> src, StorageType acc = StorageType::draw_static) : VertexArray() // (`data` may be null) Binds VBO after construction.
@@ -467,7 +467,7 @@ namespace Graphics
         VertexArray<L> vao;
         uint32_t size;
         uint32_t pos;
-        Utils::Array<L> arr;
+        std::vector<L> arr;
 
       public:
         RenderArray(uint32_t l, StorageType acc = StorageType::draw_dynamic) : vao({(const uint8_t *)0, sizeof (L) * l}, acc)
@@ -476,7 +476,7 @@ namespace Graphics
                 Sys::Error("Invalid rendering array size.");
             size = l;
             pos = 0;
-            arr.alloc(l);
+            arr.resize(l);
         }
         RenderArray(const RenderArray &) = delete;
         RenderArray(RenderArray &&) = delete;
@@ -508,7 +508,7 @@ namespace Graphics
         L *Add(uint32_t amount)
         {
             if (pos + amount > size)
-                Exceptions::Graphics::RenderArrayOverflow(Jo(size));
+                Exceptions::Graphics::RenderArrayOverflow(Str(size));
             L *ret = arr + pos;
             pos += amount;
             return ret;
@@ -550,7 +550,7 @@ namespace Graphics
 
         void Send() // You shall not call Push*() between Send() and Draw*()
         {
-            vao.Set({arr, pos}, 0);
+            vao.Set({arr.data(), pos}, 0);
         }
         void Clear()
         {
@@ -601,34 +601,38 @@ namespace Graphics
             if (RenderArray<L>::pos + primitives * Dim > RenderArray<L>::size)
             {
                 if (primitives * Dim > RenderArray<L>::size)
-                    Exceptions::Graphics::RenderArrayOverflow(Jo(RenderArray<L>::size));
+                    Exceptions::Graphics::RenderArrayOverflow(Str(RenderArray<L>::size));
                 Flush();
             }
-            L *ret = RenderArray<L>::arr + RenderArray<L>::pos;
+            L *ret = RenderArray<L>::arr.data() + RenderArray<L>::pos;
             RenderArray<L>::pos += primitives * Dim;
             return ret;
         }
 
-        std::enable_if_t<Dim == 1, void> Insert(const L &a)
+        void Insert(const L &a)
         {
+            static_assert(Dim == 1, "This function only works for point queues.");
             L *dst = Add(1);
             dst[0] = a;
         }
-        std::enable_if_t<Dim == 2, void> Insert(const L &a, const L &b)
+        void Insert(const L &a, const L &b)
         {
+            static_assert(Dim == 2, "This function only works for line queues.");
             L *dst = Add(2);
             dst[0] = a;
             dst[1] = b;
         }
-        std::enable_if_t<Dim == 3, void> Insert(const L &a, const L &b, const L &c)
+        void Insert(const L &a, const L &b, const L &c)
         {
+            static_assert(Dim == 3, "This function only works for triangle queues.");
             L *dst = Add(3);
             dst[0] = a;
             dst[1] = b;
             dst[2] = c;
         }
-        std::enable_if_t<Dim == 3, void> Insert(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
+        void Insert(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
         {
+            static_assert(Dim == 3, "This function only works for triangle queues.");
             L *dst = Add(6);
             dst[0] = a;
             dst[1] = b;
@@ -649,7 +653,7 @@ namespace Graphics
 
     class ImageData
     {
-        Utils::Array<u8vec4> data;
+        std::vector<u8vec4> data;
         ivec2 size;
       public:
         void LoadTGA(Utils::BinaryInput io, Mirror mirror = Mirror::no);
@@ -706,17 +710,17 @@ namespace Graphics
             Clear();
 
             size = new_size;
-            data.alloc(size.product());
+            data.resize(size.product());
         }
         void LoadFromMem(ivec2 new_size, uint8_t *mem)
         {
             Empty(new_size);
-            std::memcpy(data, mem, ByteSize());
+            std::memcpy(data.data(), mem, ByteSize());
         }
         void Clear()
         {
             size = {0,0};
-            data.free();
+            data.clear();
         }
         void Fill(u8vec4 color)
         {
@@ -725,11 +729,11 @@ namespace Graphics
         }
         void *Data()
         {
-            return data;
+            return data.data();
         }
         const void *Data() const
         {
-            return data;
+            return data.data();
         }
         ivec2 Size() const
         {
@@ -754,7 +758,7 @@ namespace Graphics
         ImageData(uvec2 new_size)
         {
             size = new_size;
-            data.alloc(size.product());
+            data.resize(size.product());
         }
         ~ImageData()
         {
@@ -780,13 +784,13 @@ namespace Graphics
         static constexpr int sub_buffer_count = 1024;
         static constexpr int sub_buffer_size = total_glyph_count / sub_buffer_count;
 
-        Utils::Buffer<Utils::Buffer<Glyph>> glyph_map;
+        std::vector<std::vector<Glyph>> glyph_map;
         int height, ascent, descent, line_skip;
         Font *font_ptr;
 
         void Alloc(Font *font, int he, int asc, int lskip)
         {
-            glyph_map.alloc(sub_buffer_count);
+            glyph_map.resize(sub_buffer_count);
             font_ptr = font;
             height = he;
             ascent = asc;
@@ -797,9 +801,9 @@ namespace Graphics
         void AddGlyph(uint16_t glyph, ivec2 pos, ivec2 size, ivec2 offset, int advance)
         {
             int sub_buffer = glyph / sub_buffer_size;
-            if (!glyph_map[sub_buffer])
+            if (!glyph_map[sub_buffer].size())
             {
-                glyph_map[sub_buffer].alloc(sub_buffer_size);
+                glyph_map[sub_buffer].resize(sub_buffer_size);
                 for (int i = 0; i < sub_buffer_size; i++)
                     glyph_map[sub_buffer][i] = Glyph{};
             }
@@ -811,7 +815,7 @@ namespace Graphics
 
         FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc, int adv, int lskip) // Computes font data for monospaced font placed directly on the texture.
         {
-            glyph_map.alloc(sub_buffer_count);
+            glyph_map.resize(sub_buffer_count);
             font_ptr = 0;
             height = glyph_sz.y;
             ascent = asc;
@@ -834,31 +838,31 @@ namespace Graphics
 
         bool HasGlyph(uint16_t glyph) const
         {
-            if (glyph_map[glyph / sub_buffer_size] == 0)
+            if (glyph_map[glyph / sub_buffer_size].size() == 0)
                 return 0;
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].exists;
         }
         ivec2 Pos(uint16_t glyph) const
         {
-            if (glyph_map[glyph / sub_buffer_size] == 0)
+            if (glyph_map[glyph / sub_buffer_size].size() == 0)
                 return {0,0};
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].pos;
         }
         ivec2 Size(uint16_t glyph) const
         {
-            if (glyph_map[glyph / sub_buffer_size] == 0)
+            if (glyph_map[glyph / sub_buffer_size].size() == 0)
                 return {0,0};
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].size;
         }
         ivec2 Offset(uint16_t glyph) const
         {
-            if (glyph_map[glyph / sub_buffer_size] == 0)
+            if (glyph_map[glyph / sub_buffer_size].size() == 0)
                 return {0,0};
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].offset;
         }
         int Advance(uint16_t glyph) const // Horisontal offset to the next glyph.
         {
-            if (glyph_map[glyph / sub_buffer_size] == 0)
+            if (glyph_map[glyph / sub_buffer_size].size() == 0)
                 return 0;
             return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].advance;
         }
@@ -881,7 +885,7 @@ namespace Graphics
             stream = (Utils::BinaryInput &&) input;
             handle = TTF_OpenFontIndexRW((SDL_RWops *)stream.RWops(), 0, ptsize, index);
             if (!handle)
-                Exceptions::IO::CantParse(stream.Name(), Jo("SDL ttf plugin is unable to parse font: ", FixEdges(TTF_GetError())));
+                Exceptions::IO::CantParse(stream.Name(), Str("SDL ttf plugin is unable to parse font: ", TTF_GetError()));
         }
         void Close()
         {
@@ -1089,12 +1093,12 @@ namespace Graphics
             return TTF_GetFontKerningSizeGlyphs(handle, a, b);
         }
 
-        const char *Name() const
+        std::string Name() const
         {
             const char *ret = TTF_FontFaceFamilyName(handle);
             return ret ? ret : "";
         }
-        const char *StyleName() const
+        std::string StyleName() const
         {
             const char *ret = TTF_FontFaceStyleName(handle);
             return ret ? ret : "";
@@ -1173,7 +1177,7 @@ namespace Graphics
                 {
                     SDL_FreeSurface(surface);
                     SDL_FreeSurface(glyph_surface);
-                    Exceptions::Graphics::FontAtlasOverflow(Name(), Jo(dstsz+1));
+                    Exceptions::Graphics::FontAtlasOverflow(Name(), Str(dstsz+1));
                 }
 
                 font_data.AddGlyph(it, tex_pos, tex_sz, {minx, -maxy}, advance);
@@ -1183,7 +1187,7 @@ namespace Graphics
                 {
                     SDL_FreeSurface(surface);
                     SDL_FreeSurface(glyph_surface);
-                    Sys::Error(Jo("Can't blit glyph #", it, " for font ", Name(), '.'));
+                    Sys::Error(Str("Can't blit glyph #", it, " for font ", Name(), '.'));
                 }
                 if (outline)
                 {
@@ -1210,13 +1214,13 @@ namespace Graphics
         {
             std::size_t len = u8strlen(glyphs);
             std::cout << len;
-            Utils::Buffer<uint16_t> arr(len);
+            std::vector<uint16_t> arr(len);
             const char *ptr = glyphs;
             for (std::size_t i = 0; i < len; i++)
             {
                 arr[i] = u8decode(ptr, &ptr);
             }
-            RenderGlyphs(font_data, img, dst, dstsz, {arr, len}, outline, quality, color);
+            RenderGlyphs(font_data, img, dst, dstsz, {arr.data(), len}, outline, quality, color);
         }
     };
 
@@ -1394,7 +1398,7 @@ namespace Graphics
             Activate();
             size = data.Size();
             if (size.x != size.y)
-                Exceptions::Graphics::BadCubeMapImage(Jo(size));
+                Exceptions::Graphics::BadCubeMapImage(Str(size));
             glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
         }
         void SetData(Side side, int new_size, void *ptr = 0)
@@ -1421,9 +1425,9 @@ namespace Graphics
                 for (int i = 0; i < 6; i++)
                 {
                     if (i != 0) err += ", ";
-                    err += Jo("+-"[i%2], "xyz"[i/2], " = ", sides[i].Size());
+                    err += Str("+-"[i%2], "xyz"[i/2], " = ", sides[i].Size());
                 }
-                Exceptions::Graphics::BadCubeMapImage(err.c_str());
+                Exceptions::Graphics::BadCubeMapImage(err);
             }
             size = sides[0].Size();
             for (int i = 0; i < 6; i++)
@@ -1496,14 +1500,14 @@ namespace Graphics
 
     struct ShaderSource
     {
-        Utils::Array<const char *> attribs, uniforms;
-        const char *vertex, *fragment;
+        std::vector<std::string> attribs, uniforms;
+        std::string vertex, fragment;
     };
 
     class Shader
     {
         GLuint prog, vsh, fsh;
-        Utils::Array<GLint> uniform_locs;
+        std::vector<GLint> uniform_locs;
 
         static GLuint binding;
 
@@ -1512,7 +1516,7 @@ namespace Graphics
             return uniform_locs[n];
         }
       public:
-        Shader(const char *name, ShaderSource source); // Can throw ShaderCompilationError and ShaderLinkingError.
+        Shader(std::string name, ShaderSource source); // Can throw ShaderCompilationError and ShaderLinkingError.
 
         Shader(const Shader &) = delete;
         Shader(Shader &&) = delete;

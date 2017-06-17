@@ -70,7 +70,7 @@ namespace Audio
 
     class SoundData
     {
-        Utils::Array<uint8_t> data;
+        std::vector<uint8_t> data;
         uint32_t size; // Amount of samples.
         uint32_t freq;
         SoundFormat format;
@@ -145,25 +145,25 @@ namespace Audio
             Clear();
             size = new_size;
             format = new_format;
-            data.alloc(ByteSize());
+            data.resize(ByteSize());
         }
         void LoadFromMem(uint32_t new_size, SoundFormat new_format, uint8_t *mem)
         {
             Empty(new_size, new_format);
-            std::memcpy(data, mem, ByteSize());
+            std::memcpy(data.data(), mem, ByteSize());
         }
         void Clear()
         {
             size = 0;
-            data.free();
+            data.clear();
         }
         void *Data()
         {
-            return data;
+            return data.data();
         }
         const void *Data() const
         {
-            return data;
+            return data.data();
         }
         uint32_t Size() const // Amount of samples, not bytes.
         {
@@ -201,14 +201,14 @@ namespace Audio
         {
             return format == SoundFormat::mono16 || format == SoundFormat::stereo16;
         }
-        uint8_t &AtMono8   (uint32_t pos) {return *(uint8_t *)(data + pos);}
-        int16_t &AtMono16  (uint32_t pos) {return *(int16_t *)(data + pos*2);}
-        u8vec2  &AtStereo8 (uint32_t pos) {return *(u8vec2  *)(data + pos*2);}
-        i16vec2 &AtStereo16(uint32_t pos) {return *(i16vec2 *)(data + pos*4);}
-        uint8_t AtMono8   (uint32_t pos) const {return *(uint8_t *)(data + pos);}
-        int16_t AtMono16  (uint32_t pos) const {return *(int16_t *)(data + pos*2);}
-        u8vec2  AtStereo8 (uint32_t pos) const {return *(u8vec2  *)(data + pos*2);}
-        i16vec2 AtStereo16(uint32_t pos) const {return *(i16vec2 *)(data + pos*4);}
+        uint8_t &AtMono8   (uint32_t pos) {return *(uint8_t *)(&data[pos  ]);}
+        int16_t &AtMono16  (uint32_t pos) {return *(int16_t *)(&data[pos*2]);}
+        u8vec2  &AtStereo8 (uint32_t pos) {return *(u8vec2  *)(&data[pos*2]);}
+        i16vec2 &AtStereo16(uint32_t pos) {return *(i16vec2 *)(&data[pos*4]);}
+        uint8_t AtMono8   (uint32_t pos) const {return *(uint8_t *)(&data[pos  ]);}
+        int16_t AtMono16  (uint32_t pos) const {return *(int16_t *)(&data[pos*2]);}
+        u8vec2  AtStereo8 (uint32_t pos) const {return *(u8vec2  *)(&data[pos*2]);}
+        i16vec2 AtStereo16(uint32_t pos) const {return *(i16vec2 *)(&data[pos*4]);}
         SoundData()
         {
             size = 0;
@@ -220,9 +220,9 @@ namespace Audio
             size = samples;
             freq = frequency;
             format = data_format;
-            data.alloc(ByteSize());
+            data.resize(ByteSize());
             if (from)
-                std::memcpy(data, from, ByteSize());
+                std::memcpy(data.data(), from, ByteSize());
         }
         ~SoundData()
         {

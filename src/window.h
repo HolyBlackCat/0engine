@@ -19,7 +19,7 @@ namespace Window
     ivec2 Size();
     bool Maximized();
     void Fullscreen(bool on);
-    void SetTitle(const char *txt);
+    void SetTitle(std::string txt);
     void Resize(ivec2 new_size);
     ivec2 DisplaySize(int num);
     ivec2 CurrentDisplaySize();
@@ -43,7 +43,7 @@ namespace Window
 
     namespace Init
     {
-        void Name(const char *name);
+        void Name(std::string name);
         void Size(ivec2 sz);
         void MinimalSize(ivec2 sz); // Set to [0,0] to disable. Has no effect on mobile.
         void Resizable(bool r);

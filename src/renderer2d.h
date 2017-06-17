@@ -15,9 +15,9 @@ class Renderer2D
     ivec2 min_pos, max_pos;
     int font_index = 0;
     bool kerning = 1;
-    Utils::Array<Graphics::Texture>  textures;
-    Utils::Array<Graphics::Font>     fonts;
-    Utils::Array<Graphics::FontData> fonts_data;
+    std::vector<Graphics::Texture>  textures;
+    std::vector<Graphics::Font>     fonts;
+    std::vector<Graphics::FontData> fonts_data;
     Utils::Object<Graphics::Shader>  primary_shader;
     Utils::Object<Graphics::RenderQueue<VertexFormat,3>> render_queue;
 
@@ -52,16 +52,15 @@ class Renderer2D
         int row_len, asc = (glyph_sz.y+1)/2, adv = glyph_sz.x, lskip = glyph_sz.y;
     };
 
-    Renderer2D(Utils::ArrayView<TextureInfo> textures_info, Utils::ArrayView<FontInfo> fonts_info, Utils::Array<BitmapFontInfo> bitmap_fonts_info)
+    Renderer2D(Utils::ArrayView<TextureInfo> textures_info, Utils::ArrayView<FontInfo> fonts_info, Utils::ArrayView<BitmapFontInfo> bitmap_fonts_info) : textures(textures_info.size())
     {
-        fonts.alloc(fonts_info.size());
+        fonts.resize(fonts_info.size());
         for (std::size_t i = 0; i < fonts_info.size(); i++)
         {
             fonts[i].Open((Utils::BinaryInput &&) fonts_info[i].file, fonts_info[i].ptsize, fonts_info[i].index);
         }
 
-        textures.alloc(textures_info.size());
-        fonts_data.alloc(fonts_info.size() + bitmap_fonts_info.size());
+        fonts_data.resize(fonts_info.size() + bitmap_fonts_info.size());
         for (std::size_t i = 0; i < textures_info.size(); i++)
         {
             Graphics::ImageData img = Graphics::ImageData::FromPNG((Utils::BinaryInput &&) textures_info[i].file);
@@ -86,7 +85,7 @@ class Renderer2D
                                                                    bitmap_fonts_info[i].lskip);
         }
 
-        primary_shader.alloc("Renderer2D primary shader", Graphics::ShaderSource
+        primary_shader.create("Renderer2D primary shader", Graphics::ShaderSource
 {{"a_pos","a_color","a_texpos","a_factors"},
  {"u_matrix","u_texture","u_texsize"},
 ForWindows("#version 330 compatibility")
@@ -127,7 +126,7 @@ void main()
         if (textures.size())
             UseTexture(0);
 
-        render_queue.alloc(0x10000);
+        render_queue.create(0x10000);
     }
 
     ~Renderer2D() {}

@@ -47,12 +47,12 @@ namespace Sys
         static bool no_cleanup = OnWindows || OnAndroid;
         static int extra_sdl_init_flags = 0;
 
-        void ApplicationName(const char *name)
+        void ApplicationName(std::string name)
         {
             app_name = name;
         }
 
-        void MessageNames(const char *info, const char *warning, const char *error)
+        void MessageNames(std::string info, std::string warning, std::string error)
         {
             msg_title_info = info;
             msg_title_warning = warning;
@@ -84,13 +84,13 @@ namespace Sys
             case ErrorType::sig_ill:   Error("Signal: Illegal instruction. (Invalid machine code.)"); return;
             case ErrorType::sig_fpe:   Error("Signal: Floating point exception. (Invalid arithmetic operation.)"); return;
             case ErrorType::sig_segv:  Error("Signal: Segmentation fault. (Invalid memory access.)"); return;
-            case ErrorType::terminate: try {throw;} catch (std::exception &e) {Error(Jo("Exception: ", e.what()));}
-                                                    catch (const char *e)     {Error(Jo("Exception: \"", e, "\"."));}
-                                                    catch (...)               {Error(Jo("Exception: Unknown."));}
+            case ErrorType::terminate: try {throw;} catch (std::exception &e) {Error(Str("Exception: ", e.what()));}
+                                                    catch (const char *e)     {Error(Str("Exception: \"", e, "\"."));}
+                                                    catch (...)               {Error(Str("Exception: Unknown."));}
                                                     Error("The terminate function was called but no unhandled exception was found."); return;
-            case ErrorType::unexpected: try {throw;} catch (std::exception &e) {Error(Jo("Unexpected exception: ", e.what()));}
-                                                     catch (const char *e)     {Error(Jo("Unexpected exception: \"", e, "\"."));}
-                                                     catch (...)               {Error(Jo("Unexpected exception: Unknown."));}
+            case ErrorType::unexpected: try {throw;} catch (std::exception &e) {Error(Str("Unexpected exception: ", e.what()));}
+                                                     catch (const char *e)     {Error(Str("Unexpected exception: \"", e, "\"."));}
+                                                     catch (...)               {Error(Str("Unexpected exception: Unknown."));}
                                                      Error("The unexpected exception handler was called but no unhandled exception was found."); return;
             default: Error("Unknown. (An unknown error was passed to error handler.)"); return;
         }
@@ -133,23 +133,23 @@ namespace Sys
         }
     }
 
-    void Message(const char *title, const char *text, MessageType type)
+    void Message(std::string title, std::string text, MessageType type)
     {
         int arr[3] {SDL_MESSAGEBOX_INFORMATION, SDL_MESSAGEBOX_WARNING, SDL_MESSAGEBOX_ERROR};
-        SDL_ShowSimpleMessageBox(arr[(int)type], title, text, 0);
+        SDL_ShowSimpleMessageBox(arr[(int)type], title.c_str(), text.c_str(), 0);
     }
-    void Message(const char *text, MessageType type)
+    void Message(std::string text, MessageType type)
     {
         switch (type)
         {
           case MessageType::info:
-            Message(Config::msg_title_info[0] ? Config::msg_title_info.c_str() : Config::app_name.c_str(), text, type);
+            Message(Config::msg_title_info[0] ? Config::msg_title_info.c_str() : Config::app_name.c_str(), text.c_str(), type);
             break;
           case MessageType::warning:
-            Message(Config::msg_title_warning[0] ? Config::msg_title_warning.c_str() : Jo(Config::app_name, " - Warning"), text, type);
+            Message(Config::msg_title_warning[0] ? Config::msg_title_warning.c_str() : Str(Config::app_name, " - Warning"), text.c_str(), type);
             break;
           case MessageType::error:
-            Message(Config::msg_title_error[0] ? Config::msg_title_error.c_str() : Jo(Config::app_name, " - Error"), text, type);
+            Message(Config::msg_title_error[0] ? Config::msg_title_error.c_str() : Str(Config::app_name, " - Error"), text.c_str(), type);
             break;
         }
     }
@@ -218,7 +218,7 @@ namespace Sys
         exit_request_by_user = ExitRequestType::self;
     }
 
-    [[noreturn]] void Error(const char *text)
+    [[noreturn]] void Error(std::string text)
     {
         // Recursion breaker.
         static bool started = 0;
@@ -233,7 +233,7 @@ namespace Sys
         std::signal(SIGINT,  SIG_DFL);
         std::signal(SIGTERM, SIG_DFL);
 
-        if (text)
+        if (text[0])
         {
             std::string locs_list;
 
@@ -252,7 +252,7 @@ namespace Sys
                 }
             }
 
-            Message(Jo("Error: ", text, '\n', locs_list), MessageType::error);
+            Message(Str("Error: ", text, '\n', locs_list), MessageType::error);
         }
 
         Exit();
@@ -282,11 +282,11 @@ namespace Sys
             SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
             if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | Config::extra_sdl_init_flags)) // Returns non-zero int on failure.
             {
-                const char *p = SDL_GetError();
-                if (!p || !*p)
-                    Error("SDL init failed.");
+                std::string s = SDL_GetError();
+                if (s[0])
+                    Error(Str("SDL init failed. Error message: `", s, "`."));
                 else
-                    Error(Jo("SDL init failed. Error message: `", p, "`."));
+                    Error("SDL init failed.");
             }
             sdl_init_ok = 1;
         }

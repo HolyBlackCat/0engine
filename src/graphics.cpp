@@ -30,10 +30,10 @@ namespace Graphics
         texture_pool_cubemap.Resize(Init::max_texture_count);
         sdl_image_init_ok = (IMG_Init(IMG_INIT_PNG) == IMG_INIT_PNG);
         if (!sdl_image_init_ok)
-            Sys::Error(Jo("SDL image plugin init failed. Error message: `", IMG_GetError(), "`."));
+            Sys::Error(Str("SDL image plugin init failed. Error message: `", IMG_GetError(), "`."));
         sdl_ttf_init_ok = TTF_Init() == 0;
         if (!sdl_ttf_init_ok)
-            Sys::Error(Jo("SDL ttf plugin init failed. Error message: `", TTF_GetError(), "`."));
+            Sys::Error(Str("SDL ttf plugin init failed. Error message: `", TTF_GetError(), "`."));
     }
     void Cleanup()
     {
@@ -102,7 +102,7 @@ namespace Graphics
         void Enable(unsigned int num)
         {
             if (num >= 64)
-                Sys::Error(Jo("Attribute number is out of range. Must be not larger than 63, but ", num, " is used."));
+                Sys::Error(Str("Attribute number is out of range. Must be not larger than 63, but ", num, " is used."));
 
             if (((status >> num) & 1) == 1)
                 return;
@@ -112,7 +112,7 @@ namespace Graphics
         void Disable(unsigned int num)
         {
             if (num >= 64)
-                Sys::Error(Jo("Attribute number is out of range. Must be not larger than 63, but ", num, " is used."));
+                Sys::Error(Str("Attribute number is out of range. Must be not larger than 63, but ", num, " is used."));
 
             if (((status >> num) & 1) == 0)
                 return;
@@ -142,7 +142,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
+        auto ParseError = [&](std::string txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         uint8_t id_field_len, tmp;
 
@@ -171,7 +171,7 @@ namespace Graphics
 
         io.SeekRel(id_field_len);
 
-        data.alloc(size.product());
+        data.resize(size.product());
         int x, y, xend, yend, xstep, ystep, xbegin;
 
         if (!swap_x)
@@ -278,7 +278,7 @@ namespace Graphics
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
+        auto ParseError = [&](std::string txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         unsigned char tmp;
 
@@ -296,11 +296,11 @@ namespace Graphics
         io.ReadEx(tmp); len |= tmp << 8;
         io.ReadEx(tmp); len |= tmp << 16;
         io.ReadEx(tmp); len |= tmp << 24;
-        Utils::Array<char> buf(len);
-        data.alloc(size.product());
-        io.ReadEx((char *)buf, len);
+        std::vector<char> buf(len);
+        data.resize(size.product());
+        io.ReadEx(buf.data(), len);
         uLongf dstlen = ByteSize();
-        uncompress((unsigned char *)&*data, &dstlen, (unsigned char *)(char *)buf, len);
+        uncompress((unsigned char *)data.data(), &dstlen, (unsigned char *)buf.data(), len);
     }
 
     void ImageData::SaveCompressed(Utils::BinaryOutput io)
@@ -317,20 +317,20 @@ namespace Graphics
         Byte(size.y & 0xff);
         Byte((size.y >> 8) & 0xff);
         uLongf len = compressBound(ByteSize());
-        Utils::Array<char> buf(len);
-        compress((unsigned char *)(char *)buf, &len, (unsigned char *)&*data, ByteSize());
+        std::vector<char> buf(len);
+        compress((unsigned char *)buf.data(), &len, (unsigned char *)data.data(), ByteSize());
         Uint32(len);
-        io.WriteEx((char *)buf, len);
+        io.WriteEx(buf.data(), len);
     }
 
     void ImageData::LoadPNG(Utils::BinaryInput io, Mirror mirror)
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
+        auto ParseError = [&](std::string txt){Exceptions::IO::CantParse(io.Name(), txt);};
         SDL_Surface *source = IMG_LoadPNG_RW((SDL_RWops *)io.RWops());
         if (!source)
-            ParseError(FixEdges(IMG_GetError()));
+            ParseError(NormalizeStr(IMG_GetError()));
         SDL_Surface *converted = SDL_ConvertSurfaceFormat(source, Utils::big_endian ? SDL_PIXELFORMAT_RGBA8888 : SDL_PIXELFORMAT_ABGR8888, 0);
         SDL_FreeSurface(source);
         if (!converted)
@@ -339,7 +339,7 @@ namespace Graphics
         size.x = converted->w;
         size.y = converted->h;
 
-        data.alloc(size.product());
+        data.resize(size.product());
 
         int x, y, xend, yend, xstep, ystep, xbegin;
 
@@ -388,12 +388,12 @@ namespace Graphics
 
     void ImageData::SavePNG(Utils::BinaryOutput io, Mirror mirror)
     {
-        Utils::Array<uint32_t> surface_buf(size.product()); // Surprisingly, SDL_CreateRGBSurfaceFrom does not copy data from passed buffer. It uses it for the surface instead.
+        std::vector<uint32_t> surface_buf(size.product()); // Surprisingly, SDL_CreateRGBSurfaceFrom does not copy data from passed buffer. It uses it for the surface instead.
         SDL_Surface *surface;
         if (Utils::big_endian)
-            surface = SDL_CreateRGBSurfaceFrom(surface_buf, size.x, size.y, 32, size.x*4, 0xff << 8*3, 0xff << 8*2, 0xff << 8*1, 0xff << 8*0);
+            surface = SDL_CreateRGBSurfaceFrom(surface_buf.data(), size.x, size.y, 32, size.x*4, 0xff << 8*3, 0xff << 8*2, 0xff << 8*1, 0xff << 8*0);
         else
-            surface = SDL_CreateRGBSurfaceFrom(surface_buf, size.x, size.y, 32, size.x*4, 0xff << 8*0, 0xff << 8*1, 0xff << 8*2, 0xff << 8*3);
+            surface = SDL_CreateRGBSurfaceFrom(surface_buf.data(), size.x, size.y, 32, size.x*4, 0xff << 8*0, 0xff << 8*1, 0xff << 8*2, 0xff << 8*3);
         if (!surface)
             Sys::Error("Can't create SDL surface");
 
@@ -456,7 +456,7 @@ namespace Graphics
     }
 
 
-    Shader::Shader(const char *name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError. The name is not saved.
+    Shader::Shader(std::string name, ShaderSource source) // Can throw ShaderCompilationError and ShaderLinkingError. The name is not saved.
     {
         prog = glCreateProgram();
         vsh = glCreateShader(GL_VERTEX_SHADER);
@@ -469,8 +469,10 @@ namespace Graphics
 
         glAttachShader(prog, vsh);
         glAttachShader(prog, fsh);
-        glShaderSource(vsh, 1, &source.vertex, 0);
-        glShaderSource(fsh, 1, &source.fragment, 0);
+        const char *src_vertex = source.vertex.c_str();
+        const char *src_fragment = source.fragment.c_str();
+        glShaderSource(vsh, 1, &src_vertex, 0);
+        glShaderSource(fsh, 1, &src_fragment, 0);
         glCompileShader(vsh);
         glCompileShader(fsh);
 
@@ -486,29 +488,26 @@ namespace Graphics
             glGetShaderiv(fsh, GL_INFO_LOG_LENGTH, &flen);
             if (vlen)
             {
-                Utils::Array<char> vlog(vlen);
-                glGetShaderInfoLog(vsh, vlen, 0, vlog);
-                vlog_str = vlog;
+                vlog_str.resize(vlen);
+                glGetShaderInfoLog(vsh, vlen, 0, vlog_str.data());
             }
             if (flen)
             {
-                Utils::Array<char> flog(flen);
-                glGetShaderInfoLog(fsh, flen, 0, flog);
-                flog_str = flog;
+                flog_str.resize(flen);
+                glGetShaderInfoLog(fsh, flen, 0, flog_str.data());
             }
 
             Exceptions::Graphics::ShaderCompilationError(name,
-                                                                   (vstat == GL_TRUE ? "OK" : "NOT OK"),
-                                                                   (fstat == GL_TRUE ? "OK" : "NOT OK"),
-                                                                   ('\n'+(std::string)FixEdges(vlog_str.c_str())).c_str(),
-                                                                   ('\n'+(std::string)FixEdges(flog_str.c_str())).c_str());
+                                                         (vstat == GL_TRUE ? "OK" : "NOT OK"),
+                                                         (fstat == GL_TRUE ? "OK" : "NOT OK"),
+                                                         '\n'+NormalizeStr(vlog_str),
+                                                         '\n'+NormalizeStr(flog_str));
         }
 
         int loc = 0;
-        for (const char *it : source.attribs)
+        for (const auto &it : source.attribs)
         {
-            if (it)
-                glBindAttribLocation(prog, loc++, it);
+            glBindAttribLocation(prog, loc++, it.c_str());
         }
         glLinkProgram(prog);
         glGetProgramiv(prog, GL_LINK_STATUS, &vstat);
@@ -518,23 +517,20 @@ namespace Graphics
             std::string log_str;
             if (vstat)
             {
-                Utils::Array<char> log(vstat);
-                glGetProgramInfoLog(prog, vstat, 0, log);
-                if (log[vstat-2] == '\n')
-                    log[vstat-2] = '\0';
-                log_str = log;
+                log_str.resize(vstat);
+                glGetProgramInfoLog(prog, vstat, 0, log_str.data());
             }
 
-            Exceptions::Graphics::ShaderLinkingError(name, ('\n'+log_str).c_str());
+            Exceptions::Graphics::ShaderLinkingError(name, '\n'+NormalizeStr(log_str));
         }
 
         loc = 0;
         if (source.uniforms.size())
         {
-            uniform_locs.alloc(source.uniforms.size());
-            for (const char *it : source.uniforms)
+            uniform_locs.resize(source.uniforms.size());
+            for (const auto &it : source.uniforms)
             {
-                uniform_locs[loc++] = glGetUniformLocation(prog, it);
+                uniform_locs[loc++] = glGetUniformLocation(prog, it.c_str());
             }
         }
     }

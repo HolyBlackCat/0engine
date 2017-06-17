@@ -9,7 +9,7 @@ namespace Network
     {
         ExecuteThisOnce();
         if (SDLNet_Init())
-            Sys::Error(Jo("SDL network plugin init failed. Error message: `", SDLNet_GetError(), "`."));
+            Sys::Error(Str("SDL network plugin init failed. Error message: `", SDLNet_GetError(), "`."));
         network_init_ok = 1;
     }
     void Cleanup()

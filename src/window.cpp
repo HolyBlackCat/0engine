@@ -34,7 +34,7 @@ namespace Window
         static bool maximize = 0;
         static int display = 0;
 
-        void Name(const char *txt)
+        void Name(std::string txt)
         {
             name = txt;
         }
@@ -193,11 +193,11 @@ namespace Window
         }
         if (Init::OpenGL::compatibility == ContextCompatibility::forward)
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-        if (Init::OpenGL::color_bits.r) SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   Init::OpenGL::color_bits.r);
-        if (Init::OpenGL::color_bits.g) SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, Init::OpenGL::color_bits.g);
-        if (Init::OpenGL::color_bits.b) SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  Init::OpenGL::color_bits.b);
-        if (Init::OpenGL::color_bits.a) SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, Init::OpenGL::color_bits.a);
-        if (Init::OpenGL::depth_bits) SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, Init::OpenGL::depth_bits);
+        if (Init::OpenGL::color_bits.r) SDL_GL_SetAttribute(SDL_GL_RED_SIZE    , Init::OpenGL::color_bits.r);
+        if (Init::OpenGL::color_bits.g) SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE  , Init::OpenGL::color_bits.g);
+        if (Init::OpenGL::color_bits.b) SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE   , Init::OpenGL::color_bits.b);
+        if (Init::OpenGL::color_bits.a) SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE  , Init::OpenGL::color_bits.a);
+        if (Init::OpenGL::depth_bits  ) SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE  , Init::OpenGL::depth_bits);
         if (Init::OpenGL::stencil_bits) SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, Init::OpenGL::stencil_bits);
 
         default_size = Init::size;
@@ -212,9 +212,9 @@ namespace Window
 
         min_size = Init::min_size;
 
-        auto WindowError = [](const char *base_txt) -> const char *
+        auto WindowError = [](std::string base_txt)
         {
-            const char *profile;
+            std::string profile;
             switch (Init::OpenGL::profile)
             {
                 case ContextProfile::core:          profile = " Core profile"; break;
@@ -223,7 +223,7 @@ namespace Window
                 default: profile = ""; break;
             }
 
-            const char *acc;
+            std::string acc;
             switch (Init::OpenGL::acceleration)
             {
                 case ContextAcceleration::hard: acc = " (hardware)"; break;
@@ -231,37 +231,37 @@ namespace Window
                 default: acc = ""; break;
             }
 
-            const char *forward;
+            std::string forward;
             if (Init::OpenGL::compatibility == ContextCompatibility::forward)
                 forward = " (forward compatible)";
             else
                 forward = "";
 
-            const char *msaa;
+            std::string msaa;
             if (Init::OpenGL::msaa > 1)
-                msaa = Jo(" with ", Init::OpenGL::msaa, "x MSAA");
+                msaa = Str(" with ", Init::OpenGL::msaa, "x MSAA");
             else
                 msaa = "";
 
-            const char *color_bits;
+            std::string color_bits;
             if (Init::OpenGL::color_bits != ivec4(0,0,0,0))
-                color_bits = Jo(" with ", Init::OpenGL::color_bits, " bits per color plane");
+                color_bits = Str(" with ", Init::OpenGL::color_bits, " bits per color plane");
             else
                 color_bits = "";
 
-            const char *depth;
+            std::string depth;
             if (Init::OpenGL::depth_bits)
-                depth = Jo(" with ", Init::OpenGL::depth_bits, " depth bits");
+                depth = Str(" with ", Init::OpenGL::depth_bits, " depth bits");
             else
                 depth = "";
 
-            const char *stencil;
+            std::string stencil;
             if (Init::OpenGL::stencil_bits)
-                stencil = Jo(" with ", Init::OpenGL::stencil_bits, " stencil bits");
+                stencil = Str(" with ", Init::OpenGL::stencil_bits, " stencil bits");
             else
                 stencil = "";
 
-            const char *sync;
+            std::string sync;
             switch (Init::OpenGL::swap)
             {
                 case ContextSwapMode::vsync:             sync = " with vsync enabled"; break;
@@ -271,13 +271,13 @@ namespace Window
             }
 
 
-            Sys::Error(Jo(base_txt, " Probably your system, video card or video driver does not support required the OpenGL version or settings.\n"
-                          "Following settings were used:\n"
-                          "OpenGL ", Init::OpenGL::major, '.', Init::OpenGL::minor, profile, acc, forward, msaa, color_bits, depth, stencil, sync, ".\n"
-                          "Error message: `", Utils::FixEdges(SDL_GetError()), "`.\n"
-                          "Update your video drivers or mess with GL setting using command line arguments. (Use `--help` to get a list of them.)\n"
-                          "If you're using a laptop or have multiple videocards, go to your video driver settings and force it to use best available video card.\n"
-                          "If all else fails, buy a new videocard or give up."));
+            Sys::Error(Str(base_txt, " Probably your system, video card or video driver does not support required the OpenGL version or settings.\n"
+                           "Following settings were used:\n"
+                           "OpenGL ", Init::OpenGL::major, '.', Init::OpenGL::minor, profile, acc, forward, msaa, color_bits, depth, stencil, sync, ".\n"
+                           "Error message: `", NormalizeStr(SDL_GetError()), "`.\n"
+                           "Update your video drivers or mess with GL setting using command line arguments. (Use `--help` to get a list of them.)\n"
+                           "If you're using a laptop or have multiple videocards, go to your video driver settings and force it to use best available video card.\n"
+                           "If all else fails, buy a new videocard or give up."));
         };
 
         handle = SDL_CreateWindow(Init::name.c_str(),
@@ -392,11 +392,8 @@ namespace Window
                 switch (event.window.event)
                 {
                   case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    {
-                        ivec2 tmp;
-                        SDL_GetWindowSize(handle, &tmp.x, &tmp.y);
-                        new_size = tmp;
-                    }
+                    new_size.x = event.window.data1;
+                    new_size.y = event.window.data2;
                     resize_needed = 1;
                     break;
                   case SDL_WINDOWEVENT_MAXIMIZED:
@@ -467,9 +464,9 @@ namespace Window
         }
     }
 
-    void SetTitle(const char *txt)
+    void SetTitle(std::string txt)
     {
-        SDL_SetWindowTitle(handle, txt);
+        SDL_SetWindowTitle(handle, txt.c_str());
     }
     void Resize(ivec2 new_size)
     {

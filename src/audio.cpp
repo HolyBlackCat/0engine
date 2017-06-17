@@ -60,7 +60,7 @@ namespace Audio
         Attributes a, a_prev;
     };
 
-    static Utils::Array<SourceData> mono_src_array, stereo_src_array;
+    static std::vector<SourceData> mono_src_array, stereo_src_array;
     static Utils::PoolManager<int> mono_manager;
     static Utils::PoolManager<int> stereo_manager;
 
@@ -79,7 +79,7 @@ namespace Audio
         alcGetIntegerv(device, ALC_MINOR_VERSION, 1, &openal_minor);
 
         if (openal_major < needed_openal_major || (openal_major == needed_openal_major && openal_minor < needed_openal_minor))
-            Sys::Error(Jo("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'));
+            Sys::Error(Str("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'));
 
         const ALCint config_array[] = {ALC_FREQUENCY, Init::freq, ALC_MONO_SOURCES, Init::mono_srcs, ALC_STEREO_SOURCES, Init::stereo_srcs, 0};
 
@@ -93,8 +93,8 @@ namespace Audio
         mono_manager.Resize(Init::mono_srcs);
         stereo_manager.Resize(Init::stereo_srcs);
 
-        mono_src_array.alloc(Init::mono_srcs);
-        stereo_src_array.alloc(Init::stereo_srcs);
+        mono_src_array.resize(Init::mono_srcs);
+        stereo_src_array.resize(Init::stereo_srcs);
     }
     void Cleanup()
     {
@@ -234,13 +234,13 @@ namespace Audio
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
+        auto ParseError = [&](std::string txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         unsigned char tmp;
         bool stereo;
         bool uses_16_bits;
 
-        auto CheckByte = [&](unsigned char byte, const char *error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
+        auto CheckByte = [&](unsigned char byte, std::string error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
 
         uint32_t data_size, data_size_alt;
 
@@ -327,7 +327,7 @@ namespace Audio
 
         size = data_size / FormatBytesPerSample(format);
 
-        data.alloc(data_size);
+        data.resize(data_size);
 
         if (uses_16_bits)
         {
@@ -342,7 +342,7 @@ namespace Audio
         }
         else
         {
-            io.ReadEx<uint8_t>((uint8_t *)data, data_size);
+            io.ReadEx<uint8_t>(data.data(), data_size);
         }
     }
     void SoundData::LoadOGG(Utils::BinaryInput io, bool load_as_8bit)
@@ -424,7 +424,7 @@ namespace Audio
             break;
           default:
             ov_clear(&ogg_file);
-            Exceptions::IO::CantParse(io.Name(), Jo("The file must be mono or stereo, but this one has ", info->channels, " channels."));
+            Exceptions::IO::CantParse(io.Name(), Str("The file must be mono or stereo, but this one has ", info->channels, " channels."));
             break;
         }
 
@@ -450,12 +450,12 @@ namespace Audio
                 if (local_info->channels != info->channels)
                 {
                     ov_clear(&ogg_file);
-                    Exceptions::IO::CantParse(io.Name(), Jo("The amount of channels have changed from ", info->channels, " to ", local_info->channels, ". Dynamic amount of channels is not supported."));
+                    Exceptions::IO::CantParse(io.Name(), Str("The amount of channels have changed from ", info->channels, " to ", local_info->channels, ". Dynamic amount of channels is not supported."));
                 }
                 if (local_info->rate != info->rate)
                 {
                     ov_clear(&ogg_file);
-                    Exceptions::IO::CantParse(io.Name(), Jo("The sampling rate have changed from ", info->rate, " to ", local_info->rate, ". Dynamic sampling rate is not supported."));
+                    Exceptions::IO::CantParse(io.Name(), Str("The sampling rate have changed from ", info->rate, " to ", local_info->rate, ". Dynamic sampling rate is not supported."));
                 }
             }
             switch (val)
@@ -529,7 +529,7 @@ namespace Audio
         }
         else
         {
-            io.WriteEx((uint8_t *)data, ByteSize());
+            io.WriteEx(data.data(), ByteSize());
         }
         if (ByteSize() % 2 == 1)
             Byte(0x00);
@@ -538,11 +538,11 @@ namespace Audio
     {
         Clear();
 
-        auto ParseError = [&](const char *txt){Exceptions::IO::CantParse(io.Name(), txt);};
+        auto ParseError = [&](std::string txt){Exceptions::IO::CantParse(io.Name(), txt);};
 
         unsigned char tmp;
 
-        auto CheckByte = [&](unsigned char byte, const char *error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
+        auto CheckByte = [&](unsigned char byte, std::string error) {io.ReadEx(tmp); if (tmp != byte) ParseError(error);};
 
         CheckByte('~', "Magic number is missing.");
         CheckByte('^', "Magic number is missing.");
@@ -578,11 +578,11 @@ namespace Audio
         io.ReadEx(tmp); len |= tmp << 8;
         io.ReadEx(tmp); len |= tmp << 16;
         io.ReadEx(tmp); len |= tmp << 24;
-        Utils::Array<char> buf(len);
+        std::vector<char> buf(len);
         uLongf dstlen = ByteSize();
-        data.alloc(dstlen);
-        io.ReadEx((char *)buf, len);
-        uncompress((unsigned char *)data, &dstlen, (unsigned char *)(char *)buf, len);
+        data.resize(dstlen);
+        io.ReadEx(buf.data(), len);
+        uncompress((unsigned char *)data.data(), &dstlen, (unsigned char *)buf.data(), len);
 
         if (Utils::big_endian && Has16BitsPerSample())
         {
@@ -603,27 +603,27 @@ namespace Audio
         Uint32(freq);
         Uint32(size);
         uLongf len = compressBound(ByteSize());
-        Utils::Array<char> buf(len);
+        std::vector<char> buf(len);
 
         if (Utils::big_endian && Stereo())
         {
-            Utils::Array<unsigned char> tmpbuf(ByteSize());
+            std::vector<unsigned char> tmpbuf(ByteSize());
 
-            std::memcpy(tmpbuf, data, ByteSize());
+            std::memcpy(tmpbuf.data(), data.data(), ByteSize());
 
             uint32_t shorts = ByteSize() / 2;
 
             for (uint32_t i = 0; i < shorts; i++)
                 std::swap(tmpbuf[i*2], tmpbuf[i*2+1]);
 
-            compress((unsigned char *)(char *)buf, &len, tmpbuf, ByteSize());
+            compress((unsigned char *)buf.data(), &len, tmpbuf.data(), ByteSize());
         }
         else
         {
-            compress((unsigned char *)(char *)buf, &len, (unsigned char *)data, ByteSize());
+            compress((unsigned char *)buf.data(), &len, (unsigned char *)data.data(), ByteSize());
         }
         Uint32(len);
-        io.WriteEx((char *)buf, len);
+        io.WriteEx(buf.data(), len);
     }
 
 

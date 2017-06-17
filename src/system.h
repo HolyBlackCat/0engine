@@ -16,8 +16,8 @@ namespace Sys
 {
     namespace Config
     {
-        void ApplicationName(const char *name);
-        void MessageNames(const char *info, const char *warning, const char *error);
+        void ApplicationName(std::string name);
+        void MessageNames(std::string info, std::string warning, std::string error);
         void NoCleanup(bool nc);
         void ExtraInitFlagsForSDL(int flags);
     }
@@ -64,8 +64,8 @@ namespace Sys
     }
 
     enum class MessageType {info = 0, warning = 1, error = 2};
-    void Message(const char *title, const char *text, MessageType type = MessageType::info);
-    void Message(const char *text, MessageType type = MessageType::info);
+    void Message(std::string title, std::string text, MessageType type = MessageType::info);
+    void Message(std::string text, MessageType type = MessageType::info);
 
     class CodeLocation final
     {
@@ -80,7 +80,7 @@ namespace Sys
 
     void RequestExit();
     [[noreturn]] void Exit();
-    [[noreturn]] void Error(const char *text); // If text == 0, the app will be closed silently.
+    [[noreturn]] void Error(std::string text); // If text == "", the app will be closed silently.
 
     void SetCurrentFunction(void (*ptr)());
     void (*CurrentFunction())();
