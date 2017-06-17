@@ -32,6 +32,7 @@ namespace Window
         static bool resizable = 0;
         static bool fullscreen = 0;
         static bool maximize = 0;
+        static int display = 0;
 
         void Name(const char *txt)
         {
@@ -56,6 +57,10 @@ namespace Window
         void Maximize(bool m)
         {
             maximize = m;
+        }
+        void Display(int d)
+        {
+            display = d;
         }
 
         namespace OpenGL
@@ -141,85 +146,6 @@ namespace Window
             Input::Initialize();
         }
 
-        // Applying command line arguemnts
-        if (Sys::Args::opengl_version())
-        {
-            Init::OpenGL::major = Sys::Args::Values::opengl_version().x;
-            Init::OpenGL::minor = Sys::Args::Values::opengl_version().y;
-            if (Init::OpenGL::major < 0 || Init::OpenGL::minor < 0)
-                Sys::Error("Bad OpenGL version specified with a command line argument.");
-        }
-        if (Sys::Args::msaa())
-        {
-            Init::OpenGL::msaa = Sys::Args::Values::msaa();
-            if (Init::OpenGL::msaa != 0 &&
-                Init::OpenGL::msaa != 1 &&
-                Init::OpenGL::msaa != 2 &&
-                Init::OpenGL::msaa != 4 &&
-                Init::OpenGL::msaa != 8 &&
-                Init::OpenGL::msaa != 16)
-            Sys::Error("Bad MSAA specified with a command line argument.");
-        }
-        if (Sys::Args::maximized())
-            Init::maximize = Sys::Args::Values::maximized();
-        if (Sys::Args::fullscreen())
-            Init::fullscreen = Sys::Args::Values::fullscreen();
-        if (Sys::Args::color_bits())
-        {
-            Init::OpenGL::color_bits = Sys::Args::Values::color_bits();
-            if (!(Init::OpenGL::color_bits >= 0))
-                Sys::Error("Bad amount of bits per color specified with a command line argument.");
-        }
-        if (Sys::Args::depth_bits())
-        {
-            Init::OpenGL::depth_bits = Sys::Args::Values::depth_bits();
-            if (Init::OpenGL::depth_bits < 0)
-                Sys::Error("Bad amount of depth bits specified with a command line argument.");
-        }
-        if (Sys::Args::stencil_bits())
-        {
-            Init::OpenGL::stencil_bits = Sys::Args::Values::stencil_bits();
-            if (Init::OpenGL::stencil_bits < 0)
-                Sys::Error("Bad amount of stencil bits specified with a command line argument.");
-        }
-        if (Sys::Args::opengl_profile())
-        {
-            if (Sys::Args::Values::opengl_profile() == "core")
-                Init::OpenGL::profile = ContextProfile::core;
-            else if (Sys::Args::Values::opengl_profile() == "compat")
-                Init::OpenGL::profile = ContextProfile::compatibility;
-            else if (Sys::Args::Values::opengl_profile() == "es")
-                Init::OpenGL::profile = ContextProfile::embedded;
-            else
-                Sys::Error("OpenGL profile specified with a command line argument must be one of: core, compat, es.");
-        }
-        if (Sys::Args::swap_mode())
-        {
-            if (Sys::Args::Values::swap_mode() == "no_vsync")
-                Init::OpenGL::swap = ContextSwapMode::no_vsync;
-            else if (Sys::Args::Values::swap_mode() == "vsync")
-                Init::OpenGL::swap = ContextSwapMode::vsync;
-            else if (Sys::Args::Values::swap_mode() == "late_swap_tearing")
-                Init::OpenGL::swap = ContextSwapMode::late_swap_tearing;
-            else
-                Sys::Error("Swap mode specified with a command line argument must be one of: vsync, no_vsync, late_swap_tearing.");
-        }
-        if (Sys::Args::opengl_frw_compat())
-        {
-            Init::OpenGL::compatibility = (Sys::Args::Values::opengl_frw_compat() ? ContextCompatibility::forward : ContextCompatibility::dont_care);
-        }
-        if (Sys::Args::opengl_acceleration())
-        {
-            if (Sys::Args::Values::opengl_acceleration() == "hardware")
-                Init::OpenGL::acceleration = ContextAcceleration::hard;
-            else if (Sys::Args::Values::opengl_acceleration() == "software")
-                Init::OpenGL::acceleration = ContextAcceleration::soft;
-            else if (Sys::Args::Values::opengl_acceleration() == "dont_care")
-                Init::OpenGL::acceleration = ContextAcceleration::dont_care;
-            else
-                Sys::Error("Acceleration mode specified with a command line argument must be one of: hardware, software, dont_care.");
-        }
-
         int flags = SDL_WINDOW_OPENGL;
         if (Init::resizable)
             flags |= SDL_WINDOW_RESIZABLE;
@@ -274,17 +200,10 @@ namespace Window
         if (Init::OpenGL::depth_bits) SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, Init::OpenGL::depth_bits);
         if (Init::OpenGL::stencil_bits) SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, Init::OpenGL::stencil_bits);
 
-        int display;
-        if (Sys::Args::display_num())
-            display = Sys::Args::Values::display_num();
-        else
-            display = 0;
-
-
         default_size = Init::size;
         if (Init::resizable && Init::fullscreen)
         {
-            size = Window::DisplaySize(display);
+            size = Window::DisplaySize(Init::display);
             if (!Init::maximize)
             fix_window_when_fullscreen_is_disabled_once = 1;
         }
@@ -362,7 +281,7 @@ namespace Window
         };
 
         handle = SDL_CreateWindow(Init::name.c_str(),
-                                  SDL_WINDOWPOS_CENTERED_DISPLAY(display), SDL_WINDOWPOS_CENTERED_DISPLAY(display),
+                                  SDL_WINDOWPOS_CENTERED_DISPLAY(Init::display), SDL_WINDOWPOS_CENTERED_DISPLAY(Init::display),
                                   size.x, size.y,
                                   flags);
         if (!handle)

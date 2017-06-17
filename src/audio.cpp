@@ -19,8 +19,8 @@ namespace Audio
                       mono_srcs = 31,
                       stereo_srcs = 7;
 
-        void Frequency(int f) {freq = f;}
-        void MonoSources(int c) {mono_srcs = c;}
+        void Frequency(int f)     {freq = f;}
+        void MonoSources(int c)   {mono_srcs = c;}
         void StereoSources(int c) {stereo_srcs = c;}
     }
 
@@ -72,12 +72,7 @@ namespace Audio
 
         device = alcOpenDevice(0);
         if (!device)
-        {
-            if (Sys::Args::ignore_openal_init_failure())
-                return;
-            else
-                Sys::Error("No valid audio device found.");
-        }
+            Sys::Error("No valid audio device found.");
 
         ALCint openal_major, openal_minor;
         alcGetIntegerv(device, ALC_MAJOR_VERSION, 1, &openal_major);
@@ -85,22 +80,6 @@ namespace Audio
 
         if (openal_major < needed_openal_major || (openal_major == needed_openal_major && openal_minor < needed_openal_minor))
             Sys::Error(Jo("Need OpenAL ", needed_openal_major, '.', needed_openal_minor, ", but found OpenAL ", openal_major, '.', openal_minor, '.'));
-
-
-        if (Sys::Args::audio_freq())
-        {
-            Init::freq = Sys::Args::Values::audio_freq();
-            if (Init::freq <= 0)
-                Sys::Error("Bad audio sampling frequency specified with a command line argument.");
-        }
-        if (Sys::Args::audio_mono_stereo_srcs())
-        {
-            Init::mono_srcs = Sys::Args::Values::audio_mono_stereo_srcs().x;
-            Init::stereo_srcs = Sys::Args::Values::audio_mono_stereo_srcs().y;
-            if (Init::mono_srcs <= 0 || Init::stereo_srcs <= 0)
-                Sys::Error("Bad number of audio sources specified with a command line argument.");
-        }
-
 
         const ALCint config_array[] = {ALC_FREQUENCY, Init::freq, ALC_MONO_SOURCES, Init::mono_srcs, ALC_STEREO_SOURCES, Init::stereo_srcs, 0};
 

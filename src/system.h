@@ -61,38 +61,6 @@ namespace Sys
     {
         int Count();
         const char *const *Array(); // -1 th item is the executable name.
-
-        #define E0INTERNAL_BUILTIN_ARGS_LIST \
-            ARG( help                       , void   ) \
-            ARG( display_num                , int    ) \
-            ARG( opengl_version             , ivec2  ) \
-            ARG( opengl_profile             , string ) \
-            ARG( msaa                       , int    ) \
-            ARG( color_bits                 , ivec4  ) \
-            ARG( depth_bits                 , int    ) \
-            ARG( stencil_bits               , int    ) \
-            ARG( swap_mode                  , string ) \
-            ARG( opengl_frw_compat          , bool   ) \
-            ARG( opengl_acceleration        , string ) \
-            ARG( fullscreen                 , bool   ) \
-            ARG( maximized                  , bool   ) \
-            ARG( audio_freq                 , int    ) \
-            ARG( audio_mono_stereo_srcs     , ivec2  ) \
-            ARG( ignore_openal_init_failure , void   ) \
-
-        // Functions
-
-        #define ARG(name, type) bool name();
-        E0INTERNAL_BUILTIN_ARGS_LIST
-        #undef ARG
-
-        namespace Values
-        {
-            using std::string;
-            #define ARG(name, type) type name();
-            E0INTERNAL_BUILTIN_ARGS_LIST
-            #undef ARG
-        }
     }
 
     enum class MessageType {info = 0, warning = 1, error = 2};

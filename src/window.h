@@ -27,19 +27,29 @@ namespace Window
     SDL_DisplayMode CurrentDisplayMode();
     int CurrentDisplayNum();
 
+    namespace OpenGL
+    {
+        int Major();
+        int Minor();
+        bool ES();
+    }
+
     enum class ContextProfile       {dont_care, core, compatibility, embedded};
     enum class ContextAcceleration  {dont_care, hard, soft};
     enum class ContextCompatibility {dont_care, forward};
     enum class ContextSwapMode      {dont_care = -2, no_vsync = 0, vsync = 1, late_swap_tearing = -1};
 
+    ContextSwapMode SwapMode();
+
     namespace Init
     {
         void Name(const char *name);
         void Size(ivec2 sz);
-        void MinimalSize(ivec2 sz); // Has no effect on mobile. Set to [0,0] to disable.
+        void MinimalSize(ivec2 sz); // Set to [0,0] to disable. Has no effect on mobile.
         void Resizable(bool r);
         void Fullscreen(bool f);
         void Maximize(bool m);
+        void Display(int d);
 
         namespace OpenGL
         {
@@ -58,15 +68,6 @@ namespace Window
     namespace Config
     {
         void FullscreenSwitchKey(Input::KeyID id); // 0 to disable.
-    }
-
-    ContextSwapMode SwapMode();
-
-    namespace OpenGL
-    {
-        int Major();
-        int Minor();
-        bool ES();
     }
 }
 
