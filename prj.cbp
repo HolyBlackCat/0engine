@@ -25,6 +25,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O3" />
+					<Add option="-DNDEBUG" />
 					<Add option="-flto" />
 				</Compiler>
 				<Linker>
@@ -137,6 +138,7 @@
 		<Unit filename="src/network.h" />
 		<Unit filename="src/os.h" />
 		<Unit filename="src/renderer2d.h" />
+		<Unit filename="src/strings.h" />
 		<Unit filename="src/system.cpp" />
 		<Unit filename="src/system.h" />
 		<Unit filename="src/utils.cpp" />
