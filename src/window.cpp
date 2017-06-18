@@ -205,7 +205,7 @@ namespace Window
         {
             size = Window::DisplaySize(Init::display);
             if (!Init::maximize)
-            fix_window_when_fullscreen_is_disabled_once = 1;
+                fix_window_when_fullscreen_is_disabled_once = 1;
         }
         else
             size = Init::size;
@@ -305,6 +305,8 @@ namespace Window
             Sys::Error("This device does not support shader compilation.");
         #endif
 
+        while (glGetError()) {}
+
         swap_mode = Init::OpenGL::swap;
         switch (swap_mode)
         {
@@ -329,12 +331,14 @@ namespace Window
             break;
         }
 
+
         // Forcing resize event.
         SDL_Event resize_event;
         resize_event.type = SDL_WINDOWEVENT;
         resize_event.window.event = SDL_WINDOWEVENT_SIZE_CHANGED;
+        resize_event.window.data1 = size.x;
+        resize_event.window.data2 = size.y;
         SDL_PushEvent(&resize_event);
-
         Tick();
     }
     void Cleanup()
