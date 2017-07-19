@@ -78,7 +78,7 @@ namespace Input
         ResetKeyboardBuffer();
 
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
-        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply(lround);
+        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply((long(*)(double))lround);
 
         SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, Init::separate_mouse_and_touch ? "1" : "0");
     }
@@ -169,7 +169,7 @@ namespace Input
         SDL_GetRelativeMouseState(&mouse_shift.x, &mouse_shift.y);
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
 
-        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply(lround);
+        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply((long(*)(double))lround);
 
         if (mouse_buttons)
             any_button_down_id = WhatBitIsSet(mouse_buttons)+1;
@@ -183,6 +183,11 @@ namespace Input
     KeyID AnyKeyDown    () {return any_key_down_id;}
     KeyID AnyKeyPressed () {return any_key_pr_id;}
     KeyID AnyKeyReleased() {return any_key_re_id;}
+
+    std::string KeyName(KeyID id)
+    {
+        return SDL_GetScancodeName((SDL_Scancode)id);
+    }
 
 
     void ShowMouse(bool n)
@@ -257,11 +262,11 @@ namespace Input
     void SetMousePos(ivec2 pos)
     {
         mouse_movement_needed = 1;
-        mouse_movement_dst = (pos / mouse_mapping_scale - mouse_mapping_offset).apply(lround);
+        mouse_movement_dst = (pos / mouse_mapping_scale - mouse_mapping_offset).apply((long(*)(double))lround);
     }
     void SetMousePosImmediate(ivec2 pos)
     {
-        pos = (pos / mouse_mapping_scale - mouse_mapping_offset).apply(lround);
+        pos = (pos / mouse_mapping_scale - mouse_mapping_offset).apply((long(*)(double))lround);
         SDL_WarpMouseInWindow(Window::Handle(), pos.x, pos.y);
     }
 }

@@ -23,9 +23,14 @@
 #include "strings.h"
 #include "system.h"
 
-#define ExecuteThisOnce() do {static bool flag = 0; if (flag) ::Sys::Error(Str("At function ", __func__, ": Statement at " __FILE__ ":", __LINE__, " was illegally executed twice.")); flag = 1;} while (0)
+#define ExecuteThisOnce() do {static bool flag = 0; if (flag) ::Sys::Error(::Strings::Str("At function ", __func__, ": Statement at " __FILE__ ":", __LINE__, " was illegally executed twice.")); flag = 1;} while (0)
 #define ExecuteThisOnceQuiet() do {static bool flag = 0; if (flag) ::Sys::Exit(); flag = 1;} while (0)
-#define Textify(...) #__VA_ARGS__
+
+#ifdef NDEBUG
+#  define Assert(text, ...) (void(0))
+#else
+#  define Assert(text, ...) (bool(__VA_ARGS__) || (::Sys::Error(::Strings::Str("Assertion failed at `" __FILE__ "`:", __LINE__, " in `", __func__, "()`.\nMessage: `", text, "`\nExpression: `" #__VA_ARGS__, '`')), 0), void(0))
+#endif
 
 namespace Utils
 {
@@ -45,6 +50,8 @@ namespace Utils
         std::aligned_storage_t<sizeof(T), alignof(T)> data;
 
       public:
+        using type = T;
+
         constexpr Object() : alive(0) {}
         Object(const Object &o)
         {
@@ -104,16 +111,17 @@ namespace Utils
                 (*this)->~T();
         }
 
-        operator       T *()       {assert(alive); return (      T *)&data;}
-        operator const T *() const {assert(alive); return (const T *)&data;}
+        operator       T *()       {Assert("Deferencing Utils::Object which is not alive.", alive); return (      T *)&data;}
+        operator const T *() const {Assert("Deferencing Utils::Object which is not alive.", alive); return (const T *)&data;}
 
-              T *operator->()       {assert(alive); return (      T *)&data;}
-        const T *operator->() const {assert(alive); return (const T *)&data;}
+              T *operator->()       {Assert("Deferencing Utils::Object which is not alive.", alive); return (      T *)&data;}
+        const T *operator->() const {Assert("Deferencing Utils::Object which is not alive.", alive); return (const T *)&data;}
 
         template <typename ...P> void create(P &&... p)
         {
             destroy();
             ::new (&data) T((P &&)p...);
+            alive = 1;
         }
         void destroy()
         {
@@ -144,8 +152,8 @@ namespace Utils
 
     inline namespace SysInfo
     {
-        inline constexpr bool char_is_signed = std::numeric_limits<char>::is_signed;
-        inline constexpr bool big_endian = SDL_BYTEORDER == SDL_BIG_ENDIAN;
+        constexpr bool char_is_signed = std::numeric_limits<char>::is_signed;
+        constexpr bool big_endian = SDL_BYTEORDER == SDL_BIG_ENDIAN;
     }
 
     namespace Encodings
@@ -235,76 +243,109 @@ namespace Utils
         uint32_t Noise32(uint32_t in);
     }
 
+    inline namespace SmartFlags
+    {
+        template <typename Tag, typename T = unsigned int> class Flag
+        {
+          public:
+            T value;
+
+            [[nodiscard]] constexpr operator T() const {return value;}
+        };
+
+        template <typename Tag, typename T> [[nodiscard]] constexpr Flag<T,Tag> operator|(Flag<T,Tag> a, Flag<T,Tag> b) {return {a.value | b.value};}
+        template <typename Tag, typename T> [[nodiscard]] constexpr Flag<T,Tag> operator&(Flag<T,Tag> a, Flag<T,Tag> b) {return {a.value & b.value};}
+        template <typename Tag, typename T> constexpr Flag<T,Tag> &operator|=(Flag<T,Tag> &a, Flag<T,Tag> b) {a.value |= b.value; return a;}
+        template <typename Tag, typename T> constexpr Flag<T,Tag> &operator&=(Flag<T,Tag> &a, Flag<T,Tag> b) {a.value &= b.value; return a;}
+        template <typename Tag, typename T> [[nodiscard]] constexpr Flag<T,Tag> operator*(Flag<T,Tag> a, bool b) {return {a.value * b};}
+        template <typename Tag, typename T> [[nodiscard]] constexpr Flag<T,Tag> operator*(bool a, Flag<T,Tag> b) {return {a * b.value};}
+        template <typename Tag, typename T> constexpr Flag<T,Tag> &operator*=(Flag<T,Tag> &a, Flag<T,Tag> b) {a.value *= b.value; return a;}
+    }
+
     class TickStabilizer
     {
-        uint64_t tick_len, begin_time;
-        unsigned int tick_limit;
-        bool lag_flag;
+        uint64_t tick_len;
+        int max_ticks;
 
-        TickStabilizer(const TickStabilizer &) = delete;
-        TickStabilizer(TickStabilizer &&) = delete;
-        TickStabilizer &operator=(const TickStabilizer &) = delete;
-        TickStabilizer &operator=(TickStabilizer &&) = delete;
+        uint64_t accumulator;
+        bool new_frame;
+
+        bool lag;
+
       public:
-        TickStabilizer(double freq, unsigned int max_tick_queued = 16)
+        TickStabilizer() : TickStabilizer(60) {}
+        TickStabilizer(double freq, int max_ticks_per_frame = 8)
         {
-            lag_flag = 0;
-            SetFreq(freq);
-            SetTickLimit(max_tick_queued);
+            SetFrequency(freq);
+            SetMaxTicksPerFrame(max_ticks_per_frame);
             Reset();
         }
 
-        bool Lag() // Returns 1 if max tick queue len is reached, then the flag is reseted to 0.
-        {
-            if (lag_flag)
-            {
-                lag_flag = 0;
-                return 1;
-            }
-            return 0;
-        }
-
-        void Reset()
-        {
-            begin_time = Clock::Time();
-        }
-
-        void SetFreq(double freq)
+        void SetFrequency(double freq)
         {
             tick_len = Clock::Tps() / freq;
         }
-
-        void SetTickLimit(unsigned int max_tick_queued = 64) // This limits an amout of ticks that would be made after an eternal lag.
+        void SetMaxTicksPerFrame(int n) // Set to 0 to disable the limit.
         {
-            tick_limit = max_tick_queued;
+            max_ticks = n;
+        }
+        void Reset()
+        {
+            accumulator = 0;
+            new_frame = 1;
+            lag = 0;
         }
 
-        bool Tick(uint64_t cur_time = Sys::FrameStartTime()) // Use it like this: `while (_.Tick()) {Your tick code}`
+        bool Lag() // Flag resets after this function is called. The flag is set to 1 if the amount of ticks per last frame was limited due to reaching the limit.
         {
-            if (cur_time - begin_time > tick_len)
+            if (lag)
             {
-                if (cur_time - begin_time > tick_len * tick_limit)
-                {
-                    begin_time = cur_time - tick_len * tick_limit;
-                    lag_flag = 1;
-                }
-                begin_time += tick_len;
+                lag = 0;
                 return 1;
             }
             return 0;
         }
-        bool TickNeeded(uint64_t cur_time = Sys::FrameStartTime()) // Only checks if tick is needed without performing it.
+
+        double Frequency() const
         {
-            return cur_time - begin_time > tick_len;
+            return Utils::Clock::Tps() / double(tick_len);
+        }
+        uint64_t ClockTicksPerTick() const
+        {
+            return tick_len;
+        }
+        int MaxTicksPerFrame() const
+        {
+            return max_ticks;
         }
 
-        double Time(uint64_t cur_time = Sys::FrameStartTime()) // Returns time since last tick, measured in ticks. Useful for rendering moving things when FPS is higher than tickrate.
+        bool Tick(uint64_t delta = Sys::FrameDeltaClockTicks())
         {
-            return double(cur_time - begin_time) / tick_len;
+            if (new_frame)
+                accumulator += delta;
+
+            if (accumulator >= tick_len)
+            {
+                if (max_ticks && accumulator > tick_len * max_ticks)
+                {
+                    accumulator = tick_len * max_ticks;
+                    lag = 1;
+                }
+                accumulator -= tick_len;
+                new_frame = 0;
+                return 1;
+            }
+            else
+            {
+                new_frame = 1;
+                return 0;
+            }
         }
 
-        uint64_t TickLen()       {return tick_len;}
-        unsigned int TickLimit() {return tick_limit;}
+        double Time() const
+        {
+            return accumulator / double(tick_len);
+        }
     };
 
     class IO
@@ -663,6 +704,7 @@ namespace Utils
     {
         TextInput() {}
         TextInput(std::string fname) : IO(IO::FromTextFile(fname, IO::Mode::read)) {}
+        TextInput(const char *fname) : IO(IO::FromTextFile(fname, IO::Mode::read)) {}
         TextInput(const void *mem, int size) : IO(IO::FromConstMemory(mem, size)) {}
         TextInput &&Move() {return (TextInput &&)*this;}
     };
@@ -670,6 +712,7 @@ namespace Utils
     {
         BinaryInput() {}
         BinaryInput(std::string fname) : IO(IO::FromBinaryFile(fname, IO::Mode::read)) {}
+        BinaryInput(const char *fname) : IO(IO::FromBinaryFile(fname, IO::Mode::read)) {}
         BinaryInput(const void *mem, int size) : IO(IO::FromConstMemory(mem, size)) {}
         BinaryInput &&Move() {return (BinaryInput &&)*this;}
     };
@@ -677,6 +720,7 @@ namespace Utils
     {
         TextOutput() {}
         TextOutput(std::string fname) : IO(IO::FromTextFile(fname, IO::Mode::write)) {}
+        TextOutput(const char *fname) : IO(IO::FromTextFile(fname, IO::Mode::write)) {}
         TextOutput(void *mem, int size) : IO(IO::FromMemory(mem, size)) {}
         TextOutput &&Move() {return (TextOutput &&)*this;}
     };
@@ -684,6 +728,7 @@ namespace Utils
     {
         BinaryOutput() {}
         BinaryOutput(std::string fname) : IO(IO::FromBinaryFile(fname, IO::Mode::write)) {}
+        BinaryOutput(const char *fname) : IO(IO::FromBinaryFile(fname, IO::Mode::write)) {}
         BinaryOutput(void *mem, int size) : IO(IO::FromMemory(mem, size)) {}
         BinaryOutput &&Move() {return (BinaryOutput &&)*this;}
     };
@@ -745,25 +790,25 @@ namespace Utils
             {
                 // This function may be redundant on some systems, but this is not guaranteed.
                 first = &*arr.begin();
-                length = &*arr.end() - &*arr.begin();
+                length = arr.size();
             }
             template <std::size_t S> ArrayProxy(const std::array<type, S> &arr) // From const std::array. Use this with caution on temporary arrays.
             {
                 // This function may be redundant on some systems, but this is not guaranteed.
                 static_assert(readonly, "Attempt to bind read-write proxy to a const object.");
                 first = &*arr.begin();
-                length = &*arr.end() - &*arr.begin();
+                length = arr.size();
             }
             ArrayProxy(std::vector<type> &arr) // From std::vector.
             {
                 first = &*arr.begin();
-                length = &*arr.end() - &*arr.begin();
+                length = arr.size();
             }
             ArrayProxy(const std::vector<type> &arr) // From const std::vector. Use this with caution on temporary vectors.
             {
                 static_assert(readonly, "Attempt to bind read-write proxy to a const object.");
                 first = &*arr.begin();
-                length = &*arr.end() - &*arr.begin();
+                length = arr.size();
             }
         };
 

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <functional>
 #include <initializer_list>
 #include <type_traits>
 #include <typeinfo>
@@ -192,11 +193,13 @@ namespace Graphics
         {
             template <unsigned int N, typename F, typename ...P> struct At
             {
-                static auto &func(VertexFormat<F, P...> *th) {return At<N-1, P...>::func(&th->next);}
+                static       auto &func(      VertexFormat<F, P...> *th) {return At<N-1, P...>::func(&th->next);}
+                static const auto &func(const VertexFormat<F, P...> *th) {return At<N-1, P...>::func(&th->next);}
             };
             template <typename F, typename ...P> struct At<0, F, P...>
             {
-                static auto &func(VertexFormat<F, P...> *th) {return th->first;}
+                static       auto &func(      VertexFormat<F, P...> *th) {return th->first;}
+                static const auto &func(const VertexFormat<F, P...> *th) {return th->first;}
             };
         }
 
@@ -208,7 +211,8 @@ namespace Graphics
             VertexFormat() {}
             VertexFormat(const F &f, const P &... p) : first(f), next(p...) {}
             template <unsigned int N> using TypeAt = typename Utils::TypeAt<N, F, P...>::type;
-            template <unsigned int N> auto &At() {return InternalPackTemplates::At<N, F, P...>::func(this);}
+            template <unsigned int N>       auto &At()       {return InternalPackTemplates::At<N, F, P...>::func(this);}
+            template <unsigned int N> const auto &At() const {return InternalPackTemplates::At<N, F, P...>::func(this);}
         };
         template <typename F> struct VertexFormat<F>
         {
@@ -217,7 +221,8 @@ namespace Graphics
             VertexFormat() {}
             VertexFormat(const F &f) : first(f) {}
             template <unsigned int N> using TypeAt = typename Utils::TypeAt<N, F>::type;
-            template <unsigned int N> auto &At() {return InternalPackTemplates::At<N, F>::func(this);}
+            template <unsigned int N>       auto &At()       {return InternalPackTemplates::At<N, F>::func(this);}
+            template <unsigned int N> const auto &At() const {return InternalPackTemplates::At<N, F>::func(this);}
         };
     }
 
@@ -493,6 +498,10 @@ namespace Graphics
         {
             return pos;
         }
+        bool Empty() const
+        {
+            return !CurrentSize();
+        }
 
         void ChangeSize(uint32_t l, StorageType acc = StorageType::draw_dynamic)
         {
@@ -500,9 +509,8 @@ namespace Graphics
                 Sys::Error("Invalid rendering array size.");
             size = l;
             pos = 0;
-            arr.alloc(l);
-            vao.~VertexArray();
-            new(&vao) VertexArray<L>(0, sizeof (L) * l, acc);
+            arr.resize(l);
+            vao.NewData({(const uint8_t *)0, sizeof (L) * l}, acc);
         }
 
         L *Add(uint32_t amount)
@@ -545,7 +553,7 @@ namespace Graphics
 
         operator const L *() const
         {
-            return arr;
+            return arr.data();
         }
 
         void Send() // You shall not call Push*() between Send() and Draw*()
@@ -575,14 +583,26 @@ namespace Graphics
 
         RenderQueue(uint32_t l, StorageType acc = StorageType::draw_dynamic) : RenderArray<L>(l * Dim, acc) {}
 
-        using RenderArray<L>::MaxSize;
-        using RenderArray<L>::CurrentSize;
-        using RenderArray<L>::ChangeSize;
-        using RenderArray<L>::Clear;
+        using RenderArray<L>::Empty;
 
-        void Clear()
+        uint32_t MaxSize()
         {
-            RenderArray<L>::pos = 0;
+            return RenderArray<L>::MaxSize() / Dim;
+        }
+        uint32_t CurrentSize()
+        {
+            return RenderArray<L>::CurrentSize() / Dim;
+        }
+        void ChangeSize(uint32_t l, StorageType acc = StorageType::draw_dynamic)
+        {
+            if (!Empty())
+                Flush();
+            RenderArray<L>::ChangeSize(l * Dim, acc);
+        }
+
+        void Discard()
+        {
+            RenderArray<L>::Clear();
         }
         void Flush() // Draws and clears the queue.
         {
@@ -593,7 +613,7 @@ namespace Graphics
                 case 2: RenderArray<L>::Draw(lines    ); break;
                 case 3: RenderArray<L>::Draw(triangles); break;
             }
-            RenderArray<L>::pos = 0;
+            RenderArray<L>::Clear();
         }
 
         L *Add(uint32_t primitives)
@@ -655,6 +675,85 @@ namespace Graphics
     {
         std::vector<u8vec4> data;
         ivec2 size;
+
+        class SurfaceContainer
+        {
+            SDL_Surface *ptr;
+
+            void allocate(void *data, ivec2 size)
+            {
+                if (Utils::big_endian)
+                    ptr = SDL_CreateRGBSurfaceFrom(data, size.x, size.y, 32, size.x*4, 0xff << 8*3, 0xff << 8*2, 0xff << 8*1, 0xff << 8*0);
+                else
+                    ptr = SDL_CreateRGBSurfaceFrom(data, size.x, size.y, 32, size.x*4, 0xff << 8*0, 0xff << 8*1, 0xff << 8*2, 0xff << 8*3);
+                if (!ptr)
+                    Sys::Error("Can't create a SDL surface.");
+            }
+          public:
+            void create(void *data, ivec2 size)
+            {
+                if (!ptr)
+                    allocate(data, size);
+                else
+                {
+                    ptr->pixels = data;
+                    ptr->w = size.x;
+                    ptr->h = size.y;
+                }
+            }
+            void free()
+            {
+                if (ptr)
+                {
+                    SDL_FreeSurface(ptr);
+                    ptr = 0;
+                }
+            }
+            SDL_Surface *handle() const
+            {
+                return ptr;
+            }
+
+            SurfaceContainer() : ptr(0) {}
+            SurfaceContainer(const SurfaceContainer &o)
+            {
+                if (o.ptr)
+                    allocate(o.ptr->pixels, {o.ptr->w, o.ptr->h});
+                else
+                    ptr = 0;
+            }
+            SurfaceContainer(SurfaceContainer &&o)
+            {
+                ptr = o.ptr;
+                o.ptr = 0;
+            }
+            SurfaceContainer &operator=(const SurfaceContainer &o)
+            {
+                if (&o == this)
+                    return *this;
+                if (o.ptr)
+                    create(o.ptr->pixels, {o.ptr->w, o.ptr->h});
+                else
+                    free();
+                return *this;
+            }
+            SurfaceContainer &operator=(SurfaceContainer &&o)
+            {
+                if (&o == this)
+                    return *this;
+                ptr = o.ptr;
+                o.ptr = 0;
+                return *this;
+            }
+            ~SurfaceContainer()
+            {
+                if (ptr)
+                    SDL_FreeSurface(ptr);
+            }
+        };
+
+        SurfaceContainer surface;
+
       public:
         void LoadTGA(Utils::BinaryInput io, Mirror mirror = Mirror::no);
         void LoadCompressed(Utils::BinaryInput io);
@@ -688,9 +787,9 @@ namespace Graphics
             for (auto &it : data)
             {
                 float f = float(it.a) / 255.0f;
-                it.r = std::round(it.r * f);
-                it.g = std::round(it.g * f);
-                it.b = std::round(it.b * f);
+                it.r = std::lround(it.r * f);
+                it.g = std::lround(it.g * f);
+                it.b = std::lround(it.b * f);
             }
         }
         void Demultiply()
@@ -700,9 +799,9 @@ namespace Graphics
                 float f = float(it.a) / 255.0f;
                 if (!std::isnormal(f))
                     continue;
-                it.r = std::max((int)std::round(it.r / f), 255);
-                it.g = std::max((int)std::round(it.g / f), 255);
-                it.b = std::max((int)std::round(it.b / f), 255);
+                it.r = std::max(std::lround(it.r / f), 255l);
+                it.g = std::max(std::lround(it.g / f), 255l);
+                it.b = std::max(std::lround(it.b / f), 255l);
             }
         }
         void Empty(ivec2 new_size)
@@ -743,146 +842,529 @@ namespace Graphics
         {
             return size.product() * sizeof (u8vec4);
         }
-        u8vec4 &At(uvec2 pos)
+        u8vec4 &At(ivec2 pos)
         {
             return data[size.x * pos.y + pos.x];
         }
-        u8vec4 At(uvec2 pos) const
+        u8vec4 At(ivec2 pos) const
         {
             return data[size.x * pos.y + pos.x];
         }
+
+        void CreateSurface()
+        {
+            surface.create(data.data(), size);
+        }
+        void FreeSurface()
+        {
+            surface.free();
+        }
+        const SDL_Surface *Surface() const
+        {
+            return surface.handle();
+        }
+
         ImageData()
         {
             size = {0,0};
         }
-        ImageData(uvec2 new_size)
+        ImageData(ivec2 new_size)
         {
             size = new_size;
             data.resize(size.product());
         }
+
+        ImageData(const ImageData &o)
+        {
+            size = o.size;
+            data = o.data;
+            surface = o.surface;
+            if (surface.handle())
+                CreateSurface();
+        }
+        ImageData(ImageData &&o)
+        {
+            size = o.size;
+            data = (decltype(data) &&) o.data;
+            surface = (decltype(surface) &&) o.surface;
+            if (surface.handle())
+                CreateSurface();
+        }
+        ImageData &operator=(const ImageData &o)
+        {
+            if (&o == this)
+                return *this;
+            size = o.size;
+            data = o.data;
+            surface = o.surface;
+            if (surface.handle())
+                CreateSurface();
+            return *this;
+        }
+        ImageData &operator=(ImageData &&o)
+        {
+            if (&o == this)
+                return *this;
+            size = o.size;
+            data = (decltype(data) &&) o.data;
+            surface = (decltype(surface) &&) o.surface;
+            if (surface.handle())
+                CreateSurface();
+            return *this;
+        }
         ~ImageData()
         {
-            Clear();
+            FreeSurface();
         }
     };
+
+    enum class Format : GLenum {};
+
+    namespace GetFormat
+    {
+        inline Format RGB()
+        {
+            #if !defined(GL_RGB8)
+            # define GL_RGB8 0
+            #endif
+            static GLenum ret = (Window::OpenGL::ES() ? GL_RGB565 : GL_RGB8);
+            return (Format)ret;
+        }
+        inline Format RGBA(bool single_alpha_bit = 0)
+        {
+            #if !defined(GL_RGBA8)
+            # define GL_RGBA8 0
+            #endif
+            static GLenum ret = (Window::OpenGL::ES() ? (single_alpha_bit ? GL_RGB5_A1 : GL_RGBA4) : GL_RGBA8);
+            return (Format)ret;
+        }
+        inline Format Depth16()
+        {
+            return (Format)GL_DEPTH_COMPONENT16;
+        }
+        inline Format Depth24()
+        {
+            #if !defined(GL_DEPTH_COMPONENT24)
+            # if defined(GL_DEPTH_COMPONENT24_OES)
+            #  define GL_DEPTH_COMPONENT24 GL_DEPTH_COMPONENT24_OES
+            # else
+            #  define GL_DEPTH_COMPONENT24 0x81A6
+            # endif
+            #endif
+            static bool supported = !Window::OpenGL::ES() || ExtensionSupported("GL_OES_depth24");
+            static GLenum ret = (supported ? GL_DEPTH_COMPONENT24 : (GLenum)Depth16());
+            return (Format)ret;
+        }
+        inline Format Depth32()
+        {
+            #if !defined(GL_DEPTH_COMPONENT32)
+            # if defined(GL_DEPTH_COMPONENT32_OES)
+            #  define GL_DEPTH_COMPONENT32 GL_DEPTH_COMPONENT32_OES
+            # else
+            #  define GL_DEPTH_COMPONENT32 0x81A7
+            # endif
+            #endif
+            #if !defined(GL_DEPTH_COMPONENT32F)
+            # define GL_DEPTH_COMPONENT32F GL_DEPTH_COMPONENT32
+            #endif
+            static bool supported = !Window::OpenGL::ES() || ExtensionSupported("GL_OES_depth32");
+            static GLenum ret = (supported ? (Window::OpenGL::ES() ? GL_DEPTH_COMPONENT32 : GL_DEPTH_COMPONENT32F) : (GLenum)Depth24());
+            return (Format)ret;
+        }
+        inline Format DepthBest()
+        {
+            return Depth32();
+        }
+    }
+
+
+    enum WrapMode
+    {
+        clamp  = GL_CLAMP_TO_EDGE,
+        mirror = GL_MIRRORED_REPEAT,
+        repeat = GL_REPEAT,
+        fill   = ForPC(GL_CLAMP_TO_BORDER) ForMobile(GL_CLAMP_TO_EDGE),
+    };
+
+    unsigned int ActiveTextureSlot();
+    void SetActiveTextureSlot(unsigned int n); // You need to call this only if you use GL functions manually. Always use this instead of glActiveTexture() if you use any of Texture classes!
+
+    template <typename Derived> class TextureBase
+    {
+      protected:
+        int tex_id;
+        GLuint handle;
+        ivec2 size;
+      public:
+        TextureBase()
+        {
+            size = {0,0};
+            if (!Derived::GetPool().Alloc(&tex_id))
+                Sys::Error("Can't create a new texture because the texture pool is empty.");
+            glGenTextures(1, &handle);
+            if (!handle)
+                Sys::Error("Failed to create a new texture.");
+            Activate();
+            glBindTexture(Derived::GetTargetName(), handle);
+        }
+        TextureBase(const TextureBase &) = delete;
+        TextureBase(TextureBase &&) = delete;
+        TextureBase &operator=(const TextureBase &) = delete;
+        TextureBase &operator=(TextureBase &&) = delete;
+        ~TextureBase()
+        {
+            glDeleteTextures(1, &handle);
+            Derived::GetPool().Free(tex_id);
+        }
+        static uint32_t MaxCount()     {return Derived::GetPool().MaxSize();}
+        static uint32_t CurrentCount() {return Derived::GetPool().CurrentSize();}
+
+        void Activate() const {SetActiveTextureSlot(tex_id);}
+
+        void MinLinearInterpolation(bool n) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_MIN_FILTER, n ? GL_LINEAR : GL_NEAREST);} // This is 1 by default.
+        void MagLinearInterpolation(bool n) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_MAG_FILTER, n ? GL_LINEAR : GL_NEAREST);}
+        void LinearInterpolation(bool n)    {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_MIN_FILTER, n ? GL_LINEAR : GL_NEAREST);
+                                                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, n ? GL_LINEAR : GL_NEAREST);}
+        void WrapModeX(WrapMode mode) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_S, (GLuint)mode);}
+        void WrapModeY(WrapMode mode) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_T, (GLuint)mode);}
+        void WrapMode(WrapMode mode)  {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_S, (GLuint)mode);
+                                                   glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_T, (GLuint)mode);}
+        GLuint Handle() const {return handle;}
+        int Slot() const {return tex_id;}
+        ivec2 Size() const {return size;}
+    };
+
+    class Texture : public TextureBase<Texture>
+    {
+        static Utils::PoolManager<int> &GetPool();
+        static GLint GetTargetName() {return GL_TEXTURE_2D;}
+        friend class TextureBase<Texture>;
+      public:
+        Texture() {}
+        Texture(const ImageData &data)     {SetData(data);}
+        Texture(ivec2 size, void *ptr = 0) {SetData(size, ptr);}
+        void SetData(const ImageData &data)
+        {
+            Activate();
+            size = data.Size();
+            glTexImage2D(GL_TEXTURE_2D, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
+        }
+        void SetData(ivec2 new_size, void *ptr = 0)
+        {
+            Activate();
+            size = new_size;
+            glTexImage2D(GL_TEXTURE_2D, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+        }
+        void SetSubData(ivec2 dst, const ImageData &data)
+        {
+            Activate();
+            glTexSubImage2D(GL_TEXTURE_2D, 0, dst.x, dst.y, data.Size().x, data.Size().y, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
+        }
+        void SetSubData(ivec2 dst, ivec2 dst_size, void *ptr)
+        {
+            Activate();
+            glTexSubImage2D(GL_TEXTURE_2D, 0, dst.x, dst.y, dst_size.x, dst_size.y, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+        }
+    };
+
+    class TextureCube : public TextureBase<TextureCube>
+    {
+        static Utils::PoolManager<int> &GetPool();
+        static GLint GetTargetName() {return GL_TEXTURE_CUBE_MAP;}
+        friend class TextureBase<TextureCube>;
+      public:
+        enum class Side
+        {
+            x = GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+            y = GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+            z = GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+            _x = GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+            _y = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+            _z = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+        };
+
+        TextureCube() {}
+        TextureCube(Side side, const ImageData &data)     {SetData(side, data);}
+        TextureCube(Side side, int size, void *ptr = 0) {SetData(side, size, ptr);}
+        TextureCube(const ImageData *sides) {SetData(sides);}
+        TextureCube(int sz, void **sides = 0)   {SetData(sz, sides);}
+        void SetData(Side side, const ImageData &data)
+        {
+            Activate();
+            size = data.Size();
+            if (size.x != size.y)
+                Exceptions::Graphics::BadCubeMapImage(Str(size));
+            glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
+        }
+        void SetData(Side side, int new_size, void *ptr = 0)
+        {
+            Activate();
+            size = ivec2(new_size);
+            glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+        }
+        void SetSubData(Side side, ivec2 dst, ivec2 dst_size, void *ptr)
+        {
+            Activate();
+            glTexSubImage2D((GLenum) side, 0, dst.x, dst.y, dst_size.x, dst_size.y, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+        }
+        void SetData(const ImageData *sides) // "sides" must point to six objects in the following order: +x -x +y -y +z -z
+        {
+            Activate();
+            bool bad_size = 0;
+            for (int i = 1; i < 6; i++) // i = 1 is here on purpose.
+            {
+                if (sides[i].Size() != sides[0].Size())
+                {
+                    bad_size = 1;
+                    break;
+                }
+            }
+            if (bad_size)
+            {
+                std::string err;
+                for (int i = 0; i < 6; i++)
+                {
+                    if (i != 0) err += ", ";
+                    err += Str("+-"[i%2], "xyz"[i/2], " = ", sides[i].Size());
+                }
+                Exceptions::Graphics::BadCubeMapImage(err);
+            }
+            size = sides[0].Size();
+            for (int i = 0; i < 6; i++)
+            {
+                const Side names[6]{Side::x, Side::_x,
+                                    Side::y, Side::_y,
+                                    Side::z, Side::_z};
+                glTexImage2D((GLenum) names[i], 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, sides[i].Data());
+            }
+        }
+        void SetData(int new_size, void **sides = 0) // "sides" must point to six objects (data pointers) in the following order: +x -x +y -y +z -z. "sides" may be null.
+        {
+            Activate();
+            size = ivec2(new_size);
+            void *nulls[6]{};
+            if (!sides) sides = nulls;
+            for (int i = 0; i < 6; i++)
+            {
+                const Side names[6]{Side::x, Side::_x,
+                                    Side::y, Side::_y,
+                                    Side::z, Side::_z};
+                glTexImage2D((GLenum) names[i], 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, sides[i]);
+            }
+        }
+    };
+
 
     class Font;
 
     class FontData
     {
-        friend class Font;
+      public:
+        using kerning_func_t = std::function<int (uint16_t, uint16_t)>;
 
-        struct Glyph
+        struct GlyphData
         {
-            bool exists;
-            ivec2 pos, size;
-            ivec2 offset;
+            ivec2 pos, size, offset;
             int advance;
         };
 
-        static constexpr int total_glyph_count = 0x10000; // This must be equal to the range of uint16_t.
-        static constexpr int sub_buffer_count = 1024;
-        static constexpr int sub_buffer_size = total_glyph_count / sub_buffer_count;
-
-        std::vector<std::vector<Glyph>> glyph_map;
-        int height, ascent, descent, line_skip;
-        Font *font_ptr;
-
-        void Alloc(Font *font, int he, int asc, int lskip)
+      private:
+        template <typename T, unsigned int SubArraySize> class Catalog
         {
-            glyph_map.resize(sub_buffer_count);
-            font_ptr = font;
-            height = he;
-            ascent = asc;
-            descent = he - asc;
-            line_skip = lskip;
-        }
+          public:
+            using value_type = T;
+            using size_type = int;
 
-        void AddGlyph(uint16_t glyph, ivec2 pos, ivec2 size, ivec2 offset, int advance)
-        {
-            int sub_buffer = glyph / sub_buffer_size;
-            if (!glyph_map[sub_buffer].size())
+          private:
+            struct Element
             {
-                glyph_map[sub_buffer].resize(sub_buffer_size);
-                for (int i = 0; i < sub_buffer_size; i++)
-                    glyph_map[sub_buffer][i] = Glyph{};
+                bool exists = 0;
+                T object;
+            };
+
+            struct SubArray
+            {
+                int size = 0;
+                std::vector<Element> data;
+            };
+
+            std::vector<SubArray> data;
+
+          public:
+            constexpr Catalog() {}
+            Catalog(size_type full_size) : data((full_size + SubArraySize - 1) / SubArraySize) {}
+
+            void alloc(size_type full_size)
+            {
+                free();
+                data.resize((full_size + SubArraySize - 1) / SubArraySize);
             }
-            glyph_map[sub_buffer][glyph % sub_buffer_size] = {1, pos, size, offset, advance};
-        }
+            void free()
+            {
+                data.clear();
+            }
+            void free_all()
+            {
+                for (auto it : data)
+                    it.data.clear();
+            }
+
+            [[nodiscard]] bool exists(size_type index) const
+            {
+                const auto &ref = data[index / SubArraySize];
+                if (ref.size == 0)
+                    return 0;
+                return ref.data[index % SubArraySize].exists;
+            }
+
+            T &add(size_type index)
+            {
+                auto &ref = data[index / SubArraySize];
+                if (ref.size == 0)
+                    ref.data.resize(SubArraySize);
+                auto &element_ref = ref.data[index % SubArraySize];
+                if (!element_ref.exists)
+                {
+                    ref.size++;
+                    element_ref.exists = 1;
+                }
+                return element_ref.object;
+            }
+
+            void remove(size_type index)
+            {
+                auto ref = data[index / SubArraySize];
+                if (ref.size == 0)
+                    return;
+                auto element_ref = ref.data[index % SubArraySize];
+                if (element_ref.exists)
+                {
+                    ref.size--;
+                    element_ref.exists = 0;
+                    if (ref.size == 0)
+                        ref.data.clear();
+                }
+            }
+
+            template <typename I> [[nodiscard]]       T &operator[](I index)       {return data[index / SubArraySize].data[index % SubArraySize].object;}
+            template <typename I> [[nodiscard]] const T &operator[](I index) const {return data[index / SubArraySize].data[index % SubArraySize].object;}
+        };
+
+        Catalog<GlyphData, 256> glyphs{0x10000};
+
+        kerning_func_t kerning_func;
+
+        int height, ascent, line_skip;
 
       public:
+
         FontData() {}
 
-        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc, int adv, int lskip) // Computes font data for monospaced font placed directly on the texture.
+        // Calls both `SetMetrics()` and `SetKerning()`.
+        FontData(int font_height, int font_ascent, int font_line_skip = 0, kerning_func_t func = [](uint16_t, uint16_t){return 0;})
         {
-            glyph_map.resize(sub_buffer_count);
-            font_ptr = 0;
-            height = glyph_sz.y;
-            ascent = asc;
-            descent = height - ascent;
-            line_skip = lskip;
+            SetMetrics(font_height, font_ascent, font_line_skip);
+            SetKerning((kerning_func_t &&)func);
+        }
 
-            for (std::size_t i = 0; i < enc.size(); i++)
-            {
-                AddGlyph(enc[i], {src.x + int(i) % row_len * glyph_sz.x, src.y + int(i) / row_len * glyph_sz.y}, glyph_sz, {0, -asc}, adv);
-            }
-        }
-        /*
-        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc, int adv)
-            : FontData(enc, src, glyph_sz, row_len, asc, adv, glyph_sz.y) {}
+        struct ImportFlags
+        {
+            using type = Utils::Flag<ImportFlags>;
+            static constexpr type metrics       = {0b001};
+            static constexpr type use_line_skip = {0b010}; // If this flag is not set, then the height is used as line skip. Makes no sense without `metrics`.
+            static constexpr type kerning       = {0b100}; // Requires Font object to be constantly alive and opened.
+            static constexpr type default_flags = metrics | kerning;
+        };
 
-        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len, int asc)
-            : FontData(enc, src, glyph_sz, row_len, asc, glyph_sz.x, glyph_sz.y) {}
-        FontData(ArrayView<uint16_t> enc, ivec2 src, ivec2 glyph_sz, int row_len)
-            : FontData(enc, src, glyph_sz, row_len, (glyph_sz.y+1)/2, glyph_sz.x, glyph_sz.y) {}*/
+        // Calls `Import()`.
+        FontData(const Font *font, ImportFlags::type flags = ImportFlags::default_flags)
+        {
+            Import(font, flags);
+        }
 
-        bool HasGlyph(uint16_t glyph) const
+
+        // Calls `SetMetrics()` and/or `SetKerning()` depending on flags.
+        // WARNING: If `kerning` flag is set, then the Font object must be alive and opened as long as you use the kerning function.
+        void Import(const Font *font, ImportFlags::type flags = ImportFlags::default_flags); // The implementation is placed into the .cpp to dodge the circular dependency with Font class.
+
+        // If `font_line_skip` == 0, then the height is used instead of it.
+        void SetMetrics(int font_height, int font_ascent, int font_line_skip = 0)
         {
-            if (glyph_map[glyph / sub_buffer_size].size() == 0)
-                return 0;
-            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].exists;
+            height = font_height;
+            ascent = font_ascent;
+            line_skip = (font_line_skip ? font_line_skip : font_height);
         }
-        ivec2 Pos(uint16_t glyph) const
+
+        void SetKerning(kerning_func_t func)
         {
-            if (glyph_map[glyph / sub_buffer_size].size() == 0)
-                return {0,0};
-            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].pos;
+            kerning_func = (kerning_func_t &&)func;
         }
-        ivec2 Size(uint16_t glyph) const
+        void ResetKerning()
         {
-            if (glyph_map[glyph / sub_buffer_size].size() == 0)
-                return {0,0};
-            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].size;
+            kerning_func = [](uint16_t, uint16_t){return 0;};
         }
-        ivec2 Offset(uint16_t glyph) const
+
+        void AddGlyph(uint16_t glyph, const GlyphData &data)
         {
-            if (glyph_map[glyph / sub_buffer_size].size() == 0)
-                return {0,0};
-            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].offset;
+            glyphs.add(glyph) = data;
         }
-        int Advance(uint16_t glyph) const // Horisontal offset to the next glyph.
+        void RemoveGlyph(uint16_t glyph)
         {
-            if (glyph_map[glyph / sub_buffer_size].size() == 0)
-                return 0;
-            return glyph_map[glyph / sub_buffer_size][glyph % sub_buffer_size].advance;
+            glyphs.remove(glyph);
         }
-        int Kerning(uint16_t a, uint16_t b) const; // This function relies on the original Font object which created the current instance. It must be alive and opened.
-        int Height() const {return height;}
-        int Ascent() const {return ascent;}
-        int Descent() const {return descent;}
-        int LineSkip() const {return line_skip;} // This is an Y offset between lines. Height of the font is already added to it. Using this is not mandratory.
+        void Clear()
+        {
+            glyphs.free_all();
+        }
+
+        int Height() const
+        {
+            return height;
+        }
+        int Ascent() const
+        {
+            return ascent;
+        }
+        int Descent() const
+        {
+            return height - ascent;
+        }
+        int LineSkip() const
+        {
+            return line_skip;
+        }
+        bool GlyphExists(uint16_t glyph) const
+        {
+            return glyphs.exists(glyph);
+        }
+
+        const GlyphData &Glyph(uint16_t glyph) const
+        {
+            return glyphs[glyph];
+        }
+
+        int Kerning(uint16_t a, uint16_t b) const
+        {
+            return kerning_func(a, b);
+        }
     };
 
     class Font
     {
         TTF_Font *handle;
         Utils::BinaryInput stream;
+        std::vector<char> stream_data;
 
       public:
-        void Open(Utils::BinaryInput input, int ptsize, int index = 0) // Warning: The file will be used while the font object is alive and opened.
+        void Open(Utils::BinaryInput input, int ptsize, int index = 0)
         {
             Close();
-            stream = (Utils::BinaryInput &&) input;
+            auto file_size = input.Size();
+            if (file_size == -1)
+                Exceptions::IO::CantParse(stream.Name(), "Can't get file font file size.");
+            stream_data.resize(file_size);
+            input.ReadEx(stream_data.data(), file_size);
+            stream.OpenConstMemory(stream_data.data(), file_size);
             handle = TTF_OpenFontIndexRW((SDL_RWops *)stream.RWops(), 0, ptsize, index);
             if (!handle)
                 Exceptions::IO::CantParse(stream.Name(), Str("SDL ttf plugin is unable to parse font: ", TTF_GetError()));
@@ -894,6 +1376,7 @@ namespace Graphics
                 TTF_CloseFont(handle);
                 handle = 0;
                 stream.Close();
+                stream_data.clear();
             }
         }
 
@@ -907,12 +1390,10 @@ namespace Graphics
             Open((Utils::BinaryInput &&) input, ptsize, index);
         }
 
-
-
         Font(const Font &) = delete;
         Font &operator=(const Font &) = delete;
 
-        Font(Font &&o) : stream((Utils::BinaryInput &&) o.stream)
+        Font(Font &&o) : stream((Utils::BinaryInput &&) o.stream), stream_data((decltype(stream_data) &&) o.stream_data)
         {
             handle = o.handle;
             o.handle = 0;
@@ -924,6 +1405,7 @@ namespace Graphics
             handle = o.handle;
             o.handle = 0;
             stream = (Utils::BinaryInput &&) o.stream;
+            stream_data = (decltype(stream_data) &&) o.stream_data;
             return *this;
         }
 
@@ -1007,8 +1489,8 @@ namespace Graphics
          *    ##  ##    ##    ##                  | Ascent        |
          *     ####     ##    ##                  |               | Height
          *      ##      ##    ##                  |               |
-         * ---- ## ----- ####### ------ Baseline  /   \           |
-         *                    ##                      | Descent   |
+         * .....##.......#######........Baseline../...            |
+         *                    ##                      \ Descent   |
          * . . . . . .  ####### . . . . . . . . . . . / . . . . . /
          */
 
@@ -1037,7 +1519,7 @@ namespace Graphics
             return TTF_FontFaceIsFixedWidth(handle);
         }
 
-        bool HasGlyph(uint16_t glyph) const
+        bool GlyphExists(uint16_t glyph) const
         {
             return TTF_GlyphIsProvided(handle, glyph);
         }
@@ -1049,7 +1531,7 @@ namespace Graphics
          *  |..o.......o...  maxY
          *  |  : #### #:  :
          *  |  :##  ## :  :
-         *  |  :##   ##:  :  advance (horisontal)
+         *  |  :##   ##:  :  advance (horizontal)
          *  |  : ##### :  : /
          *  |  :##     :  :/
          *  0----#####----o----X  (baseline)
@@ -1106,353 +1588,170 @@ namespace Graphics
 
         enum Quality {fast, fancy};
 
-        // Uses UTF-16 for glyphs.
-        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<uint16_t> glyphs, bool outline = 0, Quality quality = fancy, u8vec4 color = {255,255,255,255})
+        // If `img` is clean, then it's resized to the glyph size and `dst` is ignored.
+        bool RenderGlyph(ImageData &img, ivec2 dst, uint16_t glyph, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255}) const // Returns 1 on success.
         {
-            SDL_Surface *surface;
-            if (Utils::big_endian)
-                surface = SDL_CreateRGBSurfaceFrom(img.Data(), img.Size().x, img.Size().y, 32, img.Size().x*4, 0xff << 8*3, 0xff << 8*2, 0xff << 8*1, 0xff << 8*0);
+            if (!GlyphExists(glyph))
+                glyph = 0xffff;
+
+            SDL_Surface *glyph_surface = (quality == fancy ? TTF_RenderGlyph_Blended : TTF_RenderGlyph_Solid)(handle, glyph, {color.r, color.g, color.b, color.a});
+            if (!glyph_surface)
+                return 0;
+
+            SDL_SetSurfaceBlendMode(glyph_surface, SDL_BLENDMODE_NONE);
+            if (quality == fast)
+            {
+                SDL_SetColorKey(glyph_surface, 0, 0);
+                glyph_surface->format->palette->colors[0] = {0,0,0,0};
+            }
+
+
+            ivec2 glyph_pos, glyph_size;
+            GlyphRawMetrics(glyph, &glyph_pos.x, &glyph_size.x, &glyph_pos.y, &glyph_size.y, 0); // We don't check for error here since it can only happen if there is no such glyph, which we've checked earleier.
+
+            SDL_Rect src_rect;
+            src_rect.x = glyph_pos.x;
+            src_rect.y = Ascent() - glyph_size.y;
+
+            glyph_size -= glyph_pos;
+
+            // If X offset is negative.
+            if (src_rect.x < 0)
+                src_rect.x = 0;
+
+            // If Y offset is less than (negative) ascent.
+            if (src_rect.y < 0)
+            {
+                glyph_size.y += src_rect.y; // Sic! We use this for Y coordinate only because SDL2_ttf clips parts of the glyph which are above ascent line.
+                src_rect.y = 0;
+            }
+
+            src_rect.w = glyph_size.x;
+            src_rect.h = glyph_size.y;
+
+            SDL_Rect dst_rect;
+            dst_rect.w = glyph_size.x;
+            dst_rect.h = glyph_size.y;
+
+            if (img.Size() == ivec2(0,0)) // If `img` is clean.
+            {
+                img.Empty(glyph_size);
+                dst_rect.x = 0;
+                dst_rect.y = 0;
+            }
             else
-                surface = SDL_CreateRGBSurfaceFrom(img.Data(), img.Size().x, img.Size().y, 32, img.Size().x*4, 0xff << 8*0, 0xff << 8*1, 0xff << 8*2, 0xff << 8*3);
-            if (!surface)
-                Sys::Error("Can't create a temporary surface for the font renderer.");
-
-            font_data.Alloc(this, Height(), Ascent(), LineSkip());
-
-            SDL_Surface *glyph_surface;
-
-            ivec2 pixel_pos(0,0);
-
-            int asc = Ascent();
-
-            int column_h = 1; // 1 instead of 0 to avoid a stupid bug when no single glyph can fit into a destination rect.
-
-            /*
-             * Corner points:
-             * img.At(dst + ivec2(dstsz.x-2, 0)) = {  0,  0,  0,255};
-             * img.At(dst + ivec2(dstsz.x-1, 0)) = {255,255,255,255};
-             * img.At(dst + ivec2(dstsz.x-1, 1)) = {  0,  0,  0,255};
-             * img.At(dst + ivec2(0, dstsz.y-2)) = {  0,  0,  0,255};
-             * img.At(dst + ivec2(0, dstsz.y-1)) = {255,255,255,255};
-             * img.At(dst + ivec2(1, dstsz.y-1)) = {  0,  0,  0,255};
-             * img.At(dst + dstsz + ivec2(-1,-2)) = {  0,  0,  0,255};
-             * img.At(dst + dstsz + ivec2(-2,-1)) = {  0,  0,  0,255};
-             * img.At(dst + dstsz + ivec2(-1,-1)) = {255,255,255,255};
-             */
-
-            dst += outline;
-            dstsz -= outline;
-
-            for (uint16_t it : glyphs)
             {
-                if (!HasGlyph(it))
-                    continue;
-                glyph_surface = (quality == fancy ? TTF_RenderGlyph_Blended : TTF_RenderGlyph_Solid)(handle, it, {color.r, color.g, color.b, color.a});
-                if (!glyph_surface)
-                    continue;
-                SDL_SetSurfaceBlendMode(glyph_surface, SDL_BLENDMODE_NONE);
-                if (quality == fast)
-                {
-                    SDL_SetColorKey(glyph_surface, 0, 0);
-                    glyph_surface->format->palette->colors[0] = {0,0,0,0};
-                }
+                dst_rect.x = dst.x;
+                dst_rect.y = dst.y;
+            }
 
-                int minx, maxx, miny, maxy, advance;
-                GlyphRawMetrics(it, &minx, &maxx, &miny, &maxy, &advance);
-                ivec2 tex_sz(maxx-minx, maxy-miny);
+            img.CreateSurface();
 
-                while (pixel_pos.y + tex_sz.y+outline > dstsz.y)
-                {
-                    pixel_pos.y = 0;
-                    pixel_pos.x += column_h;
-                    column_h = 1; // 1 instead of 0 to avoid a stupid bug when no single glyph can fit into a destination rect.
-                }
-
-                ivec2 tex_pos = dst + pixel_pos;
-
-                if (column_h < tex_sz.x+outline)
-                    column_h = tex_sz.x+outline;
-
-                if (pixel_pos.x + column_h > dstsz.x)
-                {
-                    SDL_FreeSurface(surface);
-                    SDL_FreeSurface(glyph_surface);
-                    Exceptions::Graphics::FontAtlasOverflow(Name(), Str(dstsz+1));
-                }
-
-                font_data.AddGlyph(it, tex_pos, tex_sz, {minx, -maxy}, advance);
-                SDL_Rect src_rect{minx, asc-maxy, tex_sz.x, tex_sz.y};
-                SDL_Rect dst_rect{tex_pos.x, tex_pos.y, tex_sz.x, tex_sz.y};
-                if (SDL_BlitSurface(glyph_surface, &src_rect, surface, &dst_rect))
-                {
-                    SDL_FreeSurface(surface);
-                    SDL_FreeSurface(glyph_surface);
-                    Sys::Error(Str("Can't blit glyph #", it, " for font ", Name(), '.'));
-                }
-                if (outline)
-                {
-                    static constexpr u8vec4 outline_color(0,0,0,0);
-                    for (int i = -1; i < tex_sz.x+1; i++)
-                    {
-                        img.At(tex_pos + ivec2(i,-1)) = outline_color;
-                        img.At(tex_pos + ivec2(i,tex_sz.y)) = outline_color;
-                    }
-                    for (int i = -1; i < tex_sz.y+1; i++)
-                    {
-                        img.At(tex_pos + ivec2(-1,i)) = outline_color;
-                        img.At(tex_pos + ivec2(tex_sz.x,i)) = outline_color;
-                    }
-                }
-                pixel_pos.y += tex_sz.y+outline;
+            if (SDL_BlitSurface(glyph_surface, &src_rect, (SDL_Surface *)img.Surface(), &dst_rect))
+            {
                 SDL_FreeSurface(glyph_surface);
+                return 0;
             }
-            SDL_FreeSurface(surface);
+
+            SDL_FreeSurface(glyph_surface);
+            return 1;
+        }
+        bool RenderGlyph(Texture &tex, ivec2 dst, uint16_t glyph, Quality quality = Quality::fancy, u8vec4 color = {255,255,255,255}) const // Returns 1 on success.
+        {
+            ImageData img;
+            if (!RenderGlyph(img, {0,0}, glyph, quality, color))
+                return 0;
+            tex.SetSubData(dst, img);
+            return 1;
         }
 
-        // Uses UTF-8 for glyphs.
-        void RenderGlyphs(FontData &font_data, ImageData &img, ivec2 dst, ivec2 dstsz, ArrayView<char> glyphs, bool outline = 0, Quality quality = fancy, u8vec4 color = {255,255,255,255})
+        struct ExportFlags
         {
-            std::size_t len = u8strlen(glyphs);
-            std::cout << len;
-            std::vector<uint16_t> arr(len);
-            const char *ptr = glyphs;
-            for (std::size_t i = 0; i < len; i++)
-            {
-                arr[i] = u8decode(ptr, &ptr);
-            }
-            RenderGlyphs(font_data, img, dst, dstsz, {arr.data(), len}, outline, quality, color);
-        }
-    };
-
-    enum class Format : GLenum {};
-
-    namespace GetFormat
-    {
-        inline Format RGB()
-        {
-            #if !defined(GL_RGB8)
-            # define GL_RGB8 0
-            #endif
-            static GLenum ret = (Window::OpenGL::ES() ? GL_RGB565 : GL_RGB8);
-            return (Format)ret;
-        }
-        inline Format RGBA(bool single_alpha_bit = 0)
-        {
-            #if !defined(GL_RGBA8)
-            # define GL_RGBA8 0
-            #endif
-            static GLenum ret = (Window::OpenGL::ES() ? (single_alpha_bit ? GL_RGB5_A1 : GL_RGBA4) : GL_RGBA8);
-            return (Format)ret;
-        }
-        inline Format Depth16()
-        {
-            return (Format)GL_DEPTH_COMPONENT16;
-        }
-        inline Format Depth24()
-        {
-            #if !defined(GL_DEPTH_COMPONENT24)
-            # if defined(GL_DEPTH_COMPONENT24_OES)
-            #  define GL_DEPTH_COMPONENT24 GL_DEPTH_COMPONENT24_OES
-            # else
-            #  define GL_DEPTH_COMPONENT24 0x81A6
-            # endif
-            #endif
-            static bool supported = !Window::OpenGL::ES() || ExtensionSupported("GL_OES_depth24");
-            static GLenum ret = (supported ? GL_DEPTH_COMPONENT24 : (GLenum)Depth16());
-            return (Format)ret;
-        }
-        inline Format Depth32()
-        {
-            #if !defined(GL_DEPTH_COMPONENT32)
-            # if defined(GL_DEPTH_COMPONENT32_OES)
-            #  define GL_DEPTH_COMPONENT32 GL_DEPTH_COMPONENT32_OES
-            # else
-            #  define GL_DEPTH_COMPONENT32 0x81A7
-            # endif
-            #endif
-            #if !defined(GL_DEPTH_COMPONENT32F)
-            # define GL_DEPTH_COMPONENT32F GL_DEPTH_COMPONENT32
-            #endif
-            static bool supported = !Window::OpenGL::ES() || ExtensionSupported("GL_OES_depth32");
-            static GLenum ret = (supported ? (Window::OpenGL::ES() ? GL_DEPTH_COMPONENT32 : GL_DEPTH_COMPONENT32F) : (GLenum)Depth24());
-            return (Format)ret;
-        }
-        inline Format DepthBest()
-        {
-            return Depth32();
-        }
-    }
-
-
-    enum WrapMode
-    {
-        clamp  = GL_CLAMP_TO_EDGE,
-        mirror = GL_MIRRORED_REPEAT,
-        repeat = GL_REPEAT,
-        fill   = ForPC(GL_CLAMP_TO_BORDER) ForMobile(GL_CLAMP_TO_EDGE),
-    };
-
-
-    static void SetActiveTextureSlot(unsigned int n) // You need to call this only if you use GL functions manually. Always use this instead of glActiveTexture() if you use any of Texture classes!
-    {
-        static unsigned int active_tex = 0;
-        if (n != active_tex)
-        {
-            glActiveTexture(GL_TEXTURE0 + n);
-            active_tex = n;
-        }
-    }
-
-
-    template <typename Derived> class TextureBase
-    {
-      protected:
-        int tex_id;
-        GLuint handle;
-        ivec2 size;
-      public:
-        TextureBase()
-        {
-            size = {0,0};
-            if (!Derived::GetPool().Alloc(&tex_id))
-                Sys::Error("Can't create a new texture because the texture pool is empty.");
-            glGenTextures(1, &handle);
-            if (!handle)
-                Sys::Error("Failed to create a new texture.");
-            Activate();
-            glBindTexture(Derived::GetTargetName(), handle);
-        }
-        TextureBase(const TextureBase &) = delete;
-        TextureBase(TextureBase &&) = delete;
-        TextureBase &operator=(const TextureBase &) = delete;
-        TextureBase &operator=(TextureBase &&) = delete;
-        ~TextureBase()
-        {
-            glDeleteTextures(1, &handle);
-            Derived::GetPool().Free(tex_id);
-        }
-        static uint32_t MaxCount()     {return Derived::GetPool().MaxSize();}
-        static uint32_t CurrentCount() {return Derived::GetPool().CurrentSize();}
-
-        void Activate() const {SetActiveTextureSlot(tex_id);}
-
-        void MinLinearInterpolation(bool n) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_MIN_FILTER, n ? GL_LINEAR : GL_NEAREST);} // This is 1 by default.
-        void MagLinearInterpolation(bool n) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_MAG_FILTER, n ? GL_LINEAR : GL_NEAREST);}
-        void LinearInterpolation(bool n)    {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_MIN_FILTER, n ? GL_LINEAR : GL_NEAREST);
-                                                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, n ? GL_LINEAR : GL_NEAREST);}
-        void WrapModeX(WrapMode mode)  {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_S, (GLuint)mode);}
-        void WrapModeY(WrapMode mode)  {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_T, (GLuint)mode);}
-        void WrapModeXY(WrapMode mode) {Activate(); glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_S, (GLuint)mode);
-                                                    glTexParameteri(Derived::GetTargetName(), GL_TEXTURE_WRAP_T, (GLuint)mode);}
-        GLuint Handle() const {return handle;}
-        int Slot() const {return tex_id;}
-        ivec2 Size() const {return size;}
-    };
-
-    class Texture : public TextureBase<Texture>
-    {
-        static Utils::PoolManager<int> &GetPool();
-        static GLint GetTargetName();
-        friend class TextureBase<Texture>;
-      public:
-        Texture() {}
-        Texture(const ImageData &data)     {SetData(data);}
-        Texture(ivec2 size, void *ptr = 0) {SetData(size, ptr);}
-        void SetData(const ImageData &data)
-        {
-            Activate();
-            size = data.Size();
-            glTexImage2D(GetTargetName(), 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
-        }
-        void SetData(ivec2 new_size, void *ptr = 0)
-        {
-            Activate();
-            size = new_size;
-            glTexImage2D(GetTargetName(), 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
-        }
-    };
-
-    class TextureCube : public TextureBase<TextureCube>
-    {
-        static Utils::PoolManager<int> &GetPool();
-        static GLint GetTargetName();
-        friend class TextureBase<TextureCube>;
-      public:
-        enum class Side
-        {
-            x = GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-            y = GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-            z = GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-            _x = GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-            _y = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-            _z = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+            using type = Utils::Flag<ExportFlags>;
+            static constexpr type outline       = {0b001};
+            static constexpr type use_line_skip = {0b010};
+            static constexpr type use_kerning   = {0b100};
+            static constexpr type default_flags = outline | use_kerning;
         };
 
-        TextureCube() {}
-        TextureCube(Side side, const ImageData &data)     {SetData(side, data);}
-        TextureCube(Side side, int size, void *ptr = 0) {SetData(side, size, ptr);}
-        TextureCube(const ImageData *sides) {SetData(sides);}
-        TextureCube(int sz, void **sides = 0)   {SetData(sz, sides);}
-        void SetData(Side side, const ImageData &data)
+        void ExportGlyphs(ImageData &img, FontData &fontdata, ivec2 offset, ivec2 size, Utils::ArrayView<uint16_t> glyphs, Quality quality = fancy, ExportFlags::type flags = ExportFlags::default_flags , u8vec4 color = {255,255,255,255}) const
         {
-            Activate();
-            size = data.Size();
-            if (size.x != size.y)
-                Exceptions::Graphics::BadCubeMapImage(Str(size));
-            glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.Data());
-        }
-        void SetData(Side side, int new_size, void *ptr = 0)
-        {
-            Activate();
-            size = ivec2(new_size);
-            glTexImage2D((GLenum) side, 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
-        }
-        void SetData(const ImageData *sides) // "sides" must point to six objects in the following order: +x -x +y -y +z -z
-        {
-            Activate();
-            bool bad_size = 0;
-            for (int i = 1; i < 6; i++) // i = 1 is here on purpose.
+            bool outline = flags & ExportFlags::outline;
+
+            fontdata.Import(this, FontData::ImportFlags::metrics |
+                                  bool(flags & ExportFlags::use_kerning)   * FontData::ImportFlags::kerning |
+                                  bool(flags & ExportFlags::use_line_skip) * FontData::ImportFlags::use_line_skip);
+
+            std::vector<uint16_t> sorted_glyphs{glyphs.begin(), glyphs.end()};
+            std::sort(sorted_glyphs.begin(), sorted_glyphs.end(), [this](uint16_t a, uint16_t b){return GlyphSize(a).x > GlyphSize(b).x;});
+
+            if (outline)
             {
-                if (sides[i].Size() != sides[0].Size())
+                offset++;
+                size--;
+            }
+
+            ivec2 pos(0,0);
+            int column_w = 0;
+
+            int glyphs_processed = -1; // Sic! Note the -1 instead of 0 because we increment at the beginning of the loop.
+
+            for (uint16_t it : sorted_glyphs)
+            {
+                glyphs_processed++;
+                if (!GlyphExists(it) && it != 0)
+                    continue;
+                ivec2 glyph_size = GlyphSize(it);
+                bool has_sprite = bool(glyph_size);
+                glyph_size += outline;
+
+                if (has_sprite)
                 {
-                    bad_size = 1;
-                    break;
+                    if (glyph_size.y > size.y - pos.y)
+                    {
+                        if (glyph_size.y <= size.y)
+                        {
+                            pos.x += column_w;
+                            pos.y = 0;
+                            column_w = 0;
+                        }
+                        else
+                            Exceptions::Graphics::CantGenFontAtlas(Name(), Str(glyphs_processed, '/', glyphs.size()), Str("The height of the glyph 0x", std::hex, it, " is larger than the height of the atlas."));
+                    }
+                    if (glyph_size.x > size.x - pos.x)
+                        Exceptions::Graphics::CantGenFontAtlas(Name(), Str(glyphs_processed, '/', glyphs.size()), Str("Not enough space."));
+
+                    if (!RenderGlyph(img, offset + pos, it, quality, color))
+                        continue;
                 }
-            }
-            if (bad_size)
-            {
-                std::string err;
-                for (int i = 0; i < 6; i++)
+
+                fontdata.AddGlyph(it, {offset + pos, GlyphSize(it), GlyphOffset(it), GlyphAdvance(it)});
+
+                if (has_sprite)
                 {
-                    if (i != 0) err += ", ";
-                    err += Str("+-"[i%2], "xyz"[i/2], " = ", sides[i].Size());
+                    if (glyph_size.x > column_w)
+                        column_w = glyph_size.x;
+
+                    if (outline)
+                    {
+                        for (int i = -1; i < glyph_size.x; i++)
+                        {
+                            img.At(offset + pos + ivec2(i, glyph_size.y-1)) = {0,0,0,0};
+                            img.At(offset + pos + ivec2(i, -1)) = {0,0,0,0};
+                        }
+                        for (int i = 0; i < glyph_size.y-1; i++)
+                        {
+                            img.At(offset + pos + ivec2(glyph_size.x-1, i)) = {0,0,0,0};
+                            img.At(offset + pos + ivec2(-1, i)) = {0,0,0,0};
+                        }
+                    }
+
+                    pos.y += glyph_size.y;
                 }
-                Exceptions::Graphics::BadCubeMapImage(err);
-            }
-            size = sides[0].Size();
-            for (int i = 0; i < 6; i++)
-            {
-                const Side names[6]{Side::x, Side::_x,
-                                    Side::y, Side::_y,
-                                    Side::z, Side::_z};
-                glTexImage2D((GLenum) names[i], 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, sides[i].Data());
-            }
-        }
-        void SetData(int new_size, void **sides = 0) // "sides" must point to six objects (data pointers) in the following order: +x -x +y -y +z -z. "sides" may be null.
-        {
-            Activate();
-            size = ivec2(new_size);
-            void *nulls[6]{};
-            if (!sides) sides = nulls;
-            for (int i = 0; i < 6; i++)
-            {
-                const Side names[6]{Side::x, Side::_x,
-                                    Side::y, Side::_y,
-                                    Side::z, Side::_z};
-                glTexImage2D((GLenum) names[i], 0, ForPC(GL_RGBA8) ForMobile(GL_RGBA), size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, sides[i]);
             }
         }
     };
+
 
     namespace Internal
     {

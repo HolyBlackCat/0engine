@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.3.0 by HolyBlackCat
+// Version 2.3.2 by HolyBlackCat
 
 #include <algorithm>
 #include <cmath>
@@ -511,7 +511,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
@@ -564,7 +564,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
@@ -619,7 +619,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
@@ -673,7 +673,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
@@ -706,10 +706,10 @@ namespace Math
                 return {c, -s,
                         s, c};
             }
-            static constexpr vec scale2D(const vec2<type> &v)
+            static constexpr vec scale2D(type s)
             {
-                return {v.x, 0,
-                        0, v.y};
+                return {s, 0,
+                        0, s};
             }
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
             constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
@@ -762,7 +762,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
@@ -792,7 +792,7 @@ namespace Math
                         0, 2 / (max.y - min.y), (min.y + max.y) / (min.y - max.y)};
             }
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x2();}
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat3x2();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat3x2();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
@@ -833,7 +833,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
@@ -861,7 +861,7 @@ namespace Math
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x2();}
             static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x2();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x2();}
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x2();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat4x2();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
@@ -900,7 +900,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
@@ -921,7 +921,7 @@ namespace Math
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat2x3();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat2x3();}
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat2x3();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat2x3();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
@@ -961,7 +961,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
@@ -1001,12 +1001,12 @@ namespace Math
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 return rotate_with_normalized_axis(in.norm(), angle);
             }
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat3x3();}
-            static constexpr vec scale(const vec3<type> &v)
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat3x3();}
+            static constexpr vec scale(type s)
             {
-                return {v.x, 0, 0,
-                        0, v.y, 0,
-                        0, 0, v.z};
+                return {s, 0, 0,
+                        0, s, 0,
+                        0, 0, s};
             }
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
@@ -1074,7 +1074,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
@@ -1135,8 +1135,8 @@ namespace Math
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x3();}
             static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat4x3();}
             static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat4x3();}
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x3();}
-            static constexpr vec scale(const vec3<type> &v) {return mat3x3<type>::scale(v).to_mat4x3();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat4x3();}
+            static constexpr vec scale(type s) {return mat3x3<type>::scale(s).to_mat4x3();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
@@ -1175,7 +1175,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
             template <typename TT> constexpr vec(vec2<TT> obj) : x(obj.x), y(obj.y) {}
@@ -1196,7 +1196,7 @@ namespace Math
             static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
             static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat2x4();}
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat2x4();}
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat2x4();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat2x4();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
@@ -1236,7 +1236,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
             template <typename TT> constexpr vec(vec3<TT> obj) : x(obj.x), y(obj.y), z(obj.z) {}
@@ -1264,8 +1264,8 @@ namespace Math
             static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x4();}
             static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat3x4();}
             static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat3x4();}
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat3x4();}
-            static constexpr vec scale(const vec3<type> &v) {return mat3x3<type>::scale(v).to_mat3x4();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat3x4();}
+            static constexpr vec scale(type s) {return mat3x3<type>::scale(s).to_mat3x4();}
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
@@ -1306,7 +1306,7 @@ namespace Math
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
             explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w;}
-            constexpr vec() {}
+            vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
             template <typename TT> constexpr vec(vec4<TT> obj) : x(obj.x), y(obj.y), z(obj.z), w(obj.w) {}
@@ -1351,8 +1351,15 @@ namespace Math
                         0                , 0    , (near + far) / (near - far) , 2 * near * far / (near - far) ,
                         0                , 0    , -1                          , 0                             };
             }
-            static constexpr vec scale2D(const vec2<type> &v) {return mat2x2<type>::scale2D(v).to_mat4x4();}
-            static constexpr vec scale(const vec3<type> &v) {return mat3x3<type>::scale(v).to_mat4x4();}
+            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat4x4();}
+            static constexpr vec scale(type s) {return mat3x3<type>::scale(s).to_mat4x4();}
+            static constexpr vec scale4D(type s)
+            {
+                return {s, 0, 0, 0,
+                        0, s, 0, 0,
+                        0, 0, s, 0,
+                        0, 0, 0, s};
+            }
             constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
             constexpr mat2<type> to_mat2() const {return to_mat2x2();}
             constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}

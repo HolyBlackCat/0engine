@@ -22,18 +22,14 @@ namespace Strings
         Internal::ss.clear();
         Internal::ss.str("");
         Internal::ss.flags(Internal::stdfmt);
-        // (Internal::ss << ... << params);
-        using dummy_array = int[];
-        dummy_array{(Internal::ss << params, 0)...};
+        (Internal::ss << ... << params);
         return Internal::ss.str();
     }
     template <typename ...P> [[nodiscard]] std::string Str_(P &&... params)
     {
         Internal::ss.clear();
         Internal::ss.str("");
-        // (Internal::ss << ... << params);
-        using dummy_array = int[];
-        dummy_array{(Internal::ss << params, 0)...};
+        (Internal::ss << ... << params);
         return Internal::ss.str();
     }
 
@@ -44,7 +40,7 @@ namespace Strings
         if (str.size())
             str.remove_suffix(str.size() - str.find_last_not_of(chars_to_remove) - 1);
 
-        auto Unprintable = [](char c) {return c < 32 || c == 127;};
+        auto Unprintable = [](char c) {return (c < 32 && c != '\n') || c == 127;};
 
         std::string ret;
         ret.reserve(str.size() + 5*std::count_if(str.begin(), str.end(), Unprintable)); // Sic! `5` is used as the factor, but unprintable chars are replaced with 6 chars.
@@ -64,81 +60,111 @@ namespace Strings
         return ret;
     }
 
-    inline namespace UTF8
+    [[nodiscard]] inline std::string EscapeStr(std::string_view str)
     {
-        inline bool u8firstbyte(const char *ptr) // Check if a pointed byte is a first byte of a symbol.
+        auto EscapeSeq = [](char ch) -> const char *
         {
-            return !(*ptr & 0x80) || (*ptr & 0xc0) == 0xc0;
+            switch (ch)
+            {
+                case '\a': return "\\a";
+                case '\b': return "\\b";
+                case '\f': return "\\f";
+                case '\n': return "\\n";
+                case '\r': return "\\r";
+                case '\t': return "\\t";
+                case '\v': return "\\v";
+                default: return 0;
+            }
+        };
+
+        std::size_t len = 0;
+
+        for (char it : str)
+        {
+            if (it < 32 || it >= 127)
+            {
+                if (EscapeSeq(it) != 0)
+                    len += 2; // For example, '\a'.
+                else
+                    len += 4; // For example, '\x7f'.
+            }
+            else
+                len++;
         }
 
-        inline std::size_t u8strlen(const char *ptr)
+        std::string ret;
+        ret.reserve(len);
+
+        (void)Str(std::hex);
+
+        for (char it : str)
+        {
+            if (it < 32 || it >= 127)
+            {
+                auto seq = EscapeSeq(it);
+                if (seq)
+                    ret += seq;
+                else
+                    ret += Str_("\\x", int((unsigned char)it / 16), int((unsigned char)it % 16));
+            }
+            else
+                ret += it;
+        }
+
+        return ret;
+    }
+
+    inline namespace UTF8
+    {
+        constexpr uint16_t u8invalidchar = 0xffff;
+
+        [[nodiscard]] inline bool u8firstbyte(char ch) // Check if a pointed byte is a first byte of a symbol.
+        {
+            return (ch & 0b1100'0000) != 0b1000'0000;
+        }
+        template <typename Iter> [[nodiscard]] bool u8firstbyte(Iter it)
+        {
+            return u8firstbyte(*it);
+        }
+
+        [[nodiscard]] inline std::size_t u8strlen(std::string_view str)
         {
             std::size_t ret = 0;
-            while (*ptr)
-            {
-                if (u8firstbyte(ptr))
+            for (char it : str)
+                if (u8firstbyte(it))
                     ret++;
-                ptr++;
-            }
             return ret;
         }
 
-        inline const char *u8next(const char *ptr)
+        [[nodiscard]] inline std::size_t u8charlen(char ch) // If `ch` is not a first byte of a sequence, returns 0.
         {
-            while (*ptr)
-            {
-                ptr++;
-                if (u8firstbyte(ptr))
-                    break;
-            }
-            return ptr;
+            if ((ch & 0b1000'0000) == 0)
+                return 1;
+            if (!u8firstbyte(ch))
+                return 0;
+            for (int i = 1; i < 8; i++)
+                if ((((ch & (0xff00 >> (i+1))) ^ (0xff00 >> i)) & 0xff) == 0)
+                    return i;
+            return 8;
+        }
+        template <typename Iter> [[nodiscard]] std::size_t u8charlen(Iter it)
+        {
+            return u8charlen(*it);
         }
 
-        constexpr uint16_t u8invalidchar = 0xffff;
-
-        inline uint16_t u8decode(const char *ptr, const char **next = 0) // 0xffff is returned if the value is out of range.
+        template <typename Iter> [[nodiscard]] uint16_t u8decode(Iter str) // Decodes the first character only. Returns `u8invalidchar` on failure.
         {
-            static constexpr uint8_t bits[5]{0b10000000,
-                                             0b11000000,
-                                             0b11100000,
-                                             0b11110000,
-                                             0b11111000};
-            static constexpr uint8_t inv_bits[5]{0b01111111,
-                                                 0b00111111,
-                                                 0b00011111,
-                                                 0b00001111,
-                                                 0b00000111};
-
-            if ((*ptr & bits[0]) == 0)
+            switch (u8charlen(*str))
             {
-                if (next) *next = ptr + 1;
-                return *ptr & inv_bits[0];
+              default:
+                return u8invalidchar;
+              case 1:
+                return *str;
+              case 2:
+                return ((*str & 0b0001'1111) << 6) | (str[1] & 0b0011'1111);
+              case 3:
+                return ((*str & 0b0000'1111) << 12) | ((str[1] & 0b0011'1111) << 6) | (str[2] & 0b0011'1111);
             }
-
-            uint16_t ret;
-            for (int i = 1; i < 4; i++)
-            {
-                if ((*ptr & bits[i+1]) == bits[i])
-                {
-                    ret = *ptr & inv_bits[i+1];
-                    for (int j = 0; j < i; j++)
-                    {
-                        ptr++;
-                        if (!*ptr)
-                        {
-                            if (next) *next = ptr;
-                            return u8invalidchar;
-                        }
-                        ret = (ret << 6) | (*ptr & inv_bits[1]);
-                    }
-                    if (next) *next = ptr + 1;
-                    return ret;
-                }
-            }
-
-            if (next) *next = u8next(ptr);
-
-            return u8invalidchar;
         }
     }
 }

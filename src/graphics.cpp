@@ -17,6 +17,8 @@ namespace Graphics
 
     static bool depth_test = 0;
 
+    static unsigned int active_tex_slot = 0;
+
     namespace Init
     {
         static int max_texture_count = 48;
@@ -44,7 +46,6 @@ namespace Graphics
     }
     void BeginFrame()
     {
-        Clear();
     }
     void EndFrame()
     {
@@ -56,6 +57,7 @@ namespace Graphics
     {
         std::string glerr;
         bool isglerr = 0;
+
         while (GLenum err = glGetError())
         {
             isglerr = 1;
@@ -446,13 +448,12 @@ namespace Graphics
     }
 
 
-    int FontData::Kerning(uint16_t a, uint16_t b) const // This function relies on the original Font object which created the current instance.
+    void FontData::Import(const Font *font, ImportFlags::type flags) // The implementation is placed into the .cpp to dodge the circular dependency with Font class.
     {
-        // This was moved into .cpp to avoid a circular dependency.
-        if (font_ptr)
-            return font_ptr->GlyphKerning(a, b);
-        else
-            return 0;
+        if (flags & ImportFlags::metrics)
+            SetMetrics(font->Height(), font->Ascent(), flags & ImportFlags::use_line_skip ? font->LineSkip() : font->Height());
+        if (flags & ImportFlags::kerning)
+            SetKerning([font](uint16_t a, uint16_t b){return font->GlyphKerning(a,b);});
     }
 
 
@@ -536,11 +537,22 @@ namespace Graphics
     }
 
 
-    Utils::PoolManager<int> &Texture::GetPool()       {return texture_pool_2d;}
-    GLint                    Texture::GetTargetName() {return GL_TEXTURE_2D;}
+    unsigned int ActiveTextureSlot()
+    {
+        return active_tex_slot;
+    }
+    void SetActiveTextureSlot(unsigned int n)
+    {
+        if (n != active_tex_slot)
+        {
+            glActiveTexture(GL_TEXTURE0 + n);
+            active_tex_slot = n;
+        }
+    }
 
-    Utils::PoolManager<int> &TextureCube::GetPool()       {return texture_pool_cubemap;}
-    GLint                    TextureCube::GetTargetName() {return GL_TEXTURE_CUBE_MAP;}
+
+    Utils::PoolManager<int> &Texture::GetPool()     {return texture_pool_2d;}
+    Utils::PoolManager<int> &TextureCube::GetPool() {return texture_pool_cubemap;}
 
     GLuint Shader::binding = 0;
 

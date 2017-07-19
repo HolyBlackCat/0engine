@@ -28,7 +28,7 @@ namespace Window
     namespace Init
     {
         static std::string name = "LX";
-        static ivec2 size(800,600), min_size(800,600);
+        static ivec2 size(800,600), min_size(0,0);
         static bool resizable = 0;
         static bool fullscreen = 0;
         static bool maximize = 0;
@@ -298,6 +298,7 @@ namespace Window
         glfl::set_function_loader(SDL_GL_GetProcAddress);
         glfl::load_gl(Init::OpenGL::major, Init::OpenGL::minor);
         #endif
+
         #if OnMobile && !defined(ASSUME_ANDROID)
         GLboolean status = 0;
         glGetBooleanv(GL_SHADER_COMPILER, &status);
@@ -331,7 +332,6 @@ namespace Window
             break;
         }
 
-
         // Forcing resize event.
         SDL_Event resize_event;
         resize_event.type = SDL_WINDOWEVENT;
@@ -339,6 +339,7 @@ namespace Window
         resize_event.window.data1 = size.x;
         resize_event.window.data2 = size.y;
         SDL_PushEvent(&resize_event);
+
         Tick();
     }
     void Cleanup()
