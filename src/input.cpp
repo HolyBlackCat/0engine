@@ -1,24 +1,25 @@
+#include <bitset>
 #include <cstring>
-#include <vector>
+
+#include "lib/sdl.h"
 
 #define E0INTERNAL_INPUT_H_SPECIAL_ACCESS
 #include "input.h"
 
 #include "system.h"
 #include "window.h"
+#include "utils.h"
 
 
 namespace Input
 {
-    static std::vector<uint32_t> board, board_pr, board_re;
+    static std::bitset<SDL_NUM_SCANCODES> board, board_pr, board_re;
     static Key any_key_down_id, any_key_pr_id, any_key_re_id;
     static ivec2 mouse_pos, mouse_pos_prev, mouse_shift;
-    static uint32_t mouse_buttons, mouse_buttons_pr, mouse_buttons_re;
+    static std::bitset<32> mouse_buttons, mouse_buttons_pr, mouse_buttons_re;
     static int any_button_down_id, any_button_pr_id, any_button_re_id;
     static bool mouse_wheel_up, mouse_wheel_down, mouse_wheel_left, mouse_wheel_right;
     static bool mouse_focus, keyboard_focus;
-
-    static unsigned int board_size, board_int_size;
 
     static ivec2 mouse_mapping_offset{0,0};
     static float mouse_mapping_scale = 1;
@@ -34,48 +35,9 @@ namespace Input
         void SeparateMouseAndTouch(bool s) {separate_mouse_and_touch = s;}
     }
 
-    static void SetBit(uint32_t *p, unsigned int pos)
-    {
-        p[pos/32] |= 1 << (pos % 32);
-    }
-
-    static bool GetBit(const uint32_t *p, unsigned int pos)
-    {
-        return (p[pos/32] >> (pos % 32)) & 1;
-    }
-
-    static void ClearBits(uint32_t *p)
-    {
-        std::memset(p, 0, board_int_size * 4);
-    }
-
-    static int WhatBitIsSet(uint32_t n)
-    {
-        uint32_t tmp = (~n + 1) & n, ret = 0;
-        while (tmp != 1) {tmp >>= 1; ret++;};
-        return ret;
-    }
-
-    void ResetKeyboardBuffer()
-    {
-        int tmp;
-        SDL_GetKeyboardState(&tmp);
-        if (tmp <= (int)board_size)
-            return;
-        board_size = tmp;
-        board_int_size = (board_size + 31) / 32;
-        for (auto *it : {&board, &board_pr, &board_re})
-        {
-            it->resize(board_int_size);
-            ClearBits(it->data());
-        }
-    }
-
     void Initialize()
     {
         ExecuteThisOnce();
-
-        ResetKeyboardBuffer();
 
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
         mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply((long(*)(double))lround);
@@ -85,34 +47,46 @@ namespace Input
     void Cleanup()
     {
         ExecuteThisOnce();
-        board.clear();
-        board_pr.clear();
-        board_re.clear();
+    }
+
+    bool IsValidKey(int code)
+    {
+        return code >= 0 && code < int(board.size());
+    }
+    bool IsValidMouseButton(int code)
+    {
+        return code >= 0 && code < int(mouse_buttons.size());
     }
 
     void MoveKeyDown(int id)
     {
-        SetBit(board_pr.data(), id);
-        any_key_pr_id = (Input::Key)id;
+        if (!IsValidKey(id))
+            return;
+        board_pr[id] = 1;
+        any_key_pr_id = Input::Key(id);
     }
     void MoveKeyUp(int id)
     {
-        SetBit(board_re.data(), id);
-        any_key_re_id = (Input::Key)id;
+        if (!IsValidKey(id))
+            return;
+        board_re[id] = 1;
+        any_key_re_id = Input::Key(id);
     }
 
     void MoveMouseButtonDown(int id)
     {
-        uint32_t val = uint32_t(1) << (id-1);
-        mouse_buttons_pr |= val;
-        mouse_buttons    |= val;
+        if (!IsValidMouseButton(id))
+            return;
+        mouse_buttons_pr[id] = 1;
+        mouse_buttons[id] = 1;
         any_button_pr_id = id;
     }
     void MoveMouseButtonUp(int id)
     {
-        uint32_t val = uint32_t(1) << (id-1);
-        mouse_buttons_re |= val;
-        mouse_buttons    &= ~val;
+        if (!IsValidMouseButton(id))
+            return;
+        mouse_buttons_re[id] = 1;
+        mouse_buttons[id] = 0;
         any_button_re_id = id;
     }
 
@@ -136,16 +110,16 @@ namespace Input
             SDL_WarpMouseInWindow(Window::Handle(), mouse_movement_dst.x, mouse_movement_dst.y);
         }
 
-        ClearBits(board_pr.data());
-        ClearBits(board_re.data());
-        any_key_down_id = (Input::Key)0;
+        board_pr.reset();
+        board_re.reset();
         any_key_pr_id = (Input::Key)0;
         any_key_re_id = (Input::Key)0;
-        any_button_down_id = 0;
+
+        mouse_buttons_pr.reset();
+        mouse_buttons_re.reset();
         any_button_pr_id = 0;
         any_button_re_id = 0;
-        mouse_buttons_pr = 0;
-        mouse_buttons_re = 0;
+
         mouse_wheel_up = 0;
         mouse_wheel_down = 0;
         mouse_wheel_left = 0;
@@ -156,12 +130,20 @@ namespace Input
     }
     void PostEventsTick()
     {
-        for (unsigned int i = 0; i < board_int_size; i++)
+        board |= board_pr;
+        board &= ~board_re;
+
+        if (any_key_pr_id || any_key_re_id)
         {
-            board[i] |= board_pr[i];
-            board[i] &= ~board_re[i];
-            if (board[i] && !any_key_down_id)
-                any_key_down_id = Input::Key(WhatBitIsSet(board[i]) + i * 32);
+            any_key_down_id = Input::Key(0);
+            for (unsigned int i = 1; i < board.size(); i++) // Note the `i = 1`.
+            {
+                if (board[i])
+                {
+                    any_key_down_id = Input::Key(i);
+                    break;
+                }
+            }
         }
 
         mouse_pos_prev = mouse_pos;
@@ -171,15 +153,25 @@ namespace Input
 
         mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply((long(*)(double))lround);
 
-        if (mouse_buttons)
-            any_button_down_id = WhatBitIsSet(mouse_buttons)+1;
+        if (any_button_pr_id || any_button_re_id)
+        {
+            any_button_down_id = 0;
+            for (unsigned int i = 1; i < mouse_buttons.size(); i++) // Note the `i = 1`.
+            {
+                if (mouse_buttons[i])
+                {
+                    any_button_down_id = i;
+                    break;
+                }
+            }
+        }
     }
 
 
-    bool KeyDown    (Key id) {return GetBit(board.data(), id);}
-    bool KeyPressed (Key id) {return GetBit(board_pr.data(), id);}
-    bool KeyReleased(Key id) {return GetBit(board_re.data(), id);}
-    Key KeyCount() {return (Input::Key)board_size;}
+    bool KeyDown    (Key id) {Assert("Key ID out of range.", IsValidKey(id)); return board[id];}
+    bool KeyPressed (Key id) {Assert("Key ID out of range.", IsValidKey(id)); return board_pr[id];}
+    bool KeyReleased(Key id) {Assert("Key ID out of range.", IsValidKey(id)); return board_re[id];}
+    int KeyCount() {return board.size();}
     Key AnyKeyDown    () {return any_key_down_id;}
     Key AnyKeyPressed () {return any_key_pr_id;}
     Key AnyKeyReleased() {return any_key_re_id;}
@@ -246,11 +238,11 @@ namespace Input
 
     bool MouseInRect(ivec2 pos, ivec2 size) {return mouse_pos >= pos && mouse_pos < pos + size;}
 
-    bool MouseButtonDown    (int id) {return (mouse_buttons >> (id-1)) & 1;}
-    bool MouseButtonPressed (int id) {return (mouse_buttons_pr >> (id-1)) & 1;}
-    bool MouseButtonReleased(int id) {return (mouse_buttons_re >> (id-1)) & 1;}
+    bool MouseButtonDown    (int id) {Assert("Mouse button ID out of range.", IsValidMouseButton(id)); return mouse_buttons[id];}
+    bool MouseButtonPressed (int id) {Assert("Mouse button ID out of range.", IsValidMouseButton(id)); return mouse_buttons_pr[id];}
+    bool MouseButtonReleased(int id) {Assert("Mouse button ID out of range.", IsValidMouseButton(id)); return mouse_buttons_re[id];}
 
-    int MouseButtonCount() {return 32;}
+    int MouseButtonCount() {return mouse_buttons.size();}
     int AnyMouseButtonDown    () {return any_button_down_id;}
     int AnyMouseButtonPressed () {return any_button_pr_id;}
     int AnyMouseButtonReleased() {return any_button_re_id;}

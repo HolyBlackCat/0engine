@@ -14,7 +14,6 @@ namespace Input
     #ifdef E0INTERNAL_INPUT_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
-    void ResetKeyboardBuffer(); // This is for when keyboard layout changes.
     void MoveKeyDown(int id);
     void MoveKeyUp(int id);
     void MoveMouseButtonDown(int id);
@@ -32,7 +31,7 @@ namespace Input
     bool KeyDown    (Key id); // 1 if pressed or down   0 1 1 1 0 0 | 0 1 0 0 | 0 0 0 //
     bool KeyPressed (Key id); // 1 if pressed           0 1 0 0 0 0 | 0 1 0 0 | 0 1 0 // ID 0 = dummy.
     bool KeyReleased(Key id); // 1 if up                0 0 0 0 1 0 | 0 0 1 0 | 0 1 0 //
-    Key KeyCount(); // Returns an amount of key IDs. Valid IDs are 0 : n-1.
+    int KeyCount(); // Returns an amount of key IDs. Valid IDs are 0 : n-1.
     Key AnyKeyDown    (); //
     Key AnyKeyPressed (); // Return 0 if there is no such key.
     Key AnyKeyReleased(); //
@@ -54,7 +53,7 @@ namespace Input
     bool MouseButtonDown(int id);     //
     bool MouseButtonPressed(int id);  // Work same as Key...() ones. ID 0 = dummy, 1 = left, 2 = middle, 3 = right, ...
     bool MouseButtonReleased(int id); //
-    int MouseButtonCount(); // Returns an amount of mouse button IDs. Valid IDs are 1 .. n.
+    int MouseButtonCount(); // Returns an amount of mouse button IDs. Valid IDs are 0 .. n.
     int AnyMouseButtonDown    (); //
     int AnyMouseButtonPressed (); // Return 0 if there is no key.
     int AnyMouseButtonReleased(); //

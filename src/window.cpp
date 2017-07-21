@@ -413,9 +413,6 @@ namespace Window
               case SDL_RENDER_DEVICE_RESET: // This means that we've lost our GL context state. It's easier to just exit.
                 Sys::Exit();
                 break;
-              case SDL_KEYMAPCHANGED: // The layout have changed, we need to resize keyboard buffer to avoid any issues.
-                Input::ResetKeyboardBuffer();
-                break;
             }
         }
 
