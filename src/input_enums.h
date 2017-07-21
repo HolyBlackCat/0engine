@@ -5,128 +5,85 @@
 
 namespace Input
 {
-    using KeyID = uint16_t;
-    using MouseButtonID = uint8_t;
+    enum Key
+    {
+        #define KEY(name, sdl_name) name = SDL_SCANCODE_##sdl_name,
 
-    /* How to get KeyIDs:
-     *  Key<'#'>()          # = A..Z || a..z || 0..9 || one_of( `~!@#$%^&*()-=_+,.<>/?;:'"[]{}\|)
-     *  Key_Num<'#'>()      # = 0..9 || one_of(+*-/.,=)
-     *  Key_Num_Enter()
-     *  Key_F<#>()          # = 1..24
-     *  Key_#()             # = one_of(Space,Menu,Esc,Enter,Tab,Backspace,Insert,Delete,Up,Down,Left,Right,PageUp,PageDown,Home,End,CapsLock,ScrollLock,NumLock,PrintScreen,Pause)
-     *  Key_#_$()           # = one_of(Alt,Ctrl,Shift,GUI)      $ = one_of(L,R)
-     */
+        KEY(null         , UNKNOWN     )
 
-    #define E0INTERNAL_S(x, y) template <> constexpr inline KeyID Key<(x)>() {return SDL_SCANCODE_##y;}
-    #define E0INTERNAL_SS(x, y, z) E0INTERNAL_S(x, z) E0INTERNAL_S(y, z)
-    template <char N> constexpr inline KeyID Key();
-    E0INTERNAL_S(' ', SPACE)
-    E0INTERNAL_SS('0', ')', 0) //
-    E0INTERNAL_SS('1', '!', 1) //
-    E0INTERNAL_SS('2', '@', 2) //
-    E0INTERNAL_SS('3', '#', 3) //
-    E0INTERNAL_SS('4', '$', 4) //
-    E0INTERNAL_SS('5', '%', 5)  //
-    E0INTERNAL_SS('6', '^', 6)  //
-    E0INTERNAL_SS('7', '&', 7)  //
-    E0INTERNAL_SS('8', '*', 8)  //
-    E0INTERNAL_SS('9', '(', 9)  //
-    E0INTERNAL_SS('A', 'a', A) //
-    E0INTERNAL_SS('B', 'b', B) //
-    E0INTERNAL_SS('C', 'c', C) //
-    E0INTERNAL_SS('D', 'd', D) //
-    E0INTERNAL_SS('E', 'e', E) //
-    E0INTERNAL_SS('F', 'f', F)  //
-    E0INTERNAL_SS('G', 'g', G)  //
-    E0INTERNAL_SS('H', 'h', H)  //
-    E0INTERNAL_SS('I', 'i', I)  //
-    E0INTERNAL_SS('J', 'j', J)  //
-    E0INTERNAL_SS('K', 'k', K) //
-    E0INTERNAL_SS('L', 'l', L) //
-    E0INTERNAL_SS('M', 'm', M) //
-    E0INTERNAL_SS('N', 'n', N) //
-    E0INTERNAL_SS('O', 'o', O) //
-    E0INTERNAL_SS('P', 'p', P)  //
-    E0INTERNAL_SS('Q', 'q', Q)  //
-    E0INTERNAL_SS('R', 'r', R)  //
-    E0INTERNAL_SS('S', 's', S)  //
-    E0INTERNAL_SS('T', 't', T)  //
-    E0INTERNAL_SS('U', 'u', U) //
-    E0INTERNAL_SS('V', 'v', V) //
-    E0INTERNAL_SS('W', 'w', W) //
-    E0INTERNAL_SS('X', 'x', X) //
-    E0INTERNAL_SS('Y', 'y', Y) //
-    E0INTERNAL_SS('Z', 'z', Z)  //
-    E0INTERNAL_SS('\'','"', APOSTROPHE)
-    E0INTERNAL_SS(',', '<', COMMA)
-    E0INTERNAL_SS('.', '>', PERIOD)
-    E0INTERNAL_SS('-', '_', MINUS)
-    E0INTERNAL_SS('=', '+', EQUALS)
-    E0INTERNAL_SS(';', ':', SEMICOLON)
-    E0INTERNAL_SS('/', '?', SLASH)
-    E0INTERNAL_SS('[', '{', LEFTBRACKET)
-    E0INTERNAL_SS(']', '}', RIGHTBRACKET)
-    E0INTERNAL_SS('\\','|', BACKSLASH)
-    E0INTERNAL_SS('`', '~', GRAVE)
-    #undef E0INTERNAL_S
-    #undef E0INTERNAL_SS
-    template <char N> constexpr inline KeyID Key_Num();
-    #define E0INTERNAL_S(x, y) template <> constexpr inline KeyID Key_Num<(x)>() {return SDL_SCANCODE_KP_##y;}
-    E0INTERNAL_S('=', EQUALS)
-    E0INTERNAL_S('0', 0)
-    E0INTERNAL_S('1', 1)
-    E0INTERNAL_S('2', 2)
-    E0INTERNAL_S('3', 3)
-    E0INTERNAL_S('4', 4)
-    E0INTERNAL_S('5', 5)
-    E0INTERNAL_S('6', 6)
-    E0INTERNAL_S('7', 7)
-    E0INTERNAL_S('8', 8)
-    E0INTERNAL_S('9', 9)
-    E0INTERNAL_S('.', PERIOD)
-    E0INTERNAL_S(',', PERIOD)
-    E0INTERNAL_S('+', PLUS)
-    E0INTERNAL_S('-', MINUS)
-    E0INTERNAL_S('*', MULTIPLY)
-    E0INTERNAL_S('/', DIVIDE)
-    #undef E0INTERNAL_S
-    #define E0INTERNAL_F(x) template <> constexpr inline KeyID Key_F<(x)>() {return SDL_SCANCODE_F##x;}
-    template <unsigned int N> constexpr inline KeyID Key_F();
-    E0INTERNAL_F(1 ) E0INTERNAL_F(2 ) E0INTERNAL_F(3 ) E0INTERNAL_F(4 ) E0INTERNAL_F(5 ) E0INTERNAL_F(6 )
-    E0INTERNAL_F(7 ) E0INTERNAL_F(8 ) E0INTERNAL_F(9 ) E0INTERNAL_F(10) E0INTERNAL_F(11) E0INTERNAL_F(12)
-    E0INTERNAL_F(13) E0INTERNAL_F(14) E0INTERNAL_F(15) E0INTERNAL_F(16) E0INTERNAL_F(17) E0INTERNAL_F(18)
-    E0INTERNAL_F(19) E0INTERNAL_F(20) E0INTERNAL_F(21) E0INTERNAL_F(22) E0INTERNAL_F(23) E0INTERNAL_F(24)
-    #undef E0INTERNAL_F
-    #define E0INTERNAL_C(x, y) constexpr inline KeyID Key_##x() {return SDL_SCANCODE_##y;}
-    E0INTERNAL_C(Num_Enter, KP_ENTER)
-    E0INTERNAL_C(Menu, MENU)
-    E0INTERNAL_C(Esc, ESCAPE)
-    E0INTERNAL_C(Enter, RETURN)
-    E0INTERNAL_C(Tab, TAB)
-    E0INTERNAL_C(Backspace, BACKSPACE)
-    E0INTERNAL_C(Insert, INSERT)
-    E0INTERNAL_C(Delete, DELETE)
-    E0INTERNAL_C(Up, UP)
-    E0INTERNAL_C(Down, DOWN)
-    E0INTERNAL_C(Left, LEFT)
-    E0INTERNAL_C(Right, RIGHT)
-    E0INTERNAL_C(PageUp, PAGEUP)
-    E0INTERNAL_C(PageDown, PAGEDOWN)
-    E0INTERNAL_C(Home, HOME)
-    E0INTERNAL_C(End, END)
-    E0INTERNAL_C(CapsLock, CAPSLOCK)
-    E0INTERNAL_C(ScrollLock, SCROLLLOCK)
-    E0INTERNAL_C(NumLock, NUMLOCKCLEAR)
-    E0INTERNAL_C(PrintScreen, PRINTSCREEN)
-    E0INTERNAL_C(Pause, PAUSE)
-    E0INTERNAL_C(Space, SPACE)
-    #define E0INTERNAL_CMOD(x, y) E0INTERNAL_C(x##_L, L##y) E0INTERNAL_C(x##_R, R##y)
-    E0INTERNAL_CMOD(Alt, ALT)
-    E0INTERNAL_CMOD(Ctrl, CTRL)
-    E0INTERNAL_CMOD(Shift, SHIFT)
-    E0INTERNAL_CMOD(GUI, GUI)
-    #undef E0INTERNAL_CMOD
-    #undef E0INTERNAL_C
+        KEY(_0, 0) KEY(_1, 1) KEY(_2, 2) KEY(_3, 3) KEY(_4, 4)
+        KEY(_5, 5) KEY(_6, 6) KEY(_7, 7) KEY(_8, 8) KEY(_9, 9)
+
+        KEY(a, A) KEY(b, B) KEY(c, C) KEY(d, D) KEY(e, E)
+        KEY(f, F) KEY(g, G) KEY(h, H) KEY(i, I) KEY(j, J)
+        KEY(k, K) KEY(l, L) KEY(m, M) KEY(n, N) KEY(o, O)
+        KEY(p, P) KEY(q, Q) KEY(r, R) KEY(s, S) KEY(t, T)
+        KEY(u, U) KEY(v, V) KEY(w, W) KEY(x, X) KEY(y, Y)
+        KEY(z, Z)
+
+        KEY(apostrophe   , APOSTROPHE  )
+        KEY(comma        , COMMA       )
+        KEY(period       , PERIOD      )
+        KEY(minus        , MINUS       )
+        KEY(equals       , EQUALS      )
+        KEY(semicolon    , SEMICOLON   )
+        KEY(slash        , SLASH       )
+        KEY(l_bracket    , LEFTBRACKET )
+        KEY(r_bracket    , RIGHTBRACKET)
+        KEY(backslash    , BACKSLASH   )
+        KEY(grave        , GRAVE       )
+
+        KEY(num_0, KP_0) KEY(num_1, KP_1) KEY(num_2, KP_2) KEY(num_3, KP_3) KEY(num_4, KP_4)
+        KEY(num_5, KP_5) KEY(num_6, KP_6) KEY(num_7, KP_7) KEY(num_8, KP_8) KEY(num_9, KP_9)
+
+        KEY(num_period   , KP_PERIOD   )
+        KEY(num_equals   , KP_EQUALS   )
+        KEY(num_enter    , KP_ENTER    )
+        KEY(num_plus     , KP_PLUS     )
+        KEY(num_minus    , KP_MINUS    )
+        KEY(num_multiply , KP_MULTIPLY )
+        KEY(num_divide   , KP_DIVIDE   )
+
+        KEY(f1 , F1 ) KEY(f2 , F2 ) KEY(f3 , F3 ) KEY(f4 , F4 ) KEY(f5 , F5 ) KEY(f6 , F6 )
+        KEY(f7 , F7 ) KEY(f8 , F8 ) KEY(f9 , F9 ) KEY(f10, F10) KEY(f11, F11) KEY(f12, F12)
+        KEY(f13, F13) KEY(f14, F14) KEY(f15, F15) KEY(f16, F16) KEY(f17, F17) KEY(f18, F18)
+        KEY(f19, F19) KEY(f20, F20) KEY(f21, F21) KEY(f22, F22) KEY(f23, F23) KEY(f24, F24)
+
+        KEY(menu         , MENU        )
+        KEY(escape       , ESCAPE      )
+        KEY(enter        , RETURN      )
+        KEY(tab          , TAB         )
+        KEY(backspace    , BACKSPACE   )
+        KEY(insert       , INSERT      )
+        KEY(del          , DELETE      )
+        KEY(up           , UP          )
+        KEY(down         , DOWN        )
+        KEY(left         , LEFT        )
+        KEY(right        , RIGHT       )
+        KEY(page_up      , PAGEUP      )
+        KEY(page_down    , PAGEDOWN    )
+        KEY(home         , HOME        )
+        KEY(end          , END         )
+        KEY(caps_lock    , CAPSLOCK    )
+        KEY(scroll_lock  , SCROLLLOCK  )
+        KEY(num_lock     , NUMLOCKCLEAR)
+        KEY(print_screen , PRINTSCREEN )
+        KEY(pause        , PAUSE       )
+        KEY(space        , SPACE       )
+
+        KEY(l_shift      , LSHIFT      )
+        KEY(r_shift      , RSHIFT      )
+        KEY(l_ctrl       , LCTRL       )
+        KEY(r_ctrl       , RCTRL       )
+        KEY(l_alt        , LALT        )
+        KEY(r_alt        , RALT        )
+        KEY(l_gui        , LGUI        )
+        KEY(r_gui        , RGUI        )
+
+        #undef KEY
+    };
 }
+
+using Input::Key;
 
 #endif

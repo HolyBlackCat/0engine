@@ -67,7 +67,7 @@ namespace Window
 
     namespace Config
     {
-        void FullscreenSwitchKey(Input::KeyID id); // 0 to disable.
+        void FullscreenSwitchKey(Input::Key id); // 0 to disable.
     }
 }
 

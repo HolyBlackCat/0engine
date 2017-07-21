@@ -123,8 +123,8 @@ namespace Window
 
     namespace Config
     {
-        static Input::KeyID fullscreen_switch_key = ForPC(Input::Key_F<12>()) ForMobile(0);
-        void FullscreenSwitchKey(Input::KeyID id)
+        static Input::Key fullscreen_switch_key = Input::Key:: ForPC(f11) ForMobile(null);
+        void FullscreenSwitchKey(Input::Key id)
         {
             fullscreen_switch_key = id;
         }

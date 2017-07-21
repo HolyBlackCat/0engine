@@ -11,10 +11,10 @@
 namespace Input
 {
     static std::vector<uint32_t> board, board_pr, board_re;
-    static KeyID any_key_down_id, any_key_pr_id, any_key_re_id;
+    static Key any_key_down_id, any_key_pr_id, any_key_re_id;
     static ivec2 mouse_pos, mouse_pos_prev, mouse_shift;
     static uint32_t mouse_buttons, mouse_buttons_pr, mouse_buttons_re;
-    static MouseButtonID any_button_down_id, any_button_pr_id, any_button_re_id;
+    static int any_button_down_id, any_button_pr_id, any_button_re_id;
     static bool mouse_wheel_up, mouse_wheel_down, mouse_wheel_left, mouse_wheel_right;
     static bool mouse_focus, keyboard_focus;
 
@@ -90,25 +90,25 @@ namespace Input
         board_re.clear();
     }
 
-    void MoveKeyDown(KeyID id)
+    void MoveKeyDown(int id)
     {
         SetBit(board_pr.data(), id);
-        any_key_pr_id = id;
+        any_key_pr_id = (Input::Key)id;
     }
-    void MoveKeyUp(KeyID id)
+    void MoveKeyUp(int id)
     {
         SetBit(board_re.data(), id);
-        any_key_re_id = id;
+        any_key_re_id = (Input::Key)id;
     }
 
-    void MoveMouseButtonDown(MouseButtonID id)
+    void MoveMouseButtonDown(int id)
     {
         uint32_t val = uint32_t(1) << (id-1);
         mouse_buttons_pr |= val;
         mouse_buttons    |= val;
         any_button_pr_id = id;
     }
-    void MoveMouseButtonUp(MouseButtonID id)
+    void MoveMouseButtonUp(int id)
     {
         uint32_t val = uint32_t(1) << (id-1);
         mouse_buttons_re |= val;
@@ -138,9 +138,9 @@ namespace Input
 
         ClearBits(board_pr.data());
         ClearBits(board_re.data());
-        any_key_down_id = 0;
-        any_key_pr_id = 0;
-        any_key_re_id = 0;
+        any_key_down_id = (Input::Key)0;
+        any_key_pr_id = (Input::Key)0;
+        any_key_re_id = (Input::Key)0;
         any_button_down_id = 0;
         any_button_pr_id = 0;
         any_button_re_id = 0;
@@ -161,7 +161,7 @@ namespace Input
             board[i] |= board_pr[i];
             board[i] &= ~board_re[i];
             if (board[i] && !any_key_down_id)
-                any_key_down_id = WhatBitIsSet(board[i]) + i * 32;
+                any_key_down_id = Input::Key(WhatBitIsSet(board[i]) + i * 32);
         }
 
         mouse_pos_prev = mouse_pos;
@@ -176,15 +176,15 @@ namespace Input
     }
 
 
-    bool KeyDown    (KeyID id) {return GetBit(board.data(), id);}
-    bool KeyPressed (KeyID id) {return GetBit(board_pr.data(), id);}
-    bool KeyReleased(KeyID id) {return GetBit(board_re.data(), id);}
-    KeyID KeyCount() {return board_size;}
-    KeyID AnyKeyDown    () {return any_key_down_id;}
-    KeyID AnyKeyPressed () {return any_key_pr_id;}
-    KeyID AnyKeyReleased() {return any_key_re_id;}
+    bool KeyDown    (Key id) {return GetBit(board.data(), id);}
+    bool KeyPressed (Key id) {return GetBit(board_pr.data(), id);}
+    bool KeyReleased(Key id) {return GetBit(board_re.data(), id);}
+    Key KeyCount() {return (Input::Key)board_size;}
+    Key AnyKeyDown    () {return any_key_down_id;}
+    Key AnyKeyPressed () {return any_key_pr_id;}
+    Key AnyKeyReleased() {return any_key_re_id;}
 
-    std::string KeyName(KeyID id)
+    std::string KeyName(Key id)
     {
         return SDL_GetScancodeName((SDL_Scancode)id);
     }
@@ -246,14 +246,14 @@ namespace Input
 
     bool MouseInRect(ivec2 pos, ivec2 size) {return mouse_pos >= pos && mouse_pos < pos + size;}
 
-    bool MouseButtonDown    (MouseButtonID id) {return (mouse_buttons >> (id-1)) & 1;}
-    bool MouseButtonPressed (MouseButtonID id) {return (mouse_buttons_pr >> (id-1)) & 1;}
-    bool MouseButtonReleased(MouseButtonID id) {return (mouse_buttons_re >> (id-1)) & 1;}
+    bool MouseButtonDown    (int id) {return (mouse_buttons >> (id-1)) & 1;}
+    bool MouseButtonPressed (int id) {return (mouse_buttons_pr >> (id-1)) & 1;}
+    bool MouseButtonReleased(int id) {return (mouse_buttons_re >> (id-1)) & 1;}
 
-    MouseButtonID MouseButtonCount() {return 32;}
-    MouseButtonID AnyMouseButtonDown    () {return any_button_down_id;}
-    MouseButtonID AnyMouseButtonPressed () {return any_button_pr_id;}
-    MouseButtonID AnyMouseButtonReleased() {return any_button_re_id;}
+    int MouseButtonCount() {return 32;}
+    int AnyMouseButtonDown    () {return any_button_down_id;}
+    int AnyMouseButtonPressed () {return any_button_pr_id;}
+    int AnyMouseButtonReleased() {return any_button_re_id;}
     bool MouseWheelUp   () {return mouse_wheel_up;}
     bool MouseWheelDown () {return mouse_wheel_down;}
     bool MouseWheelLeft () {return mouse_wheel_left;}
