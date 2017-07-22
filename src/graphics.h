@@ -41,7 +41,7 @@
 
 namespace Graphics
 {
-    #ifdef E0INTERNAL_GRAPHICS_H_SPECIAL_ACCESS
+    #ifdef GRAPHICS_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
     void BeginFrame();

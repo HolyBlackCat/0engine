@@ -9,7 +9,7 @@
 
 namespace Network
 {
-    #ifdef E0INTERNAL_NETWORK_H_SPECIAL_ACCESS
+    #ifdef NETWORK_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
     #endif

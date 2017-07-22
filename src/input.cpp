@@ -3,7 +3,7 @@
 
 #include "lib/sdl.h"
 
-#define E0INTERNAL_INPUT_H_SPECIAL_ACCESS
+#define INPUT_H_SPECIAL_ACCESS
 #include "input.h"
 
 #include "system.h"

@@ -46,89 +46,119 @@ namespace Utils
     {
         static_assert(noexcept(std::declval<T>().~T()), "Object destructor must be noexcept.");
 
-        bool alive;
+        bool is_alive;
         std::aligned_storage_t<sizeof(T), alignof(T)> data;
 
       public:
         using type = T;
 
-        constexpr Object() : alive(0) {}
+        constexpr Object() : is_alive(0) {}
+        Object(const T &o)
+        {
+            is_alive = 0;
+            ::new (&data) T(o);
+            is_alive = 1;
+        }
+        Object(T &&o)
+        {
+            is_alive = 0;
+            ::new (&data) T((T &&)o);
+            is_alive = 1;
+        }
+        Object &operator=(const T &o)
+        {
+            if (!is_alive)
+            {
+                ::new (&data) T(o);
+                is_alive = 1;
+            }
+            else
+            {
+                **this = o;
+            }
+
+            return *this;
+        }
+        Object &operator=(T &&o)
+        {
+            if (!is_alive)
+            {
+                ::new (&data) T((T &&)o);
+                is_alive = 1;
+            }
+            else
+            {
+                **this = (T &&)o;
+            }
+
+            return *this;
+        }
+
         Object(const Object &o)
         {
-            alive = 0;
-            if (o.alive)
+            is_alive = 0;
+
+            if (o.is_alive)
             {
-                ::new (&data) T(*o);
-                alive = 1;
+                ::new (&data) T(o);
+                is_alive = 1;
             }
         }
         Object(Object &&o)
         {
-            alive = 0;
-            if (o.alive)
+            is_alive = 0;
+
+            if (o.is_alive)
             {
-                ::new (&data) T((T &&)*o);
-                alive = 1;
+                ::new (&data) T((T &&)o);
+                is_alive = 1;
             }
         }
         Object &operator=(const Object &o)
         {
-            if (&o == this)
+            if (this == &o)
                 return *this;
-
-            if (!alive)
-            {
-                ::new (&data) T(*o);
-                alive = 1;
-            }
-            else
-            {
-                **this = *o;
-            }
-
+            if (o.is_alive)
+                return *this = *o;
+            destroy();
             return *this;
         }
         Object &operator=(Object &&o)
         {
-            if (&o == this)
+            if (this == &o)
                 return *this;
-
-            if (!alive)
-            {
-                ::new (&data) T((T &&)*o);
-                alive = 1;
-            }
-            else
-            {
-                **this = (T &&)*o;
-            }
-
+            if (o.is_alive)
+                return *this = (T &&)*o;
+            destroy();
             return *this;
         }
+
         ~Object()
         {
-            if (alive)
+            if (is_alive)
                 (*this)->~T();
         }
 
-        operator       T *()       {Assert("Deferencing Utils::Object which is not alive.", alive); return (      T *)&data;}
-        operator const T *() const {Assert("Deferencing Utils::Object which is not alive.", alive); return (const T *)&data;}
+        operator       T *()       {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (      T *)&data;}
+        operator const T *() const {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (const T *)&data;}
 
-              T *operator->()       {Assert("Deferencing Utils::Object which is not alive.", alive); return (      T *)&data;}
-        const T *operator->() const {Assert("Deferencing Utils::Object which is not alive.", alive); return (const T *)&data;}
+              T *operator->()       {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (      T *)&data;}
+        const T *operator->() const {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (const T *)&data;}
 
         template <typename ...P> void create(P &&... p)
         {
             destroy();
             ::new (&data) T((P &&)p...);
-            alive = 1;
+            is_alive = 1;
         }
         void destroy()
         {
-            if (alive)
+            if (is_alive)
                 (*this)->~T();
-            alive = 0;
+            is_alive = 0;
         }
+
+        bool alive() const {return is_alive;}
     };
 
     namespace Clock

@@ -11,7 +11,7 @@
 
 namespace Input
 {
-    #ifdef E0INTERNAL_INPUT_H_SPECIAL_ACCESS
+    #ifdef INPUT_H_SPECIAL_ACCESS
     void Initialize();
     void Cleanup();
     void MoveKeyDown(int id);
