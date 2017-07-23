@@ -132,7 +132,10 @@
 		<Unit filename="src/lib/vorbis.h" />
 		<Unit filename="src/lib/z.h" />
 		<Unit filename="src/logic.cpp" />
-		<Unit filename="src/master.h" />
+		<Unit filename="src/master.h">
+			<Option compile="1" />
+			<Option weight="0" />
+		</Unit>
 		<Unit filename="src/math.h" />
 		<Unit filename="src/network.cpp" />
 		<Unit filename="src/network.h" />

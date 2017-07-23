@@ -5,3 +5,4 @@ bin/*.exe
 obj/
 *.depend
 *.layout
+*.gch
