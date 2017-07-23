@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.3.6"
+#define VERSION "2.3.8"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -119,11 +119,11 @@ template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, 
 inline namespace Utility
 {
 template <typename T,
+          int length = 0,
+          int precision = -1,
           char format_ch = (std::is_floating_point_v<std::remove_extent_t<T>> ? 'g' :
                             std::is_signed_v        <std::remove_extent_t<T>> ? 'i' :
                             /* else */                                          'u'),
-          int length = 0,
-          int precision = -1,
           char ...flags>
 std::string number_to_string(std::remove_extent_t<T> param)
 {
@@ -380,6 +380,10 @@ std::conditional_t< std::is_same<change_base_type_t<vec<D1,T>, base_type_t<vec<D
                                     *ops_comp[]{"<",">","<=",">="},
                                     *ops_bool[]{"&&","||"},
                                     *ops_as[]{"+=","-=","*=","/=","%=","^=","&=","|=","<<=",">>="};
+
+        // .to_string_pretty() settings
+        static constexpr int pretty_string_field_width = 12,
+                             pretty_string_field_precision = 4;
 
         r R"(
 inline namespace Vector
@@ -761,7 +765,7 @@ return inv * det;
                 l "template <typename T> struct vec<" << sz << ",T> // vec" << sz <<"\n{\n";
                 CommonHeader();
                 l "static constexpr int size = " << sz << ";\n";
-                l "static constexpr bool is_floating_point = std::is_floating_point<type>::value;\n";
+                l "static constexpr bool is_floating_point = std::is_floating_point_v<T>;\n";
 
 
                 // Fields
@@ -916,7 +920,7 @@ return inv * det;
                     l "});}\n";
                 }
                 { // String operations
-                    l "std::string to_string(std::string start, std::string sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start";
+                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0)
@@ -924,7 +928,12 @@ return inv * det;
                         l " + f(" << field_names_main[i] << ")";
                     }
                     l " + end;}\n";
+
                     l "std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
+
+                    l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
+                      "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
+                      "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}";
                 }
 
                 l "};\n";
@@ -1214,7 +1223,7 @@ $       0, 0, 0, s};
                     for (int i = 1; i <= 4; i++) // Multiplication
                         MatrixMul(w, i, h);
                     { // String operations
-                        l "std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start";
+                        l "std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start";
                         for (int hh = 0; hh < h; hh++)
                         {
                             if (hh != 0)
@@ -1227,7 +1236,12 @@ $       0, 0, 0, s};
                             }
                         }
                         l " + end;}\n";
+
                         l "std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
+
+                        l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
+                          "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
+                          "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}";
                     }
 
                     l "};\n";
@@ -1396,14 +1410,57 @@ $       0, 0, 0, s};
                 l ";}\n";
             }
         }
+        l "\n";
 
-        // Stream printers
+        // Stream output
         for (int i = 2; i <= 4; i++)
         {
-            l "template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec<" << i << ",T> &vector) {stream << '[' << vector." << field_names_main[0];
-            for (int j = 1; j < i; j++)
-                l " << ',' << vector." << field_names_main[j];
+            l "template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec" << i << "<T> &vector) {stream << '['";
+            for (int j = 0; j < i; j++)
+            {
+                if (j != 0)
+                    l " << ','";
+                l " << vector." << field_names_main[j];
+            }
             l " << ']'; return stream;}\n";
+        }
+        for (int h = 2; h <= 4; h++)
+        {
+            for (int w = 2; w <= 4; w++)
+            {
+                l "template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat" << w << "x" << h << "<T> &matrix) {stream << '['";
+                for (int hh = 0; hh < h; hh++)
+                {
+                    if (hh != 0)
+                        l " << ';'";
+                    for (int ww = 0; ww < w; ww++)
+                    {
+                        if (ww != 0)
+                            l " << ','";
+                        l " << matrix." << field_names_main[ww] << "." << field_names_main[hh];
+                    }
+                }
+                l " << ']'; return stream;}\n";
+            }
+        }
+        // Stream input
+        for (int i = 2; i <= 4; i++)
+        {
+            l "template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, vec" << i << "<T> &vector) {stream";
+            for (int j = 0; j < i; j++)
+                l " >> vector." << field_names_main[j];
+            l "; return stream;}\n";
+        }
+        for (int h = 2; h <= 4; h++)
+        {
+            for (int w = 2; w <= 4; w++)
+            {
+                l "template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat" << w << "x" << h << "<T> &matrix) {stream";
+                for (int hh = 0; hh < h; hh++)
+                    for (int ww = 0; ww < w; ww++)
+                        l " >> matrix." << field_names_main[ww] << "." << field_names_main[hh];
+                l "; return stream;}\n";
+            }
         }
 
         l "}\n";
@@ -1734,6 +1791,7 @@ int main()
 #include <cstdint>
 #include <functional>
 #include <ios>
+#include <istream>
 #include <ostream>
 #include <string>
 #include <type_traits>

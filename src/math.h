@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.3.6 by HolyBlackCat
+// Version 2.3.8 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <ios>
+#include <istream>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -27,11 +28,11 @@ namespace Math
     inline namespace Utility
     {
         template <typename T,
+                  int length = 0,
+                  int precision = -1,
                   char format_ch = (std::is_floating_point_v<std::remove_extent_t<T>> ? 'g' :
                                     std::is_signed_v        <std::remove_extent_t<T>> ? 'i' :
                                     /* else */                                          'u'),
-                  int length = 0,
-                  int precision = -1,
                   char ...flags>
         std::string number_to_string(std::remove_extent_t<T> param)
         {
@@ -675,7 +676,7 @@ namespace Math
             static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
             using type = T;
             static constexpr int size = 2;
-            static constexpr bool is_floating_point = std::is_floating_point<type>::value;
+            static constexpr bool is_floating_point = std::is_floating_point_v<T>;
             union {T x, r, s;};
             union {T y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
@@ -720,16 +721,16 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y, x*o.w.x+y*o.w.y};}
             constexpr T min() const {return std::min({x,y});}
             constexpr T max() const {return std::max({x,y});}
-            std::string to_string(std::string start, std::string sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<3,T> // vec3
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
             static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
             using type = T;
             static constexpr int size = 3;
-            static constexpr bool is_floating_point = std::is_floating_point<type>::value;
+            static constexpr bool is_floating_point = std::is_floating_point_v<T>;
             union {T x, r, s;};
             union {T y, g, t;};
             union {T z, b, p;};
@@ -776,16 +777,16 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z, x*o.w.x+y*o.w.y+z*o.w.z};}
             constexpr T min() const {return std::min({x,y,z});}
             constexpr T max() const {return std::max({x,y,z});}
-            std::string to_string(std::string start, std::string sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<4,T> // vec4
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
             static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
             using type = T;
             static constexpr int size = 4;
-            static constexpr bool is_floating_point = std::is_floating_point<type>::value;
+            static constexpr bool is_floating_point = std::is_floating_point_v<T>;
             union {T x, r, s;};
             union {T y, g, t;};
             union {T z, b, p;};
@@ -834,9 +835,9 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w, x*o.w.x+y*o.w.y+z*o.w.z+w*o.w.w};}
             constexpr T min() const {return std::min({x,y,z,w});}
             constexpr T max() const {return std::max({x,y,z,w});}
-            std::string to_string(std::string start, std::string sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<2,vec<2,T>> // mat2x2
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -924,9 +925,9 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<3,vec<2,T>> // mat3x2
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -996,9 +997,9 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<4,vec<2,T>> // mat4x2
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1067,9 +1068,9 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<2,vec<3,T>> // mat2x3
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1129,9 +1130,9 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<3,vec<3,T>> // mat3x3
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1243,9 +1244,9 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<4,vec<3,T>> // mat4x3
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1348,9 +1349,9 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<2,vec<4,T>> // mat2x4
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1410,9 +1411,9 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y, x.w*o.w.x+y.w*o.w.y};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<3,vec<4,T>> // mat3x4
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1481,9 +1482,9 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
         template <typename T> struct vec<4,vec<4,T>> // mat4x4
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -1681,9 +1682,9 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z+w.w*o.w.w};}
-            std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
-        };
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}};
 
         template <typename T1, typename T2> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const vec2<T2> &second) {return {first.x+second.x,first.y+second.y};}
         template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const T2 &second) {return {first.x+second,first.y+second};}
@@ -1934,9 +1935,31 @@ namespace Math
         template <typename T1, typename T2> constexpr bool operator!=(const vec4<T1> &first, const vec4<T2> &second) {return (first.x != second.x) || (first.y != second.y) || (first.z != second.z) || (first.w != second.w);}
         template <typename T1, typename T2> constexpr bool operator!=(const vec4<T1> &first, const T2 &second) {return (first.x != second) || (first.y != second) || (first.z != second) || (first.w != second);}
         template <typename T1, typename T2> constexpr bool operator!=(const T1 &first, const vec4<T2> &second) {return (first != second.x) || (first != second.y) || (first != second.z) || (first != second.w);}
-        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec<2,T> &vector) {stream << '[' << vector.x << ',' << vector.y << ']'; return stream;}
-        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec<3,T> &vector) {stream << '[' << vector.x << ',' << vector.y << ',' << vector.z << ']'; return stream;}
-        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec<4,T> &vector) {stream << '[' << vector.x << ',' << vector.y << ',' << vector.z << ',' << vector.w << ']'; return stream;}
+
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec2<T> &vector) {stream << '[' << vector.x << ',' << vector.y << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec3<T> &vector) {stream << '[' << vector.x << ',' << vector.y << ',' << vector.z << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const vec4<T> &vector) {stream << '[' << vector.x << ',' << vector.y << ',' << vector.z << ',' << vector.w << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat2x2<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ';' << matrix.x.y << ',' << matrix.y.y << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat3x2<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ',' << matrix.z.x << ';' << matrix.x.y << ',' << matrix.y.y << ',' << matrix.z.y << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat4x2<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ',' << matrix.z.x << ',' << matrix.w.x << ';' << matrix.x.y << ',' << matrix.y.y << ',' << matrix.z.y << ',' << matrix.w.y << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat2x3<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ';' << matrix.x.y << ',' << matrix.y.y << ';' << matrix.x.z << ',' << matrix.y.z << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat3x3<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ',' << matrix.z.x << ';' << matrix.x.y << ',' << matrix.y.y << ',' << matrix.z.y << ';' << matrix.x.z << ',' << matrix.y.z << ',' << matrix.z.z << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat4x3<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ',' << matrix.z.x << ',' << matrix.w.x << ';' << matrix.x.y << ',' << matrix.y.y << ',' << matrix.z.y << ',' << matrix.w.y << ';' << matrix.x.z << ',' << matrix.y.z << ',' << matrix.z.z << ',' << matrix.w.z << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat2x4<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ';' << matrix.x.y << ',' << matrix.y.y << ';' << matrix.x.z << ',' << matrix.y.z << ';' << matrix.x.w << ',' << matrix.y.w << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat3x4<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ',' << matrix.z.x << ';' << matrix.x.y << ',' << matrix.y.y << ',' << matrix.z.y << ';' << matrix.x.z << ',' << matrix.y.z << ',' << matrix.z.z << ';' << matrix.x.w << ',' << matrix.y.w << ',' << matrix.z.w << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_ostream<X,Y> &operator<<(std::basic_ostream<X,Y> &stream, const mat4x4<T> &matrix) {stream << '[' << matrix.x.x << ',' << matrix.y.x << ',' << matrix.z.x << ',' << matrix.w.x << ';' << matrix.x.y << ',' << matrix.y.y << ',' << matrix.z.y << ',' << matrix.w.y << ';' << matrix.x.z << ',' << matrix.y.z << ',' << matrix.z.z << ',' << matrix.w.z << ';' << matrix.x.w << ',' << matrix.y.w << ',' << matrix.z.w << ',' << matrix.w.w << ']'; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, vec2<T> &vector) {stream >> vector.x >> vector.y; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, vec3<T> &vector) {stream >> vector.x >> vector.y >> vector.z; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, vec4<T> &vector) {stream >> vector.x >> vector.y >> vector.z >> vector.w; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat2x2<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.x.y >> matrix.y.y; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat3x2<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.z.x >> matrix.x.y >> matrix.y.y >> matrix.z.y; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat4x2<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.z.x >> matrix.w.x >> matrix.x.y >> matrix.y.y >> matrix.z.y >> matrix.w.y; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat2x3<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.x.y >> matrix.y.y >> matrix.x.z >> matrix.y.z; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat3x3<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.z.x >> matrix.x.y >> matrix.y.y >> matrix.z.y >> matrix.x.z >> matrix.y.z >> matrix.z.z; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat4x3<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.z.x >> matrix.w.x >> matrix.x.y >> matrix.y.y >> matrix.z.y >> matrix.w.y >> matrix.x.z >> matrix.y.z >> matrix.z.z >> matrix.w.z; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat2x4<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.x.y >> matrix.y.y >> matrix.x.z >> matrix.y.z >> matrix.x.w >> matrix.y.w; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat3x4<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.z.x >> matrix.x.y >> matrix.y.y >> matrix.z.y >> matrix.x.z >> matrix.y.z >> matrix.z.z >> matrix.x.w >> matrix.y.w >> matrix.z.w; return stream;}
+        template <typename X, typename Y, typename T> std::basic_istream<X,Y> &operator>>(std::basic_istream<X,Y> &stream, mat4x4<T> &matrix) {stream >> matrix.x.x >> matrix.y.x >> matrix.z.x >> matrix.w.x >> matrix.x.y >> matrix.y.y >> matrix.z.y >> matrix.w.y >> matrix.x.z >> matrix.y.z >> matrix.z.z >> matrix.w.z >> matrix.x.w >> matrix.y.w >> matrix.z.w >> matrix.w.w; return stream;}
     }
 
     inline namespace Quaternion
