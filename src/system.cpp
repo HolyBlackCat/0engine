@@ -10,10 +10,11 @@
 #include <unordered_map>
 #include <string>
 
-#define WINDOW_H_SPECIAL_ACCESS
-#define GRAPHICS_H_SPECIAL_ACCESS
 #define AUDIO_H_SPECIAL_ACCESS
+#define GRAPHICS_H_SPECIAL_ACCESS
 #define NETWORK_H_SPECIAL_ACCESS
+#define WINDOW_H_SPECIAL_ACCESS
+
 #define E0INTERNAL_SDL_NO_UNDEF_MAIN
 
 #include "system.h"
@@ -267,7 +268,6 @@ namespace Sys
         MarkLocation("Init");
 
         constexpr int default_fps = 60;
-
         SetFps(default_fps);
 
         ::PreInit();
@@ -464,10 +464,6 @@ int main(int argc, char **argv)
 {
     MarkLocation("Main");
 
-    // Saving args
-    Sys::argc = argc - 1;
-    Sys::argv = argv + 1;
-
     // Setting handlers
     std::signal(SIGSEGV, Sys::SignalHandler);
     std::signal(SIGFPE,  Sys::SignalHandler);
@@ -478,6 +474,10 @@ int main(int argc, char **argv)
 
     std::set_terminate([]{Sys::HandleError(Sys::ErrorType::terminate);});
     std::set_unexpected([]{Sys::HandleError(Sys::ErrorType::unexpected);});
+
+    // Saving args
+    Sys::argc = argc - 1;
+    Sys::argv = argv + 1;
 
     Sys::AppInit();
     {

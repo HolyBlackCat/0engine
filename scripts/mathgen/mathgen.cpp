@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.3.2"
+#define VERSION "2.3.4"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -123,6 +123,88 @@ template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, 
     r R"(
 inline namespace Utility
 {
+template <typename T,
+          char format_ch = (std::is_floating_point_v<std::remove_extent_t<T>> ? 'g' :
+                            std::is_signed_v        <std::remove_extent_t<T>> ? 'i' :
+                            /* else */                                          'u'),
+          int length = 0,
+          int precision = -1,
+          char ...flags>
+std::string number_to_string(std::remove_extent_t<T> param)
+{
+char buffer[(std::is_array_v<T> ? std::extent_v<T> : 64) + 1];
+
+using type = std::remove_extent_t<T>;
+static_assert(std::is_arithmetic_v<type>, "The type must be arithmetic.");
+
+static_assert(
+[]() constexpr -> bool
+{
+if constexpr (sizeof...(flags))
+{
+char array[] = {flags...};
+for (unsigned i = 0; i < sizeof...(flags); i++)
+{
+if (array[i] != '+'
+ && array[i] != ' '
+ && array[i] != '#'
+ && array[i] != '0')
+    return 0;
+for (unsigned j = 0; j < i; j++)
+    if (array[i] == array[j])
+        return 0;
+}
+}
+return 1;
+}
+(), "Invalid format flags.");
+
+if constexpr (std::is_floating_point_v<type>)
+{
+static_assert(format_ch == 'f' ||
+              format_ch == 'F' ||
+              format_ch == 'e' ||
+              format_ch == 'E' ||
+              format_ch == 'a' ||
+              format_ch == 'A' ||
+              format_ch == 'g' ||
+              format_ch == 'G', "Invalid format char for the type.");
+static constexpr char format[] = {'%', flags..., '*', '.', '*', std::is_same_v<type, long double> ? 'L' : 'l', format_ch, '\0'};
+std::snprintf(buffer, sizeof buffer, format, length, precision, param);
+}
+else
+{
+if constexpr (std::is_signed_v<type>)
+static_assert(format_ch == 'd' ||
+              format_ch == 'i', "Invalid format char for the type.");
+else
+static_assert(format_ch == 'u' ||
+              format_ch == 'o' ||
+              format_ch == 'x' ||
+              format_ch == 'X', "Invalid format char for the type.");
+
+using signed_type = std::make_signed_t<type>;
+if constexpr (std::is_same_v<signed_type, long long>)
+{
+static constexpr char format[] = {'%', flags..., '*', '.', '*', 'l', 'l', format_ch, '\0'};
+std::snprintf(buffer, sizeof buffer, format, length, precision, param);
+}
+else if constexpr (std::is_same_v<signed_type, long>)
+{
+static constexpr char format[] = {'%', flags..., '*', '.', '*', 'l', format_ch, '\0'};
+std::snprintf(buffer, sizeof buffer, format, length, precision, param);
+}
+else
+{
+static constexpr char format[] = {'%', flags..., '*', '.', '*', format_ch, '\0'};
+std::snprintf(buffer, sizeof buffer, format, length, precision, param);
+}
+}
+
+return buffer;
+}
+
+
 template <typename T> struct floating_point_t_impl {using type = std::conditional_t<std::is_floating_point<T>::value, T, double>;};
 template <unsigned int D, typename T> struct floating_point_t_impl<vec<D,T>> {using type = vec<D,typename floating_point_t_impl<T>::type>;};
 template <typename T> using floating_point_t = typename floating_point_t_impl<T>::type;
@@ -753,6 +835,17 @@ return inv * det;
                     }
                     l "});}\n";
                 }
+                { // String operations
+                    l "std::string to_string(std::string start, std::string sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0)
+                            l " + sep";
+                        l " + f(" << field_names_main[i] << ")";
+                    }
+                    l " + end;}\n";
+                    l "std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
+                }
 
                 l "};\n";
             }
@@ -1040,6 +1133,22 @@ $       0, 0, 0, s};
                     if (w == h) MatrixInverse(w); // Inverse
                     for (int i = 1; i <= 4; i++) // Multiplication
                         MatrixMul(w, i, h);
+                    { // String operations
+                        l "std::string to_string(std::string start, std::string sep, std::string row_sep, std::string end, std::string(*f)(type) = number_to_string<type>) const {return start";
+                        for (int hh = 0; hh < h; hh++)
+                        {
+                            if (hh != 0)
+                                l " + row_sep";
+                            for (int ww = 0; ww < w; ww++)
+                            {
+                                if (ww != 0)
+                                    l " + sep";
+                                l " + f(" << field_names_main[ww] << "." << field_names_main[hh] << ")";
+                            }
+                        }
+                        l " + end;}\n";
+                        l "std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
+                    }
 
                     l "};\n";
                 }
@@ -1527,6 +1636,8 @@ int main()
 #include <functional>
 #include <ios>
 #include <ostream>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
