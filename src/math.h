@@ -1,16 +1,17 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.3.4 by HolyBlackCat
+// Version 2.3.6 by HolyBlackCat
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <functional>
 #include <ios>
 #include <ostream>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -107,6 +108,91 @@ namespace Math
         }
 
 
+        template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0)
+        {
+            if (std::isspace(*ptr))
+            {
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return 0;
+            }
+
+            const char *end;
+            T value;
+
+            if constexpr (std::is_same_v<T, float>)
+                value = std::strtof(ptr, (char **)&end);
+            else if constexpr (std::is_same_v<T, double>)
+                value = std::strtod(ptr, (char **)&end);
+            else
+                value = std::strtold(ptr, (char **)&end);
+
+            if (ptr == end)
+            {
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return 0;
+            }
+
+            if (chars_consumed)
+                *chars_consumed = end - ptr;
+            return value;
+        }
+        template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int base = 0, int *chars_consumed = 0)
+        {
+            if (std::isspace(*ptr))
+            {
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return 0;
+            }
+
+            const char *end;
+            T value;
+
+            if constexpr (std::is_signed_v<T>)
+            {
+                if constexpr (sizeof (T) <= sizeof (long))
+                    value = std::strtol(ptr, (char **)&end, base);
+                else
+                    value = std::strtoll(ptr, (char **)&end, base);
+            }
+            else
+            {
+                if constexpr (sizeof (T) <= sizeof (unsigned long))
+                    value = std::strtoul(ptr, (char **)&end, base);
+                else
+                    value = std::strtoull(ptr, (char **)&end, base);
+            }
+
+            if (ptr == end)
+            {
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return 0;
+            }
+
+            if (chars_consumed)
+                *chars_consumed = end - ptr;
+            return value;
+        }
+        template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0)
+        {
+            switch (*ptr)
+            {
+              default:
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return 0;
+              case '0':
+              case '1':
+                if (chars_consumed)
+                    *chars_consumed = 1;
+                return *ptr - '0';
+            }
+        }
+
+
         template <typename T> struct floating_point_t_impl {using type = std::conditional_t<std::is_floating_point<T>::value, T, double>;};
         template <unsigned int D, typename T> struct floating_point_t_impl<vec<D,T>> {using type = vec<D,typename floating_point_t_impl<T>::type>;};
         template <typename T> using floating_point_t = typename floating_point_t_impl<T>::type;
@@ -140,7 +226,7 @@ namespace Math
         template <typename T> using base_type_t = typename base_type_t_impl<T>::type;
 
         template <typename ...P> struct larger_type_t_impl {using type = void;};
-        template <typename ...P> using larger_type_t = typename larger_type_t_impl<P...>::type;
+        template <typename ...P> using larger_type_t = std::enable_if_t<!std::is_void_v<typename larger_type_t_impl<P...>::type>, typename larger_type_t_impl<P...>::type>;
         template <typename T, typename ...P> struct larger_type_t_impl<T, P...> {using type = larger_type_t<T, larger_type_t<P...>>;};
         template <typename T> struct larger_type_t_impl<T> {using type = T;};
         template <typename T, typename TT> struct larger_type_t_impl<T, TT>
@@ -2116,6 +2202,18 @@ namespace Math
         template <typename T, typename TT> constexpr std::enable_if_t<is_vec_or_mat<TT>::value, larger_type_t<T,TT>>
         max(T a, TT b) {return b.apply(a, (larger_type_t<base_type_t<T>,base_type_t<TT>> (*)(base_type_t<T>, base_type_t<TT>))max);}
     }
+
+    namespace Everything
+    {
+        using namespace Vector;
+        using namespace Quaternion;
+        using namespace Operators;
+        using namespace Misc;
+
+        using Utility::number_to_string;
+        using Utility::floating_point_t;
+        using Utility::larger_type_t;
+    }
 }
 
 namespace std
@@ -2170,6 +2268,6 @@ namespace std
     };
 }
 
-using namespace Math;
+using namespace Math::Everything;
 
 #endif

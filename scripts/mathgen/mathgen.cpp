@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.3.4"
+#define VERSION "2.3.6"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -49,26 +49,21 @@ void Print(const char *ptr)
             new_line = 1;
             break;
           case '{':
-            if (new_line)
-                Indent();
+            Indent();
             indentation++;
             break;
           case '}':
             indentation--;
-            if (new_line)
-                Indent();
+            Indent();
             break;
           case '@':
-            if (new_line)
-                Indent(-2);
+            Indent(-2);
             break;
           case '$':
-            if (new_line)
-                Indent(-4);
+            Indent(-4);
             break;
           default:
-            if (new_line)
-                Indent();
+            Indent();
             break;
         }
         if (*ptr == '$')
@@ -205,6 +200,91 @@ return buffer;
 }
 
 
+template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0)
+{
+if (std::isspace(*ptr))
+{
+if (chars_consumed)
+    *chars_consumed = 0;
+return 0;
+}
+
+const char *end;
+T value;
+
+if constexpr (std::is_same_v<T, float>)
+    value = std::strtof(ptr, (char **)&end);
+else if constexpr (std::is_same_v<T, double>)
+    value = std::strtod(ptr, (char **)&end);
+else
+    value = std::strtold(ptr, (char **)&end);
+
+if (ptr == end)
+{
+if (chars_consumed)
+    *chars_consumed = 0;
+return 0;
+}
+
+if (chars_consumed)
+    *chars_consumed = end - ptr;
+return value;
+}
+template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int base = 0, int *chars_consumed = 0)
+{
+if (std::isspace(*ptr))
+{
+if (chars_consumed)
+    *chars_consumed = 0;
+return 0;
+}
+
+const char *end;
+T value;
+
+if constexpr (std::is_signed_v<T>)
+{
+if constexpr (sizeof (T) <= sizeof (long))
+    value = std::strtol(ptr, (char **)&end, base);
+else
+    value = std::strtoll(ptr, (char **)&end, base);
+}
+else
+{
+if constexpr (sizeof (T) <= sizeof (unsigned long))
+    value = std::strtoul(ptr, (char **)&end, base);
+else
+    value = std::strtoull(ptr, (char **)&end, base);
+}
+
+if (ptr == end)
+{
+if (chars_consumed)
+    *chars_consumed = 0;
+return 0;
+}
+
+if (chars_consumed)
+    *chars_consumed = end - ptr;
+return value;
+}
+template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0)
+{
+switch (*ptr)
+{
+@default:
+if (chars_consumed)
+    *chars_consumed = 0;
+return 0;
+@case '0':
+@case '1':
+if (chars_consumed)
+    *chars_consumed = 1;
+return *ptr - '0';
+}
+}
+
+
 template <typename T> struct floating_point_t_impl {using type = std::conditional_t<std::is_floating_point<T>::value, T, double>;};
 template <unsigned int D, typename T> struct floating_point_t_impl<vec<D,T>> {using type = vec<D,typename floating_point_t_impl<T>::type>;};
 template <typename T> using floating_point_t = typename floating_point_t_impl<T>::type;
@@ -238,7 +318,7 @@ template <unsigned int D, typename T> struct base_type_t_impl<vec<D,T>> {using t
 template <typename T> using base_type_t = typename base_type_t_impl<T>::type;
 
 template <typename ...P> struct larger_type_t_impl {using type = void;};
-template <typename ...P> using larger_type_t = typename larger_type_t_impl<P...>::type;
+template <typename ...P> using larger_type_t = std::enable_if_t<!std::is_void_v<typename larger_type_t_impl<P...>::type>, typename larger_type_t_impl<P...>::type>;
 template <typename T, typename ...P> struct larger_type_t_impl<T, P...> {using type = larger_type_t<T, larger_type_t<P...>>;};
 template <typename T> struct larger_type_t_impl<T> {using type = T;};
 template <typename T, typename TT> struct larger_type_t_impl<T, TT>
@@ -1590,6 +1670,23 @@ return a.apply((typename T::type (*)(typename T::type, base_type_t<TT>))true_mod
 )";
     }
 
+    void ImportEverything()
+    {
+        r R"(
+namespace Everything
+{
+using namespace Vector;
+using namespace Quaternion;
+using namespace Operators;
+using namespace Misc;
+
+using Utility::number_to_string;
+using Utility::floating_point_t;
+using Utility::larger_type_t;
+}
+)";
+    }
+
     void StdSpecializations()
     {
         r R"(
@@ -1631,13 +1728,14 @@ int main()
 // Version )" VERSION R"( by HolyBlackCat
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <functional>
 #include <ios>
 #include <ostream>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -1656,6 +1754,8 @@ namespace Math
     Gen::Operators();
     l "\n";
     Gen::Misc();
+    l "\n";
+    Gen::ImportEverything();
     r R"(
 }
 
@@ -1663,7 +1763,7 @@ namespace Math
     Gen::StdSpecializations();
     r R"(
 
-using namespace Math;
+using namespace Math::Everything;
 
 #endif
 )";
