@@ -43,7 +43,9 @@ void main()
 {
     vec4 tex_color = texture2D(u_texture, v_texcoord);
     gl_FragColor = vec4(v_color.rgb * (1. - v_factors.x) + tex_color.rgb * v_factors.x, v_color.a * (1. - v_factors.y) + tex_color.a * v_factors.y);
-    gl_FragColor.rgb = (u_colormatrix * vec4(gl_FragColor.rgb, 1)).rgb * gl_FragColor.a;
+    vec4 c = u_colormatrix * vec4(gl_FragColor.rgb, 1);
+    gl_FragColor.a *= c.a;
+    gl_FragColor.rgb = c.rgb * gl_FragColor.a;
     gl_FragColor.a *= v_factors.z;
 }
 )"

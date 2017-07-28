@@ -27,7 +27,7 @@ namespace Window
 
     namespace Init
     {
-        static std::string name = "LX";
+        static std::string name = "E0";
         static ivec2 size(800,600), min_size(0,0);
         static bool resizable = 0;
         static bool fullscreen = 0;

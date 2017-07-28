@@ -22,7 +22,6 @@ class Renderer2D
 
   private:
     ivec2 size;
-    bool use_mouse_mapping = 0;
     Utils::Object<Graphics::RenderQueue<VertexFormat, 3>> render_queue;
     Utils::Object<Graphics::Shader> main_shader;
     int current_tex = -1;
@@ -43,18 +42,18 @@ class Renderer2D
         ResetColorMatrix();
     }
 
-    void UseMouseMapping(bool n)
+    void WindowViewport(float scale = 1)
     {
-        use_mouse_mapping = n;
-    }
-
-    void UpdateViewport(float scale = 1)
-    {
-        ivec2 sz = (size * scale).apply((long(*)(double))lround);
+        ivec2 sz = iround(size * scale);
         ivec2 pos = Window::Size() / 2 - sz / 2;
         Graphics::Viewport(pos, sz);
-        if (use_mouse_mapping)
-            Input::SetMouseMapping(pos, 1 / scale);
+    }
+
+    void UpdateMouseMapping(float scale = 1)
+    {
+        ivec2 sz = iround(size * scale);
+        ivec2 pos = Window::Size() / 2 - sz / 2;
+        Input::SetMouseMapping(-pos, 1 / scale);
     }
 
     void SetTexture(const Graphics::Texture &tex)
@@ -108,10 +107,11 @@ class Renderer2D
 
     class Sprite
     {
-        Sprite(const Sprite &) = delete;
         Sprite(Sprite &&) = delete;
         Sprite &operator=(const Sprite &) = delete;
         Sprite &operator=(Sprite &&) = delete;
+
+        Sprite(const Sprite &) = default;
 
         using rvalue = Sprite &&;
 
@@ -213,7 +213,7 @@ class Renderer2D
             sprite_colors[3] = d;
             return (rvalue)*this;
         }
-        rvalue mix(float x) // 0 - fill with color (default if color is provided), 1 - use texture
+        rvalue mix(float x) // 0 - fill with color, 1 - use texture
         {
             Assert("2D renderer: Sprite color mix factor specified twice.", !have_tex_color_fac);
             have_tex_color_fac = 1;
@@ -224,7 +224,7 @@ class Renderer2D
         }
         rvalue mix(float a, float b, float c, float d)
         {
-            assert(!have_tex_color_fac);
+            Assert("2D renderer: Sprite color mix factor specified twice.", !have_tex_color_fac);
             have_tex_color_fac = 1;
 
             tex_color_factors[0] = a;
@@ -286,18 +286,15 @@ class Renderer2D
         {
             Assert("2D renderer: Attempt to render a sprite with no texture nor color specified.", have_texture || have_color);
             Assert("2D renderer: Attempt to render a sprite with absolute corner coodinates with a center specified.", absolute_pos + have_center < 2);
+            Assert("2D renderer: Attempt to enable absolute texture coordinates for a sprite with no texture coordinates specified.", absolute_tex_pos <= have_texture);
             Assert("2D renderer: Attempt to render a sprite with both texture and color specified, but without a mixing factor.", (have_texture && have_color) <= have_tex_color_fac);
             Assert("2D renderer: Attempt to render a sprite with a matrix but without a center specified.", have_matrix <= have_center);
 
             if (absolute_pos)
-            {
                 dst_size -= dst_pos;
-            }
+
             if (absolute_tex_pos)
-            {
-                assert(have_texture);
                 texture_size -= texture_pos;
-            }
 
             fvec4 final_colors[4];
             fvec3 factors[4];
@@ -654,6 +651,7 @@ class Renderer2D
             ret.shrink_to_fit();
             return ret;
         }
+
 
         // Style-independent settings
 
@@ -1155,7 +1153,176 @@ class Renderer2D
             }
         }
     };
-    using Text_t = Text; // For cases when `Sprite` conflicts with the function name.
+    using Text_t = Text; // For cases when `Text` conflicts with the function name.
+
+    class Triangle
+    {
+        Triangle(Triangle &&) = delete;
+        Triangle &operator=(const Triangle &) = delete;
+        Triangle &operator=(Triangle &&) = delete;
+
+        Triangle(const Triangle &) = default;
+
+        using rvalue = Triangle &&;
+
+        Renderer2D *renderer;
+
+        struct Vertex
+        {
+            fvec2 pos;
+            Vertex(fvec2 pos) : pos(pos) {}
+
+            bool have_tex = 0;
+            fvec2 tex_pos = {0,0};
+
+            bool have_color = 0;
+            fvec3 color = fvec3(0);
+
+            bool have_tex_color_fac = 0;
+            float tex_color_fac = 1;
+
+            float alpha = 1;
+            float opacity = 1;
+        };
+
+        std::vector<Vertex> data;
+        int cur_vertex = -1;
+
+        ArrayProxy<Vertex> selection;
+
+      public:
+        Triangle(Renderer2D *r, fvec2 a, fvec2 b, fvec2 c) : renderer(r), data{a, b, c}, selection(data) {}
+
+        rvalue select(int pos) // If `1 <= pos <= 3`, the corresponding vertex of the (last) triangle is selected. If `pos == 0`, the entire (last) triangle is selected.
+        {
+            Assert("2D renderer: Invalid vertex index.", pos >= 0 && pos <= 3);
+            if (pos == 0)
+                selection = {&data.back() - 2, 3};
+            else
+                selection = *(&data.back() - (3 - pos));
+            return (rvalue)*this;
+        }
+
+
+        // These change appearance of currently vertex/vertices.
+
+        rvalue tex(fvec2 pos)
+        {
+            for (auto &it : selection)
+            {
+                it.have_tex = 1;
+                it.tex_pos = pos;
+            }
+            return (rvalue)*this;
+        }
+        rvalue color(fvec3 c)
+        {
+            for (auto &it : selection)
+            {
+                it.have_color = 1;
+                it.color = c;
+            }
+            return (rvalue)*this;
+        }
+        rvalue mix(float val) // 0 - fill with color, 1 - use texture
+        {
+            for (auto &it : selection)
+            {
+                it.have_tex_color_fac = 1;
+                it.tex_color_fac = val;
+            }
+            return (rvalue)*this;
+        }
+        rvalue alpha(float a)
+        {
+            for (auto &it : selection)
+                it.alpha = a;
+            return (rvalue)*this;
+        }
+        rvalue opacity(float o)
+        {
+            for (auto &it : selection)
+                it.opacity = o;
+            return (rvalue)*this;
+        }
+        rvalue reset() // Resets the (last) triangle. Might be useful if you're drawing multiple triangles with and without textures.
+        {
+            for (auto &it : selection)
+                it = {it.pos};
+            return (rvalue)*this;
+        }
+
+
+        // These add new triangles
+
+        rvalue triangle(fvec2 a) // Copies two last vertices, then adds the third one with a specified position. The entire new triangle is then selected.
+        {
+            data.reserve(data.size() + 3);
+            data.push_back(data[data.size()-2]);
+            data.push_back(data[data.size()-2]);
+            data.push_back(a);
+            select(0);
+            return (rvalue)*this;
+        }
+        rvalue triangle(fvec2 a, fvec2 b) // Copies the last vertex, then adds two new ones with specified positions. The entire new triangle is then selected.
+        {
+            data.reserve(data.size() + 3);
+            data.push_back(data[data.size()-1]);
+            data.push_back(a);
+            data.push_back(b);
+            select(0);
+            return (rvalue)*this;
+        }
+        rvalue triangle(fvec2 a, fvec2 b, fvec2 c) // Adds a new separate triangle and selects it.
+        {
+            data.reserve(data.size() + 3);
+            data.push_back(a);
+            data.push_back(b);
+            data.push_back(c);
+            select(0);
+            return (rvalue)*this;
+        }
+
+        ~Triangle()
+        {
+            for (auto ptr = &data.front(); ptr < &data.back(); ptr += 3)
+            {
+                fvec4 colors[3];
+                fvec3 factors[3];
+
+                for (int i = 0; i < 3; i++)
+                {
+                    Assert("2D renderer: Attempt to render a triangle with no texture nor color specified.", ptr[i].have_tex || ptr[i].have_color);
+                    Assert("2D renderer: Attempt to render a triangle with both texture and color specified, but without a mixing factor.", (ptr[i].have_tex && ptr[i].have_color) <= ptr[i].have_tex_color_fac);
+
+                    if (!ptr[i].have_tex)
+                    {
+                        if (!ptr[i].have_tex_color_fac)
+                            factors[i].x = 0;
+                        else
+                            factors[i].x = ptr[i].tex_color_fac;
+
+                        colors[i] = ptr[i].color.to_vec4(ptr[i].alpha);
+                        factors[i].y = 0;
+                    }
+                    else
+                    {
+                        factors[i].x = ptr[i].tex_color_fac;
+                        colors[i] = ptr[i].color.to_vec4(0);
+                        factors[i].y = ptr[i].alpha;
+                    }
+
+                    factors[i].z = ptr[i].opacity;
+                }
+
+                renderer->render_queue->Insert({ptr[0].pos, colors[0], ptr[0].tex_pos, factors[0]},
+                                               {ptr[1].pos, colors[1], ptr[1].tex_pos, factors[1]},
+                                               {ptr[2].pos, colors[2], ptr[2].tex_pos, factors[2]});
+            }
+        }
+    };
+    using Triangle_t = Triangle;
+
 
     Sprite Sprite(fvec2 pos, fvec2 size)
     {
@@ -1169,6 +1336,11 @@ class Renderer2D
     Text_t Text() // Makes stub object for style editing purposes.
     {
         return {this, {0,0}, "", 1};
+    }
+
+    Triangle_t Triangle(fvec2 a, fvec2 b, fvec2 c)
+    {
+        return {this, a, b, c};
     }
 };
 

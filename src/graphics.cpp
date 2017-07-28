@@ -489,12 +489,12 @@ namespace Graphics
             glGetShaderiv(fsh, GL_INFO_LOG_LENGTH, &flen);
             if (vlen)
             {
-                vlog_str.resize(vlen);
+                vlog_str.resize(vlen-1); // std::string adds a null-terminator automatically.
                 glGetShaderInfoLog(vsh, vlen, 0, vlog_str.data());
             }
             if (flen)
             {
-                flog_str.resize(flen);
+                flog_str.resize(flen-1); // std::string adds a null-terminator automatically.
                 glGetShaderInfoLog(fsh, flen, 0, flog_str.data());
             }
 
@@ -518,7 +518,7 @@ namespace Graphics
             std::string log_str;
             if (vstat)
             {
-                log_str.resize(vstat);
+                log_str.resize(vstat-1); // std::string adds a null-terminator automatically.
                 glGetProgramInfoLog(prog, vstat, 0, log_str.data());
             }
 

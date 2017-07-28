@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.3.8 by HolyBlackCat
+// Version 2.3.9 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -723,7 +723,8 @@ namespace Math
             constexpr T max() const {return std::max({x,y});}
             std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}};
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+        };
         template <typename T> struct vec<3,T> // vec3
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -779,7 +780,8 @@ namespace Math
             constexpr T max() const {return std::max({x,y,z});}
             std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}};
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+        };
         template <typename T> struct vec<4,T> // vec4
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -837,7 +839,8 @@ namespace Math
             constexpr T max() const {return std::max({x,y,z,w});}
             std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
             std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}};
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+        };
         template <typename T> struct vec<2,vec<2,T>> // mat2x2
         {
             static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
@@ -2141,6 +2144,20 @@ namespace Math
             return val.apply((int (*)(typename T::type))sign);
         }
 
+        template <typename I = int, typename F> enable_if_not_vec_or_mat_t<F,I> iround(F x)
+        {
+            static_assert(std::is_floating_point_v<F>, "Argument type must be floating-point.");
+            static_assert(std::is_integral_v<I> && std::is_signed_v<I>, "Template argument must be integral and signed.");
+            if constexpr (sizeof (I) <= sizeof (long))
+                return std::lround(x);
+            else
+                return std::llround(x);
+        }
+        template <typename I = int, typename F> enable_if_vec_or_mat_t<F,change_base_type_t<F,I>> iround(F val)
+        {
+            return val.apply(iround<I, typename F::type>);
+        }
+
         template <typename T> constexpr T smoothstep(T x)
         {
             static_assert(std::is_floating_point<base_type_t<T>>::value, "Argument type must be floating-point.");
@@ -2152,7 +2169,7 @@ namespace Math
             static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
             return std::floor(x);
         }
-        template <typename T> constexpr enable_if_vec_or_mat_t<T,T> floor(T val)
+        template <typename T> enable_if_vec_or_mat_t<T,T> floor(T val)
         {
             return val.apply((typename T::type (*)(typename T::type))floor);
         }
@@ -2162,7 +2179,7 @@ namespace Math
             static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
             return std::ceil(x);
         }
-        template <typename T> constexpr enable_if_vec_or_mat_t<T,T> ceil(T val)
+        template <typename T> enable_if_vec_or_mat_t<T,T> ceil(T val)
         {
             return val.apply((typename T::type (*)(typename T::type))ceil);
         }
@@ -2172,7 +2189,7 @@ namespace Math
             static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
             return std::trunc(x);
         }
-        template <typename T> constexpr enable_if_vec_or_mat_t<T,T> trunc(T val)
+        template <typename T> enable_if_vec_or_mat_t<T,T> trunc(T val)
         {
             return val.apply((typename T::type (*)(typename T::type))trunc);
         }

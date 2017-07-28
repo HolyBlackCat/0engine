@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.3.8"
+#define VERSION "2.3.9"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -933,7 +933,7 @@ return inv * det;
 
                     l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
                       "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
-                      "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}";
+                      "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
                 }
 
                 l "};\n";
@@ -1635,6 +1635,20 @@ template <typename T> constexpr enable_if_vec_or_mat_t<T,change_base_type_t<T,in
 return val.apply((int (*)(typename T::type))sign);
 }
 
+template <typename I = int, typename F> enable_if_not_vec_or_mat_t<F,I> iround(F x)
+{
+static_assert(std::is_floating_point_v<F>, "Argument type must be floating-point.");
+static_assert(std::is_integral_v<I> && std::is_signed_v<I>, "Template argument must be integral and signed.");
+if constexpr (sizeof (I) <= sizeof (long))
+    return std::lround(x);
+else
+    return std::llround(x);
+}
+template <typename I = int, typename F> enable_if_vec_or_mat_t<F,change_base_type_t<F,I>> iround(F val)
+{
+return val.apply(iround<I, typename F::type>);
+}
+
 template <typename T> constexpr T smoothstep(T x)
 {
 static_assert(std::is_floating_point<base_type_t<T>>::value, "Argument type must be floating-point.");
@@ -1646,7 +1660,7 @@ template <typename T> enable_if_not_vec_or_mat_t<T,T> floor(T x)
 static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
 return std::floor(x);
 }
-template <typename T> constexpr enable_if_vec_or_mat_t<T,T> floor(T val)
+template <typename T> enable_if_vec_or_mat_t<T,T> floor(T val)
 {
 return val.apply((typename T::type (*)(typename T::type))floor);
 }
@@ -1656,7 +1670,7 @@ template <typename T> enable_if_not_vec_or_mat_t<T,T> ceil(T x)
 static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
 return std::ceil(x);
 }
-template <typename T> constexpr enable_if_vec_or_mat_t<T,T> ceil(T val)
+template <typename T> enable_if_vec_or_mat_t<T,T> ceil(T val)
 {
 return val.apply((typename T::type (*)(typename T::type))ceil);
 }
@@ -1666,7 +1680,7 @@ template <typename T> enable_if_not_vec_or_mat_t<T,T> trunc(T x)
 static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
 return std::trunc(x);
 }
-template <typename T> constexpr enable_if_vec_or_mat_t<T,T> trunc(T val)
+template <typename T> enable_if_vec_or_mat_t<T,T> trunc(T val)
 {
 return val.apply((typename T::type (*)(typename T::type))trunc);
 }

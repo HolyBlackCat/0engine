@@ -27,9 +27,9 @@
 #define ExecuteThisOnceQuiet() do {static bool flag = 0; if (flag) ::Sys::Exit(); flag = 1;} while (0)
 
 #ifdef NDEBUG
-#  define Assert(text, ...) (void(0))
+#  define Assert(text, ...) (void())
 #else
-#  define Assert(text, ...) (bool(__VA_ARGS__) || (::Sys::Error(::Strings::Str("Assertion failed at `" __FILE__ "`:", __LINE__, " in `", __func__, "()`.\nMessage: `", text, "`\nExpression: `" #__VA_ARGS__, '`')), 0), void(0))
+#  define Assert(text, ...) (void(bool(__VA_ARGS__) || (::Sys::Error(::Strings::Str("Assertion failed at `" __FILE__ "`:", __LINE__, " in `", __func__, "()`\nMessage: `", text, "`\nExpression: `" #__VA_ARGS__, '`')), 0)))
 #endif
 
 namespace Utils

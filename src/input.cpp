@@ -29,6 +29,15 @@ namespace Input
     static bool mouse_movement_needed;
     static ivec2 mouse_movement_dst;
 
+    static ivec2 TransformMousePos(ivec2 pos)
+    {
+        return iround((pos + mouse_mapping_offset) * mouse_mapping_scale);
+    }
+    static ivec2 InverseTransformMousePos(ivec2 pos)
+    {
+        return iround(pos / mouse_mapping_scale - mouse_mapping_offset);
+    }
+
     namespace Init
     {
         bool separate_mouse_and_touch = 0;
@@ -40,7 +49,7 @@ namespace Input
         ExecuteThisOnce();
 
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
-        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply((long(*)(double))lround);
+        mouse_pos = TransformMousePos(mouse_pos);
 
         SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, Init::separate_mouse_and_touch ? "1" : "0");
     }
@@ -49,11 +58,11 @@ namespace Input
         ExecuteThisOnce();
     }
 
-    bool IsValidKey(int code)
+    static bool IsValidKey(int code)
     {
         return code >= 0 && code < int(board.size());
     }
-    bool IsValidMouseButton(int code)
+    static bool IsValidMouseButton(int code)
     {
         return code >= 0 && code < int(mouse_buttons.size());
     }
@@ -151,7 +160,7 @@ namespace Input
         SDL_GetRelativeMouseState(&mouse_shift.x, &mouse_shift.y);
         SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y);
 
-        mouse_pos = ((mouse_pos + mouse_mapping_offset) * mouse_mapping_scale).apply((long(*)(double))lround);
+        mouse_pos = TransformMousePos(mouse_pos);
 
         if (any_button_pr_id || any_button_re_id)
         {
@@ -254,11 +263,11 @@ namespace Input
     void SetMousePos(ivec2 pos)
     {
         mouse_movement_needed = 1;
-        mouse_movement_dst = (pos / mouse_mapping_scale - mouse_mapping_offset).apply((long(*)(double))lround);
+        mouse_movement_dst = iround(pos / mouse_mapping_scale - mouse_mapping_offset);
     }
     void SetMousePosImmediate(ivec2 pos)
     {
-        pos = (pos / mouse_mapping_scale - mouse_mapping_offset).apply((long(*)(double))lround);
+        pos = InverseTransformMousePos(pos);
         SDL_WarpMouseInWindow(Window::Handle(), pos.x, pos.y);
     }
 }

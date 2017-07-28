@@ -787,9 +787,9 @@ namespace Graphics
             for (auto &it : data)
             {
                 float f = float(it.a) / 255.0f;
-                it.r = std::lround(it.r * f);
-                it.g = std::lround(it.g * f);
-                it.b = std::lround(it.b * f);
+                it.r = iround(it.r * f);
+                it.g = iround(it.g * f);
+                it.b = iround(it.b * f);
             }
         }
         void Demultiply()
@@ -799,9 +799,9 @@ namespace Graphics
                 float f = float(it.a) / 255.0f;
                 if (!std::isnormal(f))
                     continue;
-                it.r = std::max(std::lround(it.r / f), 255l);
-                it.g = std::max(std::lround(it.g / f), 255l);
-                it.b = std::max(std::lround(it.b / f), 255l);
+                it.r = max(iround(it.r / f), 255);
+                it.g = max(iround(it.g / f), 255);
+                it.b = max(iround(it.b / f), 255);
             }
         }
         void Empty(ivec2 new_size)
@@ -1756,41 +1756,41 @@ namespace Graphics
     namespace Internal
     {
         template <typename T> void SetUniform(GLint loc, const T &obj);
-        #define LX_GEN_SINGLE(type, tag)       template <> P inline void SetUniform(GLint loc, const type &obj)            {C(glUniform1##tag(loc, obj);)}
-        #define LX_GEN_VECTOR(type, tag, size) template <> P inline void SetUniform(GLint loc, const vec##size<type> &obj) {C(glUniform##size##tag##v(loc, 1, obj.as_array());)}
-        #define LX_GEN_MATRIX(type, tag, size) template <> P inline void SetUniform(GLint loc, const mat##size<type> &obj) {C(glUniformMatrix##size##tag##v(loc, 1, 0, obj.as_array());)}
+        #define E0_GEN_SINGLE(type, tag)       template <> P inline void SetUniform(GLint loc, const type &obj)            {C(glUniform1##tag(loc, obj);)}
+        #define E0_GEN_VECTOR(type, tag, size) template <> P inline void SetUniform(GLint loc, const vec##size<type> &obj) {C(glUniform##size##tag##v(loc, 1, obj.as_array());)}
+        #define E0_GEN_MATRIX(type, tag, size) template <> P inline void SetUniform(GLint loc, const mat##size<type> &obj) {C(glUniformMatrix##size##tag##v(loc, 1, 0, obj.as_array());)}
         #define C(...) __VA_ARGS__
         #define P
-        LX_GEN_SINGLE(float, f)
-        LX_GEN_VECTOR(float, f, 2)
-        LX_GEN_VECTOR(float, f, 3)
-        LX_GEN_VECTOR(float, f, 4)
-        LX_GEN_SINGLE(int,   i)
-        LX_GEN_VECTOR(int,   i, 2)
-        LX_GEN_VECTOR(int,   i, 3)
-        LX_GEN_VECTOR(int,   i, 4)
-        LX_GEN_MATRIX(float, f, 2)
-        LX_GEN_MATRIX(float, f, 3)
-        LX_GEN_MATRIX(float, f, 4)
+        E0_GEN_SINGLE(float, f)
+        E0_GEN_VECTOR(float, f, 2)
+        E0_GEN_VECTOR(float, f, 3)
+        E0_GEN_VECTOR(float, f, 4)
+        E0_GEN_SINGLE(int,   i)
+        E0_GEN_VECTOR(int,   i, 2)
+        E0_GEN_VECTOR(int,   i, 3)
+        E0_GEN_VECTOR(int,   i, 4)
+        E0_GEN_MATRIX(float, f, 2)
+        E0_GEN_MATRIX(float, f, 3)
+        E0_GEN_MATRIX(float, f, 4)
         #undef C
         #undef P
         #define C(...) ForPC(__VA_ARGS__) ForMobile((void)loc; (void)obj;)
         #define P WarningForMobile("This does not work on mobile platforms (matrices with different dimensions and unsigned uniforms are not supported).")
-        LX_GEN_SINGLE(unsigned int, ui)
-        LX_GEN_VECTOR(unsigned int, ui, 2)
-        LX_GEN_VECTOR(unsigned int, ui, 3)
-        LX_GEN_VECTOR(unsigned int, ui, 4)
-        LX_GEN_MATRIX(float, f, 2x3)
-        LX_GEN_MATRIX(float, f, 2x4)
-        LX_GEN_MATRIX(float, f, 3x2)
-        LX_GEN_MATRIX(float, f, 3x4)
-        LX_GEN_MATRIX(float, f, 4x2)
-        LX_GEN_MATRIX(float, f, 4x3)
+        E0_GEN_SINGLE(unsigned int, ui)
+        E0_GEN_VECTOR(unsigned int, ui, 2)
+        E0_GEN_VECTOR(unsigned int, ui, 3)
+        E0_GEN_VECTOR(unsigned int, ui, 4)
+        E0_GEN_MATRIX(float, f, 2x3)
+        E0_GEN_MATRIX(float, f, 2x4)
+        E0_GEN_MATRIX(float, f, 3x2)
+        E0_GEN_MATRIX(float, f, 3x4)
+        E0_GEN_MATRIX(float, f, 4x2)
+        E0_GEN_MATRIX(float, f, 4x3)
         #undef C
         #undef P
-        #undef LX_GEN_SINGLE
-        #undef LX_GEN_VECTOR
-        #undef LX_GEN_MATRIX
+        #undef E0_GEN_SINGLE
+        #undef E0_GEN_VECTOR
+        #undef E0_GEN_MATRIX
         template <> inline void SetUniform(GLint loc, const Texture &ref)     {SetUniform<GLint>(loc, ref.Slot());}
         template <> inline void SetUniform(GLint loc, const TextureCube &ref) {SetUniform<GLint>(loc, ref.Slot());}
     }

@@ -42,7 +42,7 @@ namespace Sys
 
     namespace Config
     {
-        static std::string app_name = "LX Engine",
+        static std::string app_name = "Engine0",
                            msg_title_info = "",
                            msg_title_warning = "",
                            msg_title_error = "";
