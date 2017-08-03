@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.3.9 by HolyBlackCat
+// Version 2.3.10 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -2162,6 +2162,15 @@ namespace Math
         {
             static_assert(std::is_floating_point<base_type_t<T>>::value, "Argument type must be floating-point.");
             return 3 * x*x - 2 * x*x*x;
+        }
+
+        template <typename T> enable_if_not_vec_or_mat_t<T,T> abs(T x)
+        {
+            return (x >= 0 ? x : -x);
+        }
+        template <typename T> enable_if_vec_or_mat_t<T,T> abs(T val)
+        {
+            return val.apply((typename T::type (*)(typename T::type))abs);
         }
 
         template <typename T> enable_if_not_vec_or_mat_t<T,T> floor(T x)
