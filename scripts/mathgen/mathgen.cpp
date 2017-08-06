@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.3.10"
+#define VERSION "2.4.0"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -105,7 +105,7 @@ namespace Gen
     void VectorPrototypes()
     {
         r R"(
-inline namespace Vector
+inline namespace Vector // prototypes
 {
 template <unsigned int D, typename T> struct vec;
 template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, T>>;
@@ -117,6 +117,98 @@ template <unsigned int W, unsigned int H, typename T> using mat = vec<W, vec<H, 
     {
     r R"(
 inline namespace Utility
+{
+struct custom_operator_base_t {constexpr custom_operator_base_t() {}};
+
+template <typename T> struct type_category
+{
+static constexpr bool vec = 0,
+                      mat = 0,
+                      vec_or_mat = 0,
+                      io = std::is_base_of_v<std::ios_base,T>,
+                      op = std::is_base_of_v<custom_operator_base_t,T>,
+                      io_or_op = io || op,
+                      other = !io_or_op;
+};
+template <unsigned int D, typename T> struct type_category<vec<D,T>>
+{
+static constexpr bool vec = 1,
+                      mat = 0,
+                      vec_or_mat = 1,
+                      io = 0,
+                      op = 0,
+                      io_or_op = 0,
+                      other = 0;
+};
+template <unsigned int W, unsigned int H, typename T> struct type_category<mat<W,H,T>>
+{
+static constexpr bool vec = 0,
+                      mat = 1,
+                      vec_or_mat = 1,
+                      io = 0,
+                      op = 0,
+                      io_or_op = 0,
+                      other = 0;
+};
+
+template <typename T> struct base_type_t_impl {using type = T;};
+template <unsigned int D, typename T> struct base_type_t_impl<vec<D,T>> {using type = typename vec<D,T>::type;};
+template <typename T> using base_type_t = typename base_type_t_impl<T>::type;
+
+template <typename T, typename TT> struct change_base_type_t_impl {using type = base_type_t<TT>;};
+template <unsigned int D, typename T, typename TT> struct change_base_type_t_impl<vec<D,T>,TT> {using type = vec<D,base_type_t<TT>>;};
+template <unsigned int W, unsigned int H, typename T, typename TT> struct change_base_type_t_impl<mat<W,H,T>,TT> {using type = mat<W,H,base_type_t<TT>>;};
+template <typename T, typename TT> using change_base_type_t = typename change_base_type_t_impl<T,TT>::type;
+
+template <typename T> using floating_point_t = std::conditional_t<std::is_floating_point_v<base_type_t<T>>, T, change_base_type_t<T, double>>;
+
+template <typename ...P> struct larger_type_t_impl {using type = void;};
+template <typename ...P> using larger_type_t = std::enable_if_t<!std::is_void_v<typename larger_type_t_impl<P...>::type>, typename larger_type_t_impl<P...>::type>;
+template <typename T, typename ...P> struct larger_type_t_impl<T, P...> {using type = larger_type_t<T, larger_type_t<P...>>;};
+template <typename T> struct larger_type_t_impl<T> {using type = T;};
+template <typename T, typename TT> struct larger_type_t_impl<T, TT>
+{
+template <bool A, typename B, typename C> using con = std::conditional_t<A,B,C>;
+using type =
+con< !std::is_arithmetic_v<T> || !std::is_arithmetic_v<TT>,
+    void,
+    con< std::is_integral_v<T> == std::is_integral_v<TT>,
+        con< (sizeof (T) == sizeof (TT)),
+            con< std::is_same_v<T, TT>,
+                T,
+                void
+            >,
+            con< (sizeof(T) > sizeof (TT)),
+               T,
+               TT
+            >>,
+        con< std::is_floating_point_v<T>,
+           T,
+           TT
+        >
+    >
+>;
+};
+template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<vec<D,T>, TT>
+{
+using type = change_base_type_t<vec<D,T>, larger_type_t<base_type_t<vec<D,T>>, TT>>;
+};
+template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<TT, vec<D,T>>
+{
+using type = change_base_type_t<vec<D,T>, larger_type_t<base_type_t<vec<D,T>>, TT>>;
+};
+template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<vec<D,T>, vec<D,TT>>
+{
+using type = vec<D, larger_type_t<T,TT>>;
+};
+}
+)";
+    }
+
+    void Strings()
+    {
+        r R"(
+inline namespace Strings
 {
 template <typename T,
           int length = 0,
@@ -283,101 +375,16 @@ if (chars_consumed)
 return *ptr - '0';
 }
 }
-
-
-template <typename T> struct floating_point_t_impl {using type = std::conditional_t<std::is_floating_point<T>::value, T, double>;};
-template <unsigned int D, typename T> struct floating_point_t_impl<vec<D,T>> {using type = vec<D,typename floating_point_t_impl<T>::type>;};
-template <typename T> using floating_point_t = typename floating_point_t_impl<T>::type;
-
-template <typename T> struct is_vec_or_mat {static constexpr bool value = 0;};
-template <unsigned int D, typename T> struct is_vec_or_mat<vec<D,T>> {static constexpr bool value = 1;};
-
-template <typename T> struct is_mat {static constexpr bool value = 0;};
-template <unsigned int W, unsigned int H, typename T> struct is_mat<mat<W,H,T>> {static constexpr bool value = 1;};
-
-template <typename T> struct is_vec {static constexpr bool value = is_vec_or_mat<T>::value && !is_mat<T>::value;};
-
-template <typename Condition, typename T> using enable_if_vec_or_mat_t = std::enable_if_t<is_vec_or_mat<Condition>::value, T>;
-template <typename Condition, typename T> using enable_if_not_vec_or_mat_t = std::enable_if_t<!is_vec_or_mat<Condition>::value, T>;
-
-template <typename T> struct is_io_stream {static constexpr bool value = std::is_base_of<std::ios_base,T>::value;};
-
-template <typename T> constexpr bool is_custom_operator_impl(short) {return 0;}
-template <typename T, typename = typename T::custom_operator_tag> constexpr bool is_custom_operator_impl(int) {return 1;}
-template <typename T> struct is_custom_operator {static constexpr bool value = is_custom_operator_impl<T>(0);};
-
-template <typename Condition, typename T> using enable_if_not_special_t = std::enable_if_t<!is_io_stream<Condition>::value && !is_custom_operator<Condition>::value, T>;
-
-template <typename T, typename TT> struct change_base_type_t_impl {using type = TT;};
-template <unsigned int D, typename T, typename TT> struct change_base_type_t_impl<vec<D,T>,TT> {using type = vec<D,TT>;};
-template <unsigned int W, unsigned int H, typename T, typename TT> struct change_base_type_t_impl<mat<W,H,T>,TT> {using type = mat<W,H,TT>;};
-template <typename T, typename TT> using change_base_type_t = typename change_base_type_t_impl<T,TT>::type;
-
-template <typename T> struct base_type_t_impl {using type = T;};
-template <unsigned int D, typename T> struct base_type_t_impl<vec<D,T>> {using type = typename vec<D,T>::type;};
-template <typename T> using base_type_t = typename base_type_t_impl<T>::type;
-
-template <typename ...P> struct larger_type_t_impl {using type = void;};
-template <typename ...P> using larger_type_t = std::enable_if_t<!std::is_void_v<typename larger_type_t_impl<P...>::type>, typename larger_type_t_impl<P...>::type>;
-template <typename T, typename ...P> struct larger_type_t_impl<T, P...> {using type = larger_type_t<T, larger_type_t<P...>>;};
-template <typename T> struct larger_type_t_impl<T> {using type = T;};
-template <typename T, typename TT> struct larger_type_t_impl<T, TT>
-{
-using type =
-std::conditional_t< std::is_arithmetic<T>::value && std::is_arithmetic<TT>::value,
-    std::conditional_t< std::is_integral<T>::value == std::is_integral<TT>::value,
-        std::conditional_t< (sizeof (T) == sizeof (TT)),
-            std::conditional_t< std::is_same<T,TT>::value,
-                T
-            ,
-                void
-            >
-        ,
-            std::conditional_t< (sizeof (T) > sizeof (TT)),
-                T
-            ,
-                TT
-            >
-        >
-    ,
-        std::conditional_t< std::is_floating_point<T>::value,
-            T
-        ,
-            TT
-        >
-    >
-,
-    void
->;
-};
-template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<vec<D,T>, TT>
-{
-using type = change_base_type_t<vec<D,T>, larger_type_t<typename vec<D,T>::type, TT>>;
-};
-template <unsigned int D, typename T, typename TT> struct larger_type_t_impl<TT, vec<D,T>>
-{
-using type = change_base_type_t<vec<D,T>, larger_type_t<typename vec<D,T>::type, TT>>;
-};
-template <unsigned int D1, unsigned int D2, typename T, typename TT> struct larger_type_t_impl<vec<D1,T>, vec<D2,TT>>
-{
-using type =
-std::conditional_t< std::is_same<change_base_type_t<vec<D1,T>, base_type_t<vec<D2,TT>>>, vec<D2,TT>>::value,
-    change_base_type_t<vec<D1,T>, larger_type_t<base_type_t<vec<D1,T>>, base_type_t<vec<D2,TT>>>>
-,
-    void
->;
-};
 }
 )";
     }
 
     void Vector()
     {
-        // Operators list
-        static constexpr const char *ops_bin[]{"+","-","*","/","%","^","&","|",">>","<<"},
+        // Operator list
+        static constexpr const char *ops_bin[]{"+","-","*","/","%","^","&","|","<<",">>","<",">","<=",">="},
                                     *ops_un[]{"~","!","+","-"},
                                     *ops_fix[]{"++","--"},
-                                    *ops_comp[]{"<",">","<=",">="},
                                     *ops_bool[]{"&&","||"},
                                     *ops_as[]{"+=","-=","*=","/=","%=","^=","&=","|=","<<=",">>="};
 
@@ -449,8 +456,8 @@ inline namespace Vector
         auto CommonHeader = [&]
         {
             r R"(
-static_assert(!std::is_const<T>::value && !std::is_volatile<T>::value, "The vector base type must not have any cv-qualifiers.");
-static_assert(!std::is_reference<T>::value, "Vectors of references are not allowed.");
+static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>, "The vector base type must not have any cv-qualifiers.");
+static_assert(!std::is_reference_v<T>, "Vectors of references are not allowed.");
 using type = T;
 )";
         };
@@ -489,7 +496,7 @@ using type = T;
                 if (i != 0) l " || ";
                 l "(bool)" << field_names_main[i];
             }
-            l ";}\n";
+            l "; static_assert(!std::is_same_v<type, bool>, \"Use .none(), .any(), or .all() for vectors/matrices of bool.\");}\n";
 
             // Constructors
             l "vec() = default;\n"; // Default
@@ -811,46 +818,11 @@ return inv * det;
                 // Normalize
                 l "constexpr auto norm() const -> vec" << sz << "<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec" << sz << "<T>(0); else return *this / l;}\n";
                 { // Apply
-                    // No additional parameters
-                    l "template <typename F> constexpr auto apply(F &&func) const -> vec" << sz << "<decltype(func(x))> {return {";
+                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const vec" << sz << "<P> &... p) const -> vec" << sz << "<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ", ";
-                        l "func(" << field_names_main[i] << ")";
-                    }
-                    l "};}\n";
-                    // Parameter applied on the right
-                    //   scalar pack
-                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) const -> std::enable_if_t<(sizeof...(P)>0),vec" << sz << "<decltype(func(x,params...))>> {return {";
-                    for (int i = 0; i < sz; i++)
-                    {
-                        if (i != 0) l ", ";
-                        l "func(" << field_names_main[i] << ", params...)";
-                    }
-                    l "};}\n";
-                    //   vector pack
-                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const vec" << sz << "<P> &... params) const -> std::enable_if_t<(sizeof...(P)>0),vec" << sz << "<decltype(func(x,params.x...))>> {return {";
-                    for (int i = 0; i < sz; i++)
-                    {
-                        if (i != 0) l ", ";
-                        l "func(" << field_names_main[i] << ", params." << field_names_main[i] << "...)";
-                    }
-                    l "};}\n";
-                    // Parameter applied on the left
-                    //   scalar
-                    l "template <typename F, typename P> constexpr auto apply(P param, F &&func) const -> vec" << sz << "<decltype(func(param,x))> {return {";
-                    for (int i = 0; i < sz; i++)
-                    {
-                        if (i != 0) l ", ";
-                        l "func(param, " << field_names_main[i] << ")";
-                    }
-                    l "};}\n";
-                    //   vector
-                    l "template <typename F, typename P> constexpr auto apply(const vec" << sz << "<P> &param, F &&func) const -> vec" << sz << "<decltype(func(param.x,x))> {return {";
-                    for (int i = 0; i < sz; i++)
-                    {
-                        if (i != 0) l ", ";
-                        l "func(param." << field_names_main[i] << ", " << field_names_main[i] << ")";
+                        l "func(" << field_names_main[i] << ", p." << field_names_main[i] << "...)";
                     }
                     l "};}\n";
                 }
@@ -899,7 +871,7 @@ return inv * det;
                     };
                     BoolFunc("none", "||", 1);
                     BoolFunc("any", "||", 0);
-                    BoolFunc("each", "&&", 0);
+                    BoolFunc("all", "&&", 0);
                 }
                 for (int i = 1; i <= 4; i++) // Multiplication
                     MatrixMul(sz, i, 1);
@@ -1134,46 +1106,11 @@ $       0, 0, 0, s};
                         }
                     }
                     { // Apply
-                        // No additional parameters
-                        l "template <typename F> constexpr auto apply(F &&func) const -> mat" << w << 'x' << h << "<decltype(func(x.x))> {return {";
+                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, const mat" << w << "x" << h << "<P> &... p) const -> mat" << w << "x" << h << "<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {";
                         for (int i = 0; i < w; i++)
                         {
                             if (i != 0) l ", ";
-                            l field_names_main[i] << ".apply(func)";
-                        }
-                        l "};}\n";
-                        // Parameter applied on the right
-                        //   scalar pack
-                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, P ... params) -> std::enable_if_t<(sizeof...(P)>0),mat" << w << 'x' << h << "<decltype(func(x.x,params...))>> {return {";
-                        for (int i = 0; i < w; i++)
-                        {
-                            if (i != 0) l ", ";
-                            l field_names_main[i] << ".apply(func, params...)";
-                        }
-                        l "};}\n";
-                        //   vector pack
-                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, const mat" << w << 'x' << h << "<P> &... params) -> std::enable_if_t<(sizeof...(P)>0),mat" << w << 'x' << h << "<decltype(func(x.x,params.x.x...))>> {return {";
-                        for (int i = 0; i < w; i++)
-                        {
-                            if (i != 0) l ", ";
-                            l field_names_main[i] << ".apply(func, params." << field_names_main[i] << "...)";
-                        }
-                        l "};}\n";
-                        // Parameter applied on the left
-                        //   scalar
-                        l "template <typename F, typename P> constexpr auto apply(P param, F &&func) -> mat" << w << 'x' << h << "<decltype(func(param,x.x))> {return {";
-                        for (int i = 0; i < w; i++)
-                        {
-                            if (i != 0) l ", ";
-                            l field_names_main[i] << ".apply(param, func)";
-                        }
-                        l "};}\n";
-                        //   vector
-                        l "template <typename F, typename P> constexpr auto apply(const mat" << w << 'x' << h << "<P> &param, F &&func) -> mat" << w << 'x' << h << "<decltype(func(param.x.x,x.x))> {return {";
-                        for (int i = 0; i < w; i++)
-                        {
-                            if (i != 0) l ", ";
-                            l field_names_main[i] << ".apply(param." << field_names_main[i] << ", func)";
+                            l field_names_main[i] << ".apply(func, p." << field_names_main[i] << "...)";
                         }
                         l "};}\n";
                     }
@@ -1195,7 +1132,7 @@ $       0, 0, 0, s};
                         };
                         BoolFunc("none", "||", 1);
                         BoolFunc("any", "||", 0);
-                        BoolFunc("each", "&&", 0);
+                        BoolFunc("all", "&&", 0);
                     }
                     { // Min and max
                         l "constexpr T min() const {return std::min({";
@@ -1241,7 +1178,7 @@ $       0, 0, 0, s};
 
                         l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
                           "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
-                          "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}";
+                          "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
                     }
 
                     l "};\n";
@@ -1264,7 +1201,7 @@ $       0, 0, 0, s};
                 }
                 l "};}\n";
                 // vec @ other
-                l "template <typename T1, typename T2, typename = enable_if_not_special_t<T2,void>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return {";
+                l "template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T2>::io_or_op>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1272,7 +1209,7 @@ $       0, 0, 0, s};
                 }
                 l "};}\n";
                 // other @ vec
-                l "template <typename T1, typename T2, typename = enable_if_not_special_t<T1,void>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return {";
+                l "template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T1>::io_or_op>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1307,33 +1244,6 @@ $       0, 0, 0, s};
                     l "object." << field_names_main[i] << op;
                 }
                 l "};}\n";
-            }
-            for (const char *op : ops_comp)
-            {
-                // vec @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return ";
-                for (int i = 0; i < sz; i++)
-                {
-                    if (i != 0) l " && ";
-                    l "(first." << field_names_main[i] << ' ' << op << ' ' << "second." << field_names_main[i] << ')';
-                }
-                l ";}\n";
-                // vec @ other
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return ";
-                for (int i = 0; i < sz; i++)
-                {
-                    if (i != 0) l " && ";
-                    l "(first." << field_names_main[i] << ' ' << op << ' ' << "second" << ')';
-                }
-                l ";}\n";
-                // other @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return ";
-                for (int i = 0; i < sz; i++)
-                {
-                    if (i != 0) l " && ";
-                    l "(first" << ' ' << op << ' ' << "second." << field_names_main[i] << ')';
-                }
-                l ";}\n";
             }
             for (const char *op : ops_bool)
             {
@@ -1473,7 +1383,7 @@ inline namespace Quaternion
 {
 template <typename T> struct quat
 {
-static_assert(std::is_floating_point<T>::value, "Type must be floating-point.");
+static_assert(std::is_floating_point_v<T>, "Type must be floating-point.");
 
 vec4<T> vec;
 
@@ -1556,28 +1466,27 @@ using ldquat = quat<long double>;
 )";
     }
 
-    void Operators()
+    void CustomOperators()
     {
         l "inline namespace Operators\n{\n";
         for (const char *name : custom_op_list)
         {
-            l "template <typename T> struct " << name << "_operator_impl_expression_t\n";
+            l "template <typename T> struct " << name << "_operator_impl_expression_t : private custom_operator_base_t\n";
             l "{\n";
             l "T first_arg;\n";
-            l "using custom_operator_tag = void;\n";
+            l "template <typename TT> constexpr " << name << "_operator_impl_expression_t(TT &&obj) : first_arg((TT &&) obj) {}\n";
             l "template <typename TT> constexpr auto operator" << op_delim << "(TT &&obj) const {return first_arg." << name << "((TT &&) obj);}\n";
             l "};\n";
         }
         l '\n';
         for (const char *name : custom_op_list)
         {
-            l "struct " << name << "_operator_impl_t\n";
+            l "struct " << name << "_operator_impl_t : private custom_operator_base_t\n";
             l "{\n";
-            l "using custom_operator_tag = void;\n";
             l "constexpr " << name << "_operator_impl_t(){}\n";
             l "};\n";
             l "constexpr " << name << "_operator_impl_t " << name << ";\n";
-            l "template <typename T> constexpr auto operator" << op_delim << "(T &&obj, decltype(" << name << ")) {return " << name << "_operator_impl_expression_t<T>{(T &&) obj};}\n";
+            l "template <typename T> [[nodiscard]] constexpr auto operator" << op_delim << "(T &&obj, decltype(" << name << ")) {return " << name << "_operator_impl_expression_t<T>((T &&) obj);}\n";
         }
         l "}\n";
     }
@@ -1594,48 +1503,51 @@ constexpr long double ld_pi = pi<long double>();
 
 template <typename T> T to_rad(T in)
 {
-static_assert(!std::is_integral<T>::value, "Integral argument makes no sense for this function.");
+static_assert(!std::is_integral_v<T>, "Integral argument makes no sense for this function.");
 return in * pi<T>() / (T)180;
 }
 template <typename T> T to_deg(T in)
 {
-static_assert(!std::is_integral<T>::value, "Integral argument makes no sense for this function.");
+static_assert(!std::is_integral_v<T>, "Integral argument makes no sense for this function.");
 return in * (T)180 / pi<T>();
 }
 
 template <typename T, typename TT> constexpr T ipow(T a, TT b)
 {
-static_assert(std::is_integral<TT>::value, "Non integral power makes no sense for this function.");
+static_assert(std::is_integral_v<TT>, "Non integral power makes no sense for this function.");
 T ret = 1;
 while (b-- > 0)
     ret *= a;
 return ret;
 }
 
-template <typename T, typename Min, typename Max> constexpr enable_if_not_vec_or_mat_t<T,T> clamp(T val, Min min, Max max)
+template <typename T, typename Min, typename Max> constexpr T clamp(T val, Min min, Max max)
 {
-static_assert(std::is_arithmetic<T>::value &&
-              std::is_arithmetic<Min>::value &&
-              std::is_arithmetic<Max>::value, "Non arithmetic arguments make no sense for this function.");
+static_assert(std::is_arithmetic_v<T> &&
+              std::is_arithmetic_v<Min> &&
+              std::is_arithmetic_v<Max>, "Non arithmetic arguments make no sense for this function.");
 if (val < min) return min;
 if (val > max) return max;
 return val;
 }
-template <typename T, typename Min, typename Max> constexpr enable_if_vec_or_mat_t<T,T> clamp(T val, Min min, Max max)
+template <typename T, unsigned int D, typename Min, typename Max> constexpr vec<D,T> clamp(const vec<D,T> &val, Min min, Max max)
 {
-return val.apply((typename T::type (*)(typename T::type, base_type_t<Min>, base_type_t<Max>))clamp, min, max);
+using v = vec<D,T>;
+static_assert(!type_category<Min>::vec_or_mat || std::is_same_v<change_base_type_t<v,Min>, Min>, "Second argument must be a scalar or must have the same dimensions as the first one.");
+static_assert(!type_category<Max>::vec_or_mat || std::is_same_v<change_base_type_t<v,Max>, Max>, "Third argument must be a scalar or must have the same dimensions as the first one.");
+return val.apply(clamp<base_type_t<v>, base_type_t<Min>, base_type_t<Max>>, change_base_type_t<v,Min>(min), change_base_type_t<v,Max>(max));
+}
+template <typename T> constexpr T clamp(T val)
+{
+return clamp(val, 0, 1);
 }
 
-template <typename T> constexpr enable_if_not_vec_or_mat_t<T,int> sign(T val)
+template <typename T> constexpr change_base_type_t<T,int> sign(T val)
 {
 return (val > 0) - (val < 0);
 }
-template <typename T> constexpr enable_if_vec_or_mat_t<T,change_base_type_t<T,int>> sign(T val)
-{
-return val.apply((int (*)(typename T::type))sign);
-}
 
-template <typename I = int, typename F> enable_if_not_vec_or_mat_t<F,I> iround(F x)
+template <typename I = int, typename F> I iround(F x)
 {
 static_assert(std::is_floating_point_v<F>, "Argument type must be floating-point.");
 static_assert(std::is_integral_v<I> && std::is_signed_v<I>, "Template argument must be integral and signed.");
@@ -1644,88 +1556,92 @@ if constexpr (sizeof (I) <= sizeof (long))
 else
     return std::llround(x);
 }
-template <typename I = int, typename F> enable_if_vec_or_mat_t<F,change_base_type_t<F,I>> iround(F val)
+template <typename I = int, typename T, unsigned int D> change_base_type_t<vec<D,T>,I> iround(const vec<D,T> &val)
 {
-return val.apply(iround<I, typename F::type>);
+return val.apply(iround<I, base_type_t<vec<D,T>>>);
 }
 
 template <typename T> constexpr T smoothstep(T x)
 {
-static_assert(std::is_floating_point<base_type_t<T>>::value, "Argument type must be floating-point.");
+static_assert(std::is_floating_point_v<base_type_t<T>>, "Argument type must be floating-point.");
 return 3 * x*x - 2 * x*x*x;
 }
 
-template <typename T> enable_if_not_vec_or_mat_t<T,T> abs(T x)
+template <typename T> T constexpr abs(T x)
 {
 return (x >= 0 ? x : -x);
 }
-template <typename T> enable_if_vec_or_mat_t<T,T> abs(T val)
+template <typename T, unsigned int D> vec<D,T> abs(const vec<D,T> &val)
 {
-return val.apply((typename T::type (*)(typename T::type))abs);
+return val.apply(abs<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> enable_if_not_vec_or_mat_t<T,T> floor(T x)
+template <typename T> T floor(T x)
 {
-static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::floor(x);
 }
-template <typename T> enable_if_vec_or_mat_t<T,T> floor(T val)
+template <typename T, unsigned int D> vec<D,T> floor(const vec<D,T> &val)
 {
-return val.apply((typename T::type (*)(typename T::type))floor);
+return val.apply(floor<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> enable_if_not_vec_or_mat_t<T,T> ceil(T x)
+template <typename T> T ceil(T x)
 {
-static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::ceil(x);
 }
-template <typename T> enable_if_vec_or_mat_t<T,T> ceil(T val)
+template <typename T, unsigned int D> vec<D,T> ceil(const vec<D,T> &val)
 {
-return val.apply((typename T::type (*)(typename T::type))ceil);
+return val.apply(ceil<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> enable_if_not_vec_or_mat_t<T,T> trunc(T x)
+template <typename T> T trunc(T x)
 {
-static_assert(std::is_floating_point<T>::value, "Argument type must be floating-point.");
+static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::trunc(x);
 }
-template <typename T> enable_if_vec_or_mat_t<T,T> trunc(T val)
+template <typename T, unsigned int D> vec<D,T> trunc(const vec<D,T> &val)
 {
-return val.apply((typename T::type (*)(typename T::type))trunc);
+return val.apply(trunc<base_type_t<vec<D,T>>>);
 }
 
 template <typename T> T frac(T x)
 {
-static_assert(std::is_floating_point<base_type_t<T>>::value, "Argument type must be floating-point.");
-return x - trunc(x);
+static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
+return std::modf(x, 0);
+}
+template <typename T, unsigned int D> vec<D,T> frac(const vec<D,T> &val)
+{
+return val.apply(frac<base_type_t<vec<D,T>>>);
 }
 
-template <typename T, typename TT> constexpr enable_if_not_vec_or_mat_t<T,T> true_div(T a, TT b)
+template <typename T, typename TT> constexpr T div_ex(T a, TT b)
 {
-static_assert(std::is_integral<T>::value &&
-              std::is_integral<TT>::value, "Parameter types must be integral.");
+static_assert(std::is_integral_v<T> &&
+              std::is_integral_v<TT>, "Parameter types must be integral scalars, vectors, or matrices.");
 if (a >= 0)
     return a / b;
 else
-    return (a + 1) / b - (b >= 0 ? 1 : -1);
+    return (a + 1) / b - sign(b);
 }
-template <typename T, typename TT> constexpr enable_if_vec_or_mat_t<T,T> true_div(T a, TT b)
+template <typename T, typename TT, unsigned int D> vec<D,T> div_ex(const vec<D,T> &a, TT b)
 {
-return a.apply((typename T::type (*)(typename T::type, base_type_t<TT>))true_div, b);
+return a.apply(div_ex<base_type_t<vec<D,T>>, base_type_t<TT>>, change_base_type_t<vec<D,T>,TT>(b));
 }
 
-template <typename T, typename TT> constexpr enable_if_not_vec_or_mat_t<T,T> true_mod(T a, TT b)
+template <typename T, typename TT> constexpr T mod_ex(T a, TT b)
 {
-static_assert(std::is_integral<T>::value &&
-              std::is_integral<TT>::value, "Parameter types must be integral.");
+static_assert(std::is_integral_v<T> &&
+              std::is_integral_v<TT>, "Parameter types must be integral scalars, vectors, or matrices.");
 if (a >= 0)
     return a % b;
 else
-    return (b >= 0 ? b : -b) - 1 + (a + 1) % b;
+    return abs(b) - 1 + (a + 1) % b;
 }
-template <typename T, typename TT> constexpr enable_if_vec_or_mat_t<T,T> true_mod(T a, TT b)
+template <typename T, typename TT, unsigned int D> vec<D,T> mod_ex(const vec<D,T> &a, TT b)
 {
-return a.apply((typename T::type (*)(typename T::type, base_type_t<TT>))true_mod, b);
+return a.apply(mod_ex<base_type_t<vec<D,T>>, base_type_t<TT>>, change_base_type_t<vec<D,T>,TT>(b));
 }
 )";
         struct
@@ -1738,31 +1654,28 @@ return a.apply((typename T::type (*)(typename T::type, base_type_t<TT>))true_mod
         for (const auto &it : min_max)
         {
             l '\n';
-            l "template <typename T, typename TT> constexpr std::enable_if_t<!is_vec_or_mat<T>::value && !is_vec_or_mat<TT>::value, larger_type_t<T,TT>>\n";
-            l it.name << "(T a, TT b) {return (" << it.logic << ");}\n";
-            l "template <typename T, typename TT> constexpr std::enable_if_t<is_vec_or_mat<T>::value && !is_vec_or_mat<TT>::value, larger_type_t<T,TT>>\n";
-            l it.name << "(T a, TT b) {return a.apply((larger_type_t<base_type_t<T>,TT> (*)(base_type_t<T>, TT))" << it.name << ", b);}\n";
-            l "template <typename T, typename TT> constexpr std::enable_if_t<is_vec_or_mat<TT>::value, larger_type_t<T,TT>>\n";
-            l it.name << "(T a, TT b) {return b.apply(a, (larger_type_t<base_type_t<T>,base_type_t<TT>> (*)(base_type_t<T>, base_type_t<TT>))" << it.name << ");}\n";
+            l "template <typename T1, typename T2> constexpr larger_type_t<T1,T2> " << it.name << "(T1 a, T2 b) {return (" << it.logic << ");}\n";
+            l "template <typename T1, typename T2, unsigned int D1> constexpr larger_type_t<vec<D1,T1>,T2> " << it.name << "(const vec<D1,T1> &a, T2 b) {return a.apply(" << it.name << "<base_type_t<vec<D1,T1>>, T2>, change_base_type_t<vec<D1,T1>,T2>(b));}\n";
+            l "template <typename T1, typename T2, unsigned int D2> constexpr larger_type_t<T1,vec<D2,T2>> " << it.name << "(T1 a, const vec<D2,T2> &b) {return b.apply(" << it.name << "<T1, base_type_t<vec<D2,T2>>>, change_base_type_t<vec<D2,T2>,T1>(a));}\n";
+            l "template <typename T1, typename T2, unsigned int D1, unsigned int D2> constexpr larger_type_t<vec<D1,T1>,vec<D2,T2>> " << it.name << "(const vec<D1,T1> &a, const vec<D2,T2> &b) {return a.apply(" << it.name << "<base_type_t<vec<D1,T1>>, base_type_t<vec<D2,T2>>>, b);}\n";
         }
         r R"(
 }
 )";
     }
 
-    void ImportEverything()
+    void Export()
     {
         r R"(
-namespace Everything
+namespace Export
 {
 using namespace Vector;
 using namespace Quaternion;
 using namespace Operators;
 using namespace Misc;
 
-using Utility::number_to_string;
-using Utility::floating_point_t;
-using Utility::larger_type_t;
+using Strings::number_to_string;
+using Strings::number_from_string;
 }
 )";
     }
@@ -1828,15 +1741,17 @@ namespace Math
     l "\n";
     Gen::Utility();
     l "\n";
+    Gen::Strings();
+    l "\n";
     Gen::Vector();
     l "\n";
     Gen::Quaternion();
     l "\n";
-    Gen::Operators();
+    Gen::CustomOperators();
     l "\n";
     Gen::Misc();
     l "\n";
-    Gen::ImportEverything();
+    Gen::Export();
     r R"(
 }
 
@@ -1844,7 +1759,7 @@ namespace Math
     Gen::StdSpecializations();
     r R"(
 
-using namespace Math::Everything;
+using namespace Math::Export;
 
 #endif
 )";

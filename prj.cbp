@@ -114,6 +114,10 @@
 			<Add directory="lib" />
 		</Linker>
 		<Unit filename="lib/glfl.cpp" />
+		<Unit filename="scripts/mathgen/mathgen.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="src/audio.cpp" />
 		<Unit filename="src/audio.h" />
 		<Unit filename="src/exceptions.h" />
@@ -131,10 +135,12 @@
 		<Unit filename="src/lib/sdlttf.h" />
 		<Unit filename="src/lib/vorbis.h" />
 		<Unit filename="src/lib/z.h" />
-		<Unit filename="src/logic.cpp" />
+		<Unit filename="src/logic.cpp">
+			<Option weight="75" />
+		</Unit>
 		<Unit filename="src/master.h">
 			<Option compile="1" />
-			<Option weight="0" />
+			<Option weight="25" />
 		</Unit>
 		<Unit filename="src/math.h" />
 		<Unit filename="src/network.cpp" />
