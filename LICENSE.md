@@ -1,4 +1,4 @@
-Copyright (c) 2017 Egor Mikhailov
+Copyright (c) 2015-2017 Egor Mikhailov
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
