@@ -124,6 +124,7 @@ class Renderer2D
 
         bool have_center = 0;
         fvec2 sprite_center = {0,0};
+        bool sprite_center_coords_tex = 0;
 
         bool have_matrix = 0;
         fmat2 sprite_matrix = fmat2::identity();
@@ -168,15 +169,21 @@ class Renderer2D
             Assert("2D renderer: Sprite center specified twice.", !have_center);
             have_center = 1;
 
+            sprite_center_coords_tex = 1;
+            sprite_center = c;
+            return (rvalue)*this;
+        }
+        rvalue pixel_center(fvec2 c) // Same as `center(fvec2)`, but the coordinates are always measured in pixels instead of texels even if a texture is specified.
+        {
+            Assert("2D renderer: Sprite center specified twice.", !have_center);
+            have_center = 1;
+
             sprite_center = c;
             return (rvalue)*this;
         }
         rvalue center()
         {
-            Assert("2D renderer: Sprite center specified twice.", !have_center);
-            have_center = 1;
-
-            sprite_center = dst_size / 2;
+            pixel_center(dst_size / 2);
             return (rvalue)*this;
         }
         rvalue angle(float a) // Uses `matrix()`.
@@ -314,7 +321,7 @@ class Renderer2D
 
                 for (int i = 0; i < 4; i++)
                 {
-                    final_colors[i] = sprite_colors[i].to_vec4(sprite_alpha[4]);
+                    final_colors[i] = sprite_colors[i].to_vec4(sprite_alpha[i]);
                     factors[i].y = 0;
                 }
             }
@@ -327,7 +334,8 @@ class Renderer2D
                     factors[i].y = sprite_alpha[i];
                 }
 
-                sprite_center = sprite_center * dst_size / texture_size;
+                if (sprite_center_coords_tex)
+                    sprite_center = sprite_center * dst_size / texture_size;
             }
             for (int i = 0; i < 4; i++)
                 factors[i].z = sprite_opacity[i];
@@ -723,7 +731,7 @@ class Renderer2D
             if (index >= int(text_styles.size()))
                 text_styles.resize(index+1);
             if (!text_styles[index].was_initialized)
-                text_styles[index] = text_styles[0];
+                text_styles[index] = text_styles[src];
             return (rvalue)*this;
         }
         rvalue style(const Style &style, int index = -1) // If index is equal to -1, the current style is changed.
@@ -754,6 +762,7 @@ class Renderer2D
         {
             Assert("2D renderer: Normal text object was used for style editing instead of stub one.", internal_stub_object);
             style_vec = text_styles;
+            return (rvalue)*this;
         }
         Style &&export_style(int index = -1) // If index is equal to -1, the current style is exported. This discards current text drawing command. It's recommended to use it with stub (null) text and postiton.
         {
