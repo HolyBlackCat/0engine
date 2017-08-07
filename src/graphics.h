@@ -638,14 +638,14 @@ namespace Graphics
         void Insert(const L &a, const L &b)
         {
             static_assert(Dim == 2, "This function only works for line queues.");
-            L *dst = Add(2);
+            L *dst = Add(1);
             dst[0] = a;
             dst[1] = b;
         }
         void Insert(const L &a, const L &b, const L &c)
         {
             static_assert(Dim == 3, "This function only works for triangle queues.");
-            L *dst = Add(3);
+            L *dst = Add(1);
             dst[0] = a;
             dst[1] = b;
             dst[2] = c;
@@ -653,7 +653,7 @@ namespace Graphics
         void Insert(const L &a, const L &b, const L &c, const L &d) // a b d  b c d
         {
             static_assert(Dim == 3, "This function only works for triangle queues.");
-            L *dst = Add(6);
+            L *dst = Add(2);
             dst[0] = a;
             dst[1] = b;
             dst[2] = d;
