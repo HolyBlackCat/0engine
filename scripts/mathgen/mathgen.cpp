@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.1"
+#define VERSION "2.4.2"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -292,7 +292,7 @@ return buffer;
 }
 
 
-template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0)
+template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
 {
 if (std::isspace(*ptr))
 {
@@ -322,7 +322,7 @@ if (chars_consumed)
     *chars_consumed = end - ptr;
 return value;
 }
-template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int base = 0, int *chars_consumed = 0)
+template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int base = 0)
 {
 if (std::isspace(*ptr))
 {
@@ -360,7 +360,7 @@ if (chars_consumed)
     *chars_consumed = end - ptr;
 return value;
 }
-template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0)
+template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
 {
 switch (*ptr)
 {
@@ -515,7 +515,7 @@ using type = T;
                 if (i != 0) l " || ";
                 l "(bool)" << field_names_main[i];
             }
-            l "; static_assert(!std::is_same_v<type, bool>, \"Use .none(), .any(), or .all() for vectors/matrices of bool.\");}\n";
+            l "; static_assert(!std::is_same_v<T, bool>, \"Use .none(), .any(), or .all() for vectors/matrices of bool.\");}\n";
 
             // Constructors
             l "vec() = default;\n"; // Default
@@ -837,7 +837,7 @@ return inv * det;
                 // Normalize
                 l "constexpr auto norm() const -> vec" << sz << "<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec" << sz << "<T>(0); else return *this / l;}\n";
                 { // Apply
-                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const vec" << sz << "<P> &... p) const -> vec" << sz << "<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {";
+                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const vec" << sz << "<P> &... p) const -> vec" << sz << "<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ", ";
@@ -911,7 +911,8 @@ return inv * det;
                     l "});}\n";
                 }
                 { // String operations
-                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start";
+                    // To string
+                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0)
@@ -920,11 +921,49 @@ return inv * det;
                     }
                     l " + end;}\n";
 
-                    l "std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
+                    l "std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
 
                     l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
                       "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
                       "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
+
+                    // From string
+                    l "static vec" << sz << R"(<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+{
+if (chars_consumed) *chars_consumed = 0;
+if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+int offset; vec ret;
+)";
+                    for (int i = 0; i < sz; i++)
+                    {
+                        if (i != 0)
+                            l "if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} "
+                              "pos += sep.size();\n";
+                        l "ret." << field_names_main[i] << " = number_from_string<T>(src+pos, &offset, base); "
+                          "if (!offset) {return {};} "
+                          "pos += offset;\n";
+                    }
+                    l "if (strncmp(src+pos, end.c_str(), end.size())) {return {};} "
+                      "pos += end.size();\n"
+                      "if (chars_consumed) *chars_consumed = pos;\n"
+                      "return ret;\n"
+                      "}\n";
+
+                    l "static vec" << sz << R"(<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+{
+int ch_con;
+vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
+if (src[ch_con] != '\0')
+{
+if (chars_consumed) *chars_consumed = 0;
+return {};
+}
+if (chars_consumed) *chars_consumed = ch_con;
+return ret;
+}
+)";
+                    l "static vec" << sz << "<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
+                    l "static vec" << sz << "<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
                 }
 
                 l "};\n";
@@ -955,7 +994,7 @@ return inv * det;
                             for (int ww = 0; ww < w; ww++)
                             {
                                 if (ww != 0 || hh != 0) l ", ";
-                                l "type " << field_names_main[ww] << field_names_main[hh];
+                                l "T " << field_names_main[ww] << field_names_main[hh];
                             }
                         }
                         l ") : ";
@@ -973,7 +1012,7 @@ return inv * det;
                         l " {}\n";
                     }
                     { // Transpose
-                        l "constexpr mat" << h << 'x' << w << "<type> transpose() const {return {";
+                        l "constexpr mat" << h << 'x' << w << "<T> transpose() const {return {";
                         for (int ww = 0; ww < w; ww++)
                         {
                             for (int hh = 0; hh < h; hh++)
@@ -999,7 +1038,7 @@ return inv * det;
 
                         for (int i = 2; i <= std::min(w,h); i++) // Diagonal
                         {
-                            l "static constexpr vec dia(const vec" << i << "<type> &v) {return {";
+                            l "static constexpr vec dia(const vec" << i << "<T> &v) {return {";
                             for (int hh = 0; hh < h; hh++)
                             {
                                 for (int ww = 0; ww < w; ww++)
@@ -1024,28 +1063,28 @@ return inv * det;
                                 if (float_only) l "static_assert(is_floating_point, \"This function only makes sense for floating-point matrices.\");\n";
                                 l (1+body) << "}\n";
                             }
-                            else if (w >= minw && h >= minh) l "static constexpr vec " << name << '(' << params << ") {return mat" << minw << 'x' << minh << "<type>::" << name << "(" << sh_params << ").to_mat" << w << 'x' << h << "();}\n";
+                            else if (w >= minw && h >= minh) l "static constexpr vec " << name << '(' << params << ") {return mat" << minw << 'x' << minh << "<T>::" << name << "(" << sh_params << ").to_mat" << w << 'x' << h << "();}\n";
                         };
 
-                        MatrixFactoryMethod(2, 2, "ortho2D", "const vec2<type> &sz", "sz", R"(
+                        MatrixFactoryMethod(2, 2, "ortho2D", "const vec2<T> &sz", "sz", R"(
 return {2 / sz.x, 0,
 $       0, 2 / sz.y};
 )");
-                        MatrixFactoryMethod(3, 2, "ortho2D", "const vec2<type> &min, const vec2<type> &max", "min, max", R"(
+                        MatrixFactoryMethod(3, 2, "ortho2D", "const vec2<T> &min, const vec2<T> &max", "min, max", R"(
 return {2 / (max.x - min.x), 0, (min.x + max.x) / (min.x - max.x),
 $       0, 2 / (max.y - min.y), (min.y + max.y) / (min.y - max.y)};
 )");
-                        MatrixFactoryMethod(4, 3, "ortho", "const vec2<type> &sz, type near, type far", "sz, near, far", R"(
+                        MatrixFactoryMethod(4, 3, "ortho", "const vec2<T> &sz, T near, T far", "sz, near, far", R"(
 return {2 / sz.x, 0, 0, 0,
 $       0, 2 / sz.y, 0, 0,
 $       0, 0, 2 / (near - far), (near + far) / (near - far)};
 )");
-                        MatrixFactoryMethod(4, 3, "ortho", "const vec2<type> &min, const vec2<type> &max, type near, type far", "min, max, near, far", R"(
+                        MatrixFactoryMethod(4, 3, "ortho", "const vec2<T> &min, const vec2<T> &max, T near, T far", "min, max, near, far", R"(
 return {2 / (max.x - min.x), 0, 0, (min.x + max.x) / (min.x - max.x),
 $       0, 2 / (max.y - min.y), 0, (min.y + max.y) / (min.y - max.y),
 $       0, 0, 2 / (near - far), (near + far) / (near - far)};
 )");
-                        MatrixFactoryMethod(4, 3, "look_at", "const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up", "src, dst, local_up", R"(
+                        MatrixFactoryMethod(4, 3, "look_at", "const vec3<T> &src, const vec3<T> &dst, const vec3<T> &local_up", "src, dst, local_up", R"(
 vec3<T> v3 = (src-dst).norm();
 vec3<T> v1 = local_up.cross(v3).norm();
 vec3<T> v2 = v3.cross(v1);
@@ -1053,44 +1092,44 @@ return {v1.x, v1.y, v1.z, -src.x*v1.x - src.y*v1.y - src.z*v1.z,
 $       v2.x, v2.y, v2.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z,
 $       v3.x, v3.y, v3.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z};
 )");
-                        MatrixFactoryMethod(4, 3, "translate", "const vec3<type> &in", "in", R"(
+                        MatrixFactoryMethod(4, 3, "translate", "const vec3<T> &in", "in", R"(
 return {1, 0, 0, in.x,
 $       0, 1, 0, in.y,
 $       0, 0, 1, in.z};
 )", 0);
-                        MatrixFactoryMethod(2, 2, "rotate2D", "type angle", "angle", R"(
-type c = std::cos(angle);
-type s = std::sin(angle);
+                        MatrixFactoryMethod(2, 2, "rotate2D", "T angle", "angle", R"(
+T c = std::cos(angle);
+T s = std::sin(angle);
 return {c, -s,
 $       s, c};
 )");
-                        MatrixFactoryMethod(3, 3, "rotate_with_normalized_axis", "const vec3<type> &in, type angle", "in, angle", R"(
-type c = std::cos(angle);
-type s = std::sin(angle);
+                        MatrixFactoryMethod(3, 3, "rotate_with_normalized_axis", "const vec3<T> &in, T angle", "in, angle", R"(
+T c = std::cos(angle);
+T s = std::sin(angle);
 return {in.x * in.x * (1 - c) + c, in.x * in.y * (1 - c) - in.z * s, in.x * in.z * (1 - c) + in.y * s,
 $       in.y * in.x * (1 - c) + in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) - in.x * s,
 $       in.x * in.z * (1 - c) - in.y * s, in.y * in.z * (1 - c) + in.x * s, in.z * in.z * (1 - c) + c};
 )");
-                        MatrixFactoryMethod(3, 3, "rotate", "const vec3<type> &in, type angle", "in, angle", R"(
+                        MatrixFactoryMethod(3, 3, "rotate", "const vec3<T> &in, T angle", "in, angle", R"(
 return rotate_with_normalized_axis(in.norm(), angle);
 )");
-                        MatrixFactoryMethod(4, 4, "perspective", "type yfov, type wh_aspect, type near, type far", "yfov, wh_aspect, near, far", R"(
+                        MatrixFactoryMethod(4, 4, "perspective", "T yfov, T wh_aspect, T near, T far", "yfov, wh_aspect, near, far", R"(
 yfov = (T)1 / std::tan(yfov / 2);
 return {yfov / wh_aspect , 0    , 0                           , 0                             ,
 $       0                , yfov , 0                           , 0                             ,
 $       0                , 0    , (near + far) / (near - far) , 2 * near * far / (near - far) ,
 $       0                , 0    , -1                          , 0                             };
 )");
-                        MatrixFactoryMethod(2, 2, "scale2D", "type s", "s", R"(
+                        MatrixFactoryMethod(2, 2, "scale2D", "T s", "s", R"(
 return {s, 0,
 $       0, s};
 )", 0);
-                        MatrixFactoryMethod(3, 3, "scale", "type s", "s", R"(
+                        MatrixFactoryMethod(3, 3, "scale", "T s", "s", R"(
 return {s, 0, 0,
 $       0, s, 0,
 $       0, 0, s};
 )", 0);
-                        MatrixFactoryMethod(4, 4, "scale4D", "type s", "s", R"(
+                        MatrixFactoryMethod(4, 4, "scale4D", "T s", "s", R"(
 return {s, 0, 0, 0,
 $       0, s, 0, 0,
 $       0, 0, s, 0,
@@ -1103,7 +1142,7 @@ $       0, 0, 0, s};
                             for (int www = 2; www <= 4; www++)
                             {
                                 if (www == w && hhh == h) continue;
-                                l "constexpr mat" << www << 'x' << hhh << "<type> to_mat" << www << 'x' << hhh << "() const {return {";
+                                l "constexpr mat" << www << 'x' << hhh << "<T> to_mat" << www << 'x' << hhh << "() const {return {";
                                 for (int hh = 0; hh < hhh; hh++)
                                 {
                                     for (int ww = 0; ww < www; ww++)
@@ -1120,12 +1159,12 @@ $       0, 0, 0, s};
                                 }
                                 l "};}\n";
                                 if (www == hhh)
-                                    l "constexpr mat" << www << "<type> to_mat" << www << "() const {return to_mat" << www << 'x' << www << "();}\n";
+                                    l "constexpr mat" << www << "<T> to_mat" << www << "() const {return to_mat" << www << 'x' << www << "();}\n";
                             }
                         }
                     }
                     { // Apply
-                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, const mat" << w << "x" << h << "<P> &... p) const -> mat" << w << "x" << h << "<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {";
+                        l "template <typename F, typename ...P> constexpr auto apply(F &&func, const mat" << w << "x" << h << "<P> &... p) const -> mat" << w << "x" << h << "<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {";
                         for (int i = 0; i < w; i++)
                         {
                             if (i != 0) l ", ";
@@ -1179,7 +1218,8 @@ $       0, 0, 0, s};
                     for (int i = 1; i <= 4; i++) // Multiplication
                         MatrixMul(w, i, h);
                     { // String operations
-                        l "std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start";
+                        // To string
+                        l "std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start";
                         for (int hh = 0; hh < h; hh++)
                         {
                             if (hh != 0)
@@ -1193,11 +1233,56 @@ $       0, 0, 0, s};
                         }
                         l " + end;}\n";
 
-                        l "std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
+                        l "std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
 
                         l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
                           "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
                           "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
+
+                        // From string
+                        l "static mat" << w << "x" << h << R"(<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+{
+if (chars_consumed) *chars_consumed = 0;
+if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+int offset; vec ret;
+)";
+                        for (int hh = 0; hh < h; hh++)
+                        {
+                            if (hh != 0)
+                                l "if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} "
+                                  "pos += sep.size();\n";
+
+                            for (int ww = 0; ww < w; ww++)
+                            {
+                                if (ww != 0)
+                                    l "if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} "
+                                      "pos += sep.size();\n";
+                                l "ret." << field_names_main[ww] << "." << field_names_main[hh] << " = number_from_string<T>(src+pos, &offset, base); "
+                                  "if (!offset) {return {};} "
+                                  "pos += offset;\n";
+                            }
+                        }
+                        l "if (strncmp(src+pos, end.c_str(), end.size())) {return {};} "
+                          "pos += end.size();\n"
+                          "if (chars_consumed) *chars_consumed = pos;\n"
+                          "return ret;\n"
+                          "}\n";
+
+                        l "static mat" << w << "x" << h << R"(<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+{
+int ch_con;
+vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+if (src[ch_con] != '\0')
+{
+if (chars_consumed) *chars_consumed = 0;
+return {};
+}
+if (chars_consumed) *chars_consumed = ch_con;
+return ret;
+}
+)";
+                        l "static mat" << w << "x" << h << "<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
+                        l "static mat" << w << "x" << h << "<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
                     }
 
                     l "};\n";
@@ -1742,8 +1827,10 @@ int main()
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <ios>
 #include <istream>

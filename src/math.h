@@ -1,13 +1,15 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.4.1 by HolyBlackCat
+// Version 2.4.2 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <ios>
 #include <istream>
@@ -196,7 +198,7 @@ namespace Math
         }
 
 
-        template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0)
+        template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
         {
             if (std::isspace(*ptr))
             {
@@ -226,7 +228,7 @@ namespace Math
                 *chars_consumed = end - ptr;
             return value;
         }
-        template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int base = 0, int *chars_consumed = 0)
+        template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int base = 0)
         {
             if (std::isspace(*ptr))
             {
@@ -264,7 +266,7 @@ namespace Math
                 *chars_consumed = end - ptr;
             return value;
         }
-        template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0)
+        template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
         {
             switch (*ptr)
             {
@@ -476,7 +478,7 @@ namespace Math
             union {T y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -498,7 +500,7 @@ namespace Math
             template <typename TT> constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}
             constexpr floating_point_t<T> ratio() const {return floating_point_t<T>(x) / floating_point_t<T>(y);}
             constexpr auto norm() const -> vec2<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec2<T>(0); else return *this / l;}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec2<P> &... p) const -> vec2<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {func(x, p.x...), func(y, p.y...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec2<P> &... p) const -> vec2<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {func(x, p.x...), func(y, p.y...)};}
             constexpr vec3<T> to_vec3(T pz) const {return {x, y, pz};}
             constexpr vec4<T> to_vec4(T pz, T pw) const {return {x, y, pz, pw};}
             constexpr vec3<T> to_vec3() const {return to_vec3(T{});}
@@ -512,9 +514,35 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y, x*o.w.x+y*o.w.y};}
             constexpr T min() const {return std::min({x,y});}
             constexpr T max() const {return std::max({x,y});}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+            static vec2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static vec2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static vec2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
+            static vec2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", "]", base);}
         };
         template <typename T> struct vec<3,T> // vec3
         {
@@ -528,7 +556,7 @@ namespace Math
             union {T z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -552,7 +580,7 @@ namespace Math
             template <typename TT> constexpr auto dot(const vec3<TT> &o) const {return x*o.x + y*o.y + z*o.z;}
             template <typename TT> constexpr auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};}
             constexpr auto norm() const -> vec3<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec3<T>(0); else return *this / l;}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec3<P> &... p) const -> vec3<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {func(x, p.x...), func(y, p.y...), func(z, p.z...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec3<P> &... p) const -> vec3<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {func(x, p.x...), func(y, p.y...), func(z, p.z...)};}
             constexpr vec2<T> to_vec2() const {return {x, y};}
             constexpr vec4<T> to_vec4(T pw) const {return {x, y, z, pw};}
             constexpr vec4<T> to_vec4() const {return to_vec4(T{});}
@@ -565,9 +593,37 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z, x*o.w.x+y*o.w.y+z*o.w.z};}
             constexpr T min() const {return std::min({x,y,z});}
             constexpr T max() const {return std::max({x,y,z});}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+            static vec3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static vec3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static vec3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
+            static vec3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", "]", base);}
         };
         template <typename T> struct vec<4,T> // vec4
         {
@@ -582,7 +638,7 @@ namespace Math
             union {T w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -608,7 +664,7 @@ namespace Math
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec4<TT> &o) const {return x*o.x + y*o.y + z*o.z + w*o.w;}
             constexpr auto norm() const -> vec4<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec4<T>(0); else return *this / l;}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec4<P> &... p) const -> vec4<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {func(x, p.x...), func(y, p.y...), func(z, p.z...), func(w, p.w...)};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const vec4<P> &... p) const -> vec4<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {func(x, p.x...), func(y, p.y...), func(z, p.z...), func(w, p.w...)};}
             constexpr vec2<T> to_vec2() const {return {x, y};}
             constexpr vec3<T> to_vec3() const {return {x, y, z};}
             constexpr bool none() const {return !(x || y || z || w);}
@@ -620,9 +676,39 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w, x*o.w.x+y*o.w.y+z*o.w.z+w*o.w.w};}
             constexpr T min() const {return std::min({x,y,z,w});}
             constexpr T max() const {return std::max({x,y,z,w});}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+            static vec4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static vec4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static vec4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
+            static vec4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", "]", base);}
         };
         template <typename T> struct vec<2,vec<2,T>> // mat2x2
         {
@@ -635,7 +721,7 @@ namespace Math
             union {vec2<T> y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -651,40 +737,40 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
-            constexpr vec(type xx, type yx, type xy, type yy) : x(xx,xy), y(yx,yy) {}
-            constexpr mat2x2<type> transpose() const {return {x.x,x.y,y.x,y.y};}
+            constexpr vec(T xx, T yx, T xy, T yy) : x(xx,xy), y(yx,yy) {}
+            constexpr mat2x2<T> transpose() const {return {x.x,x.y,y.x,y.y};}
             static constexpr vec identity() {return {1, 0, 0, 1};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y};}
-            static constexpr vec ortho2D(const vec2<type> &sz)
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, v.y};}
+            static constexpr vec ortho2D(const vec2<T> &sz)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 return {2 / sz.x, 0,
                         0, 2 / sz.y};
             }
-            static constexpr vec rotate2D(type angle)
+            static constexpr vec rotate2D(T angle)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
-                type c = std::cos(angle);
-                type s = std::sin(angle);
+                T c = std::cos(angle);
+                T s = std::sin(angle);
                 return {c, -s,
                         s, c};
             }
-            static constexpr vec scale2D(type s)
+            static constexpr vec scale2D(T s)
             {
                 return {s, 0,
                         0, s};
             }
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,0,0,1};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,0,0,1,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,0,0,1,0,0,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,0,0,1,0,0,0,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x2<P> &... p) const -> mat2x2<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...)};}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,0,0,1};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,0,0,1,0};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,0,0,1,0,0,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,0,0,1,0,0,0,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x2<P> &... p) const -> mat2x2<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...)};}
             constexpr bool none() const {return !(x.x || y.x || x.y || y.y);}
             constexpr bool any() const {return x.x || y.x || x.y || y.y;}
             constexpr bool all() const {return x.x && y.x && x.y && y.y;}
@@ -707,9 +793,39 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat2x2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat2x2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat2x2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat2x2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<3,vec<2,T>> // mat3x2
         {
@@ -723,7 +839,7 @@ namespace Math
             union {vec2<T> z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -742,31 +858,31 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
-            constexpr vec(type xx, type yx, type zx, type xy, type yy, type zy) : x(xx,xy), y(yx,yy), z(zx,zy) {}
-            constexpr mat2x3<type> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
+            constexpr vec(T xx, T yx, T zx, T xy, T yy, T zy) : x(xx,xy), y(yx,yy), z(zx,zy) {}
+            constexpr mat2x3<T> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x2();}
-            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max)
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, v.y, 0};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat3x2();}
+            static constexpr vec ortho2D(const vec2<T> &min, const vec2<T> &max)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 return {2 / (max.x - min.x), 0, (min.x + max.x) / (min.x - max.x),
                         0, 2 / (max.y - min.y), (min.y + max.y) / (min.y - max.y)};
             }
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x2();}
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat3x2();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,0,0,1,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1,0,0,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,0,0,1,0,0,0,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x2<P> &... p) const -> mat3x2<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...)};}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat3x2();}
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat3x2();}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,0,0,1,0};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1,0,0,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,0,0,1,0,0,0,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x2<P> &... p) const -> mat3x2<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...)};}
             constexpr bool none() const {return !(x.x || y.x || z.x || x.y || y.y || z.y);}
             constexpr bool any() const {return x.x || y.x || z.x || x.y || y.y || z.y;}
             constexpr bool all() const {return x.x && y.x && z.x && x.y && y.y && z.y;}
@@ -776,9 +892,43 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat3x2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat3x2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat3x2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat3x2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<4,vec<2,T>> // mat4x2
         {
@@ -793,7 +943,7 @@ namespace Math
             union {vec2<T> w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -815,26 +965,26 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
-            constexpr vec(type xx, type yx, type zx, type wx, type xy, type yy, type zy, type wy) : x(xx,xy), y(yx,yy), z(zx,zy), w(wx,wy) {}
-            constexpr mat2x4<type> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y};}
+            constexpr vec(T xx, T yx, T zx, T wx, T xy, T yy, T zy, T wy) : x(xx,xy), y(yx,yy), z(zx,zy), w(wx,wy) {}
+            constexpr mat2x4<T> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x2();}
-            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x2();}
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x2();}
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat4x2();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,0,0,1,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1,0,0,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,0,0,1,0,0,0,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x2<P> &... p) const -> mat4x2<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...), w.apply(func, p.w...)};}
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat4x2();}
+            static constexpr vec ortho2D(const vec2<T> &min, const vec2<T> &max) {return mat3x2<T>::ortho2D(min, max).to_mat4x2();}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat4x2();}
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat4x2();}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,0,0};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,0,0,1,0};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,0,0,0,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,0,0,1,0,0,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,0,0,1,0,0,0,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x2<P> &... p) const -> mat4x2<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...), w.apply(func, p.w...)};}
             constexpr bool none() const {return !(x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y);}
             constexpr bool any() const {return x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y;}
             constexpr bool all() const {return x.x && y.x && z.x && w.x && x.y && y.y && z.y && w.y;}
@@ -844,9 +994,47 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat4x2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat4x2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat4x2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat4x2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<2,vec<3,T>> // mat2x3
         {
@@ -859,7 +1047,7 @@ namespace Math
             union {vec3<T> y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -875,25 +1063,25 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
-            constexpr vec(type xx, type yx, type xy, type yy, type xz, type yz) : x(xx,xy,xz), y(yx,yy,yz) {}
-            constexpr mat3x2<type> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
+            constexpr vec(T xx, T yx, T xy, T yy, T xz, T yz) : x(xx,xy,xz), y(yx,yy,yz) {}
+            constexpr mat3x2<T> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat2x3();}
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat2x3();}
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat2x3();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1,0,0,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0,0,0,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x3<P> &... p) const -> mat2x3<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...)};}
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, v.y, 0, 0};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat2x3();}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat2x3();}
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat2x3();}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1,0,0,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0,0,0,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x3<P> &... p) const -> mat2x3<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...)};}
             constexpr bool none() const {return !(x.x || y.x || x.y || y.y || x.z || y.z);}
             constexpr bool any() const {return x.x || y.x || x.y || y.y || x.z || y.z;}
             constexpr bool all() const {return x.x && y.x && x.y && y.y && x.z && y.z;}
@@ -903,9 +1091,43 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat2x3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat2x3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat2x3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat2x3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<3,vec<3,T>> // mat3x3
         {
@@ -919,7 +1141,7 @@ namespace Math
             union {vec3<T> z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -938,46 +1160,46 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
-            constexpr vec(type xx, type yx, type zx, type xy, type yy, type zy, type xz, type yz, type zz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz) {}
-            constexpr mat3x3<type> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
+            constexpr vec(T xx, T yx, T zx, T xy, T yy, T zy, T xz, T yz, T zz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz) {}
+            constexpr mat3x3<T> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1};}
-            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x3();}
-            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat3x3();}
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x3();}
-            static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle)
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1};}
+            static constexpr vec dia(const vec3<T> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat3x3();}
+            static constexpr vec ortho2D(const vec2<T> &min, const vec2<T> &max) {return mat3x2<T>::ortho2D(min, max).to_mat3x3();}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat3x3();}
+            static constexpr vec rotate_with_normalized_axis(const vec3<T> &in, T angle)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
-                type c = std::cos(angle);
-                type s = std::sin(angle);
+                T c = std::cos(angle);
+                T s = std::sin(angle);
                 return {in.x * in.x * (1 - c) + c, in.x * in.y * (1 - c) - in.z * s, in.x * in.z * (1 - c) + in.y * s,
                         in.y * in.x * (1 - c) + in.z * s, in.y * in.y * (1 - c) + c, in.y * in.z * (1 - c) - in.x * s,
                         in.x * in.z * (1 - c) - in.y * s, in.y * in.z * (1 - c) + in.x * s, in.z * in.z * (1 - c) + c};
             }
-            static constexpr vec rotate(const vec3<type> &in, type angle)
+            static constexpr vec rotate(const vec3<T> &in, T angle)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 return rotate_with_normalized_axis(in.norm(), angle);
             }
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat3x3();}
-            static constexpr vec scale(type s)
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat3x3();}
+            static constexpr vec scale(T s)
             {
                 return {s, 0, 0,
                         0, s, 0,
                         0, 0, s};
             }
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,0,0,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0,0,0,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x3<P> &... p) const -> mat3x3<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...)};}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,0,0,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0,0,0,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x3<P> &... p) const -> mat3x3<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...)};}
             constexpr bool none() const {return !(x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z);}
             constexpr bool any() const {return x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z;}
             constexpr bool all() const {return x.x && y.x && z.x && x.y && y.y && z.y && x.z && y.z && z.z;}
@@ -1014,9 +1236,49 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat3x3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat3x3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat3x3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat3x3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<4,vec<3,T>> // mat4x3
         {
@@ -1031,7 +1293,7 @@ namespace Math
             union {vec3<T> w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -1053,28 +1315,28 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
-            constexpr vec(type xx, type yx, type zx, type wx, type xy, type yy, type zy, type wy, type xz, type yz, type zz, type wz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz), w(wx,wy,wz) {}
-            constexpr mat3x4<type> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
+            constexpr vec(T xx, T yx, T zx, T wx, T xy, T yy, T zy, T wy, T xz, T yz, T zz, T wz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz), w(wx,wy,wz) {}
+            constexpr mat3x4<T> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0};}
-            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x3();}
-            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x3();}
-            static constexpr vec ortho(const vec2<type> &sz, type near, type far)
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0};}
+            static constexpr vec dia(const vec3<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat4x3();}
+            static constexpr vec ortho2D(const vec2<T> &min, const vec2<T> &max) {return mat3x2<T>::ortho2D(min, max).to_mat4x3();}
+            static constexpr vec ortho(const vec2<T> &sz, T near, T far)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 return {2 / sz.x, 0, 0, 0,
                         0, 2 / sz.y, 0, 0,
                         0, 0, 2 / (near - far), (near + far) / (near - far)};
             }
-            static constexpr vec ortho(const vec2<type> &min, const vec2<type> &max, type near, type far)
+            static constexpr vec ortho(const vec2<T> &min, const vec2<T> &max, T near, T far)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 return {2 / (max.x - min.x), 0, 0, (min.x + max.x) / (min.x - max.x),
                         0, 2 / (max.y - min.y), 0, (min.y + max.y) / (min.y - max.y),
                         0, 0, 2 / (near - far), (near + far) / (near - far)};
             }
-            static constexpr vec look_at(const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up)
+            static constexpr vec look_at(const vec3<T> &src, const vec3<T> &dst, const vec3<T> &local_up)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 vec3<T> v3 = (src-dst).norm();
@@ -1084,29 +1346,29 @@ namespace Math
                         v2.x, v2.y, v2.z, -src.x*v2.x - src.y*v2.y - src.z*v2.z,
                         v3.x, v3.y, v3.z, -src.x*v3.x - src.y*v3.y - src.z*v3.z};
             }
-            static constexpr vec translate(const vec3<type> &in)
+            static constexpr vec translate(const vec3<T> &in)
             {
                 return {1, 0, 0, in.x,
                         0, 1, 0, in.y,
                         0, 0, 1, in.z};
             }
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x3();}
-            static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat4x3();}
-            static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat4x3();}
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat4x3();}
-            static constexpr vec scale(type s) {return mat3x3<type>::scale(s).to_mat4x3();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,0,0,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z,0,0,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x3<P> &... p) const -> mat4x3<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...), w.apply(func, p.w...)};}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat4x3();}
+            static constexpr vec rotate_with_normalized_axis(const vec3<T> &in, T angle) {return mat3x3<T>::rotate_with_normalized_axis(in, angle).to_mat4x3();}
+            static constexpr vec rotate(const vec3<T> &in, T angle) {return mat3x3<T>::rotate(in, angle).to_mat4x3();}
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat4x3();}
+            static constexpr vec scale(T s) {return mat3x3<T>::scale(s).to_mat4x3();}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,0,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,0,0,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z,0,0,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x3<P> &... p) const -> mat4x3<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...), w.apply(func, p.w...)};}
             constexpr bool none() const {return !(x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z);}
             constexpr bool any() const {return x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z;}
             constexpr bool all() const {return x.x && y.x && z.x && w.x && x.y && y.y && z.y && w.y && x.z && y.z && z.z && w.z;}
@@ -1116,9 +1378,55 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat4x3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat4x3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat4x3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat4x3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<2,vec<4,T>> // mat2x4
         {
@@ -1131,7 +1439,7 @@ namespace Math
             union {vec4<T> y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -1147,25 +1455,25 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
-            constexpr vec(type xx, type yx, type xy, type yy, type xz, type yz, type xw, type yw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw) {}
-            constexpr mat4x2<type> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
+            constexpr vec(T xx, T yx, T xy, T yy, T xz, T yz, T xw, T yw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw) {}
+            constexpr mat4x2<T> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat2x4();}
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat2x4();}
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat2x4();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1,x.w,y.w,0};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0,x.w,y.w,0,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x4<P> &... p) const -> mat2x4<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...)};}
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat2x4();}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat2x4();}
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat2x4();}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,0,x.y,y.y,0};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,0,0,x.y,y.y,0,0};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,0,x.y,y.y,0,x.z,y.z,1,x.w,y.w,0};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,0,0,x.y,y.y,0,0,x.z,y.z,1,0,x.w,y.w,0,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat2x4<P> &... p) const -> mat2x4<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...)};}
             constexpr bool none() const {return !(x.x || y.x || x.y || y.y || x.z || y.z || x.w || y.w);}
             constexpr bool any() const {return x.x || y.x || x.y || y.y || x.z || y.z || x.w || y.w;}
             constexpr bool all() const {return x.x && y.x && x.y && y.y && x.z && y.z && x.w && y.w;}
@@ -1175,9 +1483,47 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y, x.w*o.w.x+y.w*o.w.y};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat2x4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat2x4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat2x4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat2x4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<3,vec<4,T>> // mat3x4
         {
@@ -1191,7 +1537,7 @@ namespace Math
             union {vec4<T> z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -1210,30 +1556,30 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
-            constexpr vec(type xx, type yx, type zx, type xy, type yy, type zy, type xz, type yz, type zz, type xw, type yw, type zw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw) {}
-            constexpr mat4x3<type> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
+            constexpr vec(T xx, T yx, T zx, T xy, T yy, T zy, T xz, T yz, T zz, T xw, T yw, T zw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw) {}
+            constexpr mat4x3<T> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1, 0, 0, 0};}
-            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z, 0, 0, 0};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat3x4();}
-            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat3x4();}
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat3x4();}
-            static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat3x4();}
-            static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat3x4();}
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat3x4();}
-            static constexpr vec scale(type s) {return mat3x3<type>::scale(s).to_mat3x4();}
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
-            constexpr mat4x4<type> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0,x.w,y.w,z.w,1};}
-            constexpr mat4<type> to_mat4() const {return to_mat4x4();}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x4<P> &... p) const -> mat3x4<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...)};}
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1, 0, 0, 0};}
+            static constexpr vec dia(const vec3<T> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, v.z, 0, 0, 0};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat3x4();}
+            static constexpr vec ortho2D(const vec2<T> &min, const vec2<T> &max) {return mat3x2<T>::ortho2D(min, max).to_mat3x4();}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat3x4();}
+            static constexpr vec rotate_with_normalized_axis(const vec3<T> &in, T angle) {return mat3x3<T>::rotate_with_normalized_axis(in, angle).to_mat3x4();}
+            static constexpr vec rotate(const vec3<T> &in, T angle) {return mat3x3<T>::rotate(in, angle).to_mat3x4();}
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat3x4();}
+            static constexpr vec scale(T s) {return mat3x3<T>::scale(s).to_mat3x4();}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
+            constexpr mat4x4<T> to_mat4x4() const {return {x.x,y.x,z.x,0,x.y,y.y,z.y,0,x.z,y.z,z.z,0,x.w,y.w,z.w,1};}
+            constexpr mat4<T> to_mat4() const {return to_mat4x4();}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat3x4<P> &... p) const -> mat3x4<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...)};}
             constexpr bool none() const {return !(x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z || x.w || y.w || z.w);}
             constexpr bool any() const {return x.x || y.x || z.x || x.y || y.y || z.y || x.z || y.z || z.z || x.w || y.w || z.w;}
             constexpr bool all() const {return x.x && y.x && z.x && x.y && y.y && z.y && x.z && y.z && z.z && x.w && y.w && z.w;}
@@ -1243,9 +1589,55 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat3x4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat3x4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat3x4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat3x4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<4,vec<4,T>> // mat4x4
         {
@@ -1260,7 +1652,7 @@ namespace Math
             union {vec4<T> w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
             template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<type, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -1282,22 +1674,22 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
-            constexpr vec(type xx, type yx, type zx, type wx, type xy, type yy, type zy, type wy, type xz, type yz, type zz, type wz, type xw, type yw, type zw, type ww) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw), w(wx,wy,wz,ww) {}
-            constexpr mat4x4<type> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w};}
+            constexpr vec(T xx, T yx, T zx, T wx, T xy, T yy, T zy, T wy, T xz, T yz, T zz, T wz, T xw, T yw, T zw, T ww) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw), w(wx,wy,wz,ww) {}
+            constexpr mat4x4<T> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
-            static constexpr vec dia(const vec2<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
-            static constexpr vec dia(const vec3<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, 1};}
-            static constexpr vec dia(const vec4<type> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, v.w};}
-            static constexpr vec ortho2D(const vec2<type> &sz) {return mat2x2<type>::ortho2D(sz).to_mat4x4();}
-            static constexpr vec ortho2D(const vec2<type> &min, const vec2<type> &max) {return mat3x2<type>::ortho2D(min, max).to_mat4x4();}
-            static constexpr vec ortho(const vec2<type> &sz, type near, type far) {return mat4x3<type>::ortho(sz, near, far).to_mat4x4();}
-            static constexpr vec ortho(const vec2<type> &min, const vec2<type> &max, type near, type far) {return mat4x3<type>::ortho(min, max, near, far).to_mat4x4();}
-            static constexpr vec look_at(const vec3<type> &src, const vec3<type> &dst, const vec3<type> &local_up) {return mat4x3<type>::look_at(src, dst, local_up).to_mat4x4();}
-            static constexpr vec translate(const vec3<type> &in) {return mat4x3<type>::translate(in).to_mat4x4();}
-            static constexpr vec rotate2D(type angle) {return mat2x2<type>::rotate2D(angle).to_mat4x4();}
-            static constexpr vec rotate_with_normalized_axis(const vec3<type> &in, type angle) {return mat3x3<type>::rotate_with_normalized_axis(in, angle).to_mat4x4();}
-            static constexpr vec rotate(const vec3<type> &in, type angle) {return mat3x3<type>::rotate(in, angle).to_mat4x4();}
-            static constexpr vec perspective(type yfov, type wh_aspect, type near, type far)
+            static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
+            static constexpr vec dia(const vec3<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, 1};}
+            static constexpr vec dia(const vec4<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, v.z, 0, 0, 0, 0, v.w};}
+            static constexpr vec ortho2D(const vec2<T> &sz) {return mat2x2<T>::ortho2D(sz).to_mat4x4();}
+            static constexpr vec ortho2D(const vec2<T> &min, const vec2<T> &max) {return mat3x2<T>::ortho2D(min, max).to_mat4x4();}
+            static constexpr vec ortho(const vec2<T> &sz, T near, T far) {return mat4x3<T>::ortho(sz, near, far).to_mat4x4();}
+            static constexpr vec ortho(const vec2<T> &min, const vec2<T> &max, T near, T far) {return mat4x3<T>::ortho(min, max, near, far).to_mat4x4();}
+            static constexpr vec look_at(const vec3<T> &src, const vec3<T> &dst, const vec3<T> &local_up) {return mat4x3<T>::look_at(src, dst, local_up).to_mat4x4();}
+            static constexpr vec translate(const vec3<T> &in) {return mat4x3<T>::translate(in).to_mat4x4();}
+            static constexpr vec rotate2D(T angle) {return mat2x2<T>::rotate2D(angle).to_mat4x4();}
+            static constexpr vec rotate_with_normalized_axis(const vec3<T> &in, T angle) {return mat3x3<T>::rotate_with_normalized_axis(in, angle).to_mat4x4();}
+            static constexpr vec rotate(const vec3<T> &in, T angle) {return mat3x3<T>::rotate(in, angle).to_mat4x4();}
+            static constexpr vec perspective(T yfov, T wh_aspect, T near, T far)
             {
                 static_assert(is_floating_point, "This function only makes sense for floating-point matrices.");
                 yfov = (T)1 / std::tan(yfov / 2);
@@ -1306,26 +1698,26 @@ namespace Math
                         0                , 0    , (near + far) / (near - far) , 2 * near * far / (near - far) ,
                         0                , 0    , -1                          , 0                             };
             }
-            static constexpr vec scale2D(type s) {return mat2x2<type>::scale2D(s).to_mat4x4();}
-            static constexpr vec scale(type s) {return mat3x3<type>::scale(s).to_mat4x4();}
-            static constexpr vec scale4D(type s)
+            static constexpr vec scale2D(T s) {return mat2x2<T>::scale2D(s).to_mat4x4();}
+            static constexpr vec scale(T s) {return mat3x3<T>::scale(s).to_mat4x4();}
+            static constexpr vec scale4D(T s)
             {
                 return {s, 0, 0, 0,
                         0, s, 0, 0,
                         0, 0, s, 0,
                         0, 0, 0, s};
             }
-            constexpr mat2x2<type> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
-            constexpr mat2<type> to_mat2() const {return to_mat2x2();}
-            constexpr mat3x2<type> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
-            constexpr mat4x2<type> to_mat4x2() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
-            constexpr mat2x3<type> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
-            constexpr mat3x3<type> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
-            constexpr mat3<type> to_mat3() const {return to_mat3x3();}
-            constexpr mat4x3<type> to_mat4x3() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z};}
-            constexpr mat2x4<type> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
-            constexpr mat3x4<type> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,x.w,y.w,z.w};}
-            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x4<P> &... p) const -> mat4x4<decltype(func(std::declval<type>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...), w.apply(func, p.w...)};}
+            constexpr mat2x2<T> to_mat2x2() const {return {x.x,y.x,x.y,y.y};}
+            constexpr mat2<T> to_mat2() const {return to_mat2x2();}
+            constexpr mat3x2<T> to_mat3x2() const {return {x.x,y.x,z.x,x.y,y.y,z.y};}
+            constexpr mat4x2<T> to_mat4x2() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y};}
+            constexpr mat2x3<T> to_mat2x3() const {return {x.x,y.x,x.y,y.y,x.z,y.z};}
+            constexpr mat3x3<T> to_mat3x3() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z};}
+            constexpr mat3<T> to_mat3() const {return to_mat3x3();}
+            constexpr mat4x3<T> to_mat4x3() const {return {x.x,y.x,z.x,w.x,x.y,y.y,z.y,w.y,x.z,y.z,z.z,w.z};}
+            constexpr mat2x4<T> to_mat2x4() const {return {x.x,y.x,x.y,y.y,x.z,y.z,x.w,y.w};}
+            constexpr mat3x4<T> to_mat3x4() const {return {x.x,y.x,z.x,x.y,y.y,z.y,x.z,y.z,z.z,x.w,y.w,z.w};}
+            template <typename F, typename ...P> constexpr auto apply(F &&func, const mat4x4<P> &... p) const -> mat4x4<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {x.apply(func, p.x...), y.apply(func, p.y...), z.apply(func, p.z...), w.apply(func, p.w...)};}
             constexpr bool none() const {return !(x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z || x.w || y.w || z.w || w.w);}
             constexpr bool any() const {return x.x || y.x || z.x || w.x || x.y || y.y || z.y || w.y || x.z || y.z || z.z || w.z || x.w || y.w || z.w || w.w;}
             constexpr bool all() const {return x.x && y.x && z.x && w.x && x.y && y.y && z.y && w.y && x.z && y.z && z.z && w.z && x.w && y.w && z.w && w.w;}
@@ -1440,9 +1832,63 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z+w.w*o.w.w};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(type) = number_to_string<type>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
-            std::string to_string(std::string(*f)(type) = number_to_string<type>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
+            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            static mat4x4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                if (chars_consumed) *chars_consumed = 0;
+                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
+                int offset; vec ret;
+                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
+                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.z.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
+                ret.w.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
+                if (chars_consumed) *chars_consumed = pos;
+                return ret;
+            }
+            static mat4x4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+            {
+                int ch_con;
+                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
+                if (src[ch_con] != '\0')
+                {
+                    if (chars_consumed) *chars_consumed = 0;
+                    return {};
+                }
+                if (chars_consumed) *chars_consumed = ch_con;
+                return ret;
+            }
+            static mat4x4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static mat4x4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
         };
 
         template <typename T1, typename T2> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const vec2<T2> &second) {return {first.x+second.x,first.y+second.y};}
