@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.0"
+#define VERSION "2.4.1"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -427,12 +427,22 @@ inline namespace Vector
 
             // Type-generic usings
             for (int i = 2; i <= 4; i++)
-                l "template <typename T> using vec" << i << " = vec<" << i << ", T>;\n";
+            {
+                l "template <typename T> using vec" << i << " = vec<" << i << ", T>;";
+                l (i == 4 ? "\n" : " ");
+            }
             for (int h = 2; h <= 4; h++)
-                for (int w = 2; w <= 4; w++)
-                    l "template <typename T> using mat" << w << 'x' << h << " = mat<" << w << ',' << h << ",T>;\n";
+            for (int w = 2; w <= 4; w++)
+            {
+                l "template <typename T> using mat" << w << 'x' << h << " = mat<" << w << ',' << h << ",T>;";
+                l (w == 4 ? "\n" : " ");
+            }
             for (int i = 2; i <= 4; i++)
-                l "template <typename T> using mat" << i << " = mat" << i << 'x' << i << "<T>;\n";
+            {
+                l "template <typename T> using mat" << i << " = mat" << i << 'x' << i << "<T>;";
+                l (i == 4 ? "\n" : " ");
+            }
+            l "\n";
 
             // Type-prefixed usings
             for (const auto &it : types)
@@ -442,15 +452,24 @@ inline namespace Vector
                   "template <unsigned int W, unsigned int H> using " << it.tag << "mat = mat<W,H," << it.name << ">;\n";
                 // Complete
                 for (int i = 2; i <= 4; i++)
-                    l "using " << it.tag << "vec" << i << " = vec<" << i << ',' << it.name << ">;\n";
+                {
+                    l "using " << it.tag << "vec" << i << " = vec<" << i << ',' << it.name << ">;";
+                    l (i == 4 ? "\n" : " ");
+                }
                 for (int h = 2; h <= 4; h++)
-                    for (int w = 2; w <= 4; w++)
-                        l "using " << it.tag << "mat" << w << 'x' << h << " = mat<" << w << ',' << h << ',' << it.name << ">;\n";
+                for (int w = 2; w <= 4; w++)
+                {
+                    l "using " << it.tag << "mat" << w << 'x' << h << " = mat<" << w << ',' << h << ',' << it.name << ">;";
+                    l (w == 4 ? "\n" : " ");
+                }
                 for (int i = 2; i <= 4; i++)
-                    l "using " << it.tag << "mat" << i << " = " << it.tag << "mat" << i << 'x' << i << ";\n";
+                {
+                    l "using " << it.tag << "mat" << i << " = " << it.tag << "mat" << i << 'x' << i << ";";
+                    l (i == 4 ? "\n" : " ");
+                }
+                l "\n";
             }
         }
-        l "\n";
 
         // Specializations
         auto CommonHeader = [&]
