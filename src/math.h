@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.4.3 by HolyBlackCat
+// Version 2.4.4 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -477,8 +477,8 @@ namespace Math
             union {T x, r, s;};
             union {T y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -494,6 +494,7 @@ namespace Math
             constexpr vec set_y(T o) const {return {x, o};}
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
+            template <typename TT> constexpr vec2<TT> to() const {return {TT(x),TT(y)};}
             constexpr auto len_sqr() const {return x*x + y*y;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec2<TT> &o) const {return x*o.x + y*o.y;}
@@ -555,8 +556,8 @@ namespace Math
             union {T y, g, t;};
             union {T z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -575,6 +576,7 @@ namespace Math
             constexpr vec set_z(T o) const {return {x, y, o};}
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
+            template <typename TT> constexpr vec3<TT> to() const {return {TT(x),TT(y),TT(z)};}
             constexpr auto len_sqr() const {return x*x + y*y + z*z;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec3<TT> &o) const {return x*o.x + y*o.y + z*o.z;}
@@ -637,8 +639,8 @@ namespace Math
             union {T z, b, p;};
             union {T w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z) || bool(w); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -660,6 +662,7 @@ namespace Math
             constexpr vec set_w(T o) const {return {x, y, z, o};}
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
+            template <typename TT> constexpr vec4<TT> to() const {return {TT(x),TT(y),TT(z),TT(w)};}
             constexpr auto len_sqr() const {return x*x + y*y + z*z + w*w;}
             constexpr auto len() const {return std::sqrt(len_sqr());}
             template <typename TT> constexpr auto dot(const vec4<TT> &o) const {return x*o.x + y*o.y + z*o.z + w*o.w;}
@@ -720,8 +723,8 @@ namespace Math
             union {vec2<T> x, r, s;};
             union {vec2<T> y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -738,6 +741,7 @@ namespace Math
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
             constexpr vec(T xx, T yx, T xy, T yy) : x(xx,xy), y(yx,yy) {}
+            template <typename TT> constexpr mat2x2<TT> to() const {return {TT(x.x),TT(y.x),TT(x.y),TT(y.y)};}
             constexpr mat2x2<T> transpose() const {return {x.x,x.y,y.x,y.y};}
             static constexpr vec identity() {return {1, 0, 0, 1};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, v.y};}
@@ -838,8 +842,8 @@ namespace Math
             union {vec2<T> y, g, t;};
             union {vec2<T> z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -859,6 +863,7 @@ namespace Math
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr vec(T xx, T yx, T zx, T xy, T yy, T zy) : x(xx,xy), y(yx,yy), z(zx,zy) {}
+            template <typename TT> constexpr mat3x2<TT> to() const {return {TT(x.x),TT(y.x),TT(z.x),TT(x.y),TT(y.y),TT(z.y)};}
             constexpr mat2x3<T> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, v.y, 0};}
@@ -942,8 +947,8 @@ namespace Math
             union {vec2<T> z, b, p;};
             union {vec2<T> w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z) || bool(w); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -966,6 +971,7 @@ namespace Math
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr vec(T xx, T yx, T zx, T wx, T xy, T yy, T zy, T wy) : x(xx,xy), y(yx,yy), z(zx,zy), w(wx,wy) {}
+            template <typename TT> constexpr mat4x2<TT> to() const {return {TT(x.x),TT(y.x),TT(z.x),TT(w.x),TT(x.y),TT(y.y),TT(z.y),TT(w.y)};}
             constexpr mat2x4<T> transpose() const {return {x.x,x.y,y.x,y.y,z.x,z.y,w.x,w.y};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0};}
@@ -1046,8 +1052,8 @@ namespace Math
             union {vec3<T> x, r, s;};
             union {vec3<T> y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -1064,6 +1070,7 @@ namespace Math
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
             constexpr vec(T xx, T yx, T xy, T yy, T xz, T yz) : x(xx,xy,xz), y(yx,yy,yz) {}
+            template <typename TT> constexpr mat2x3<TT> to() const {return {TT(x.x),TT(y.x),TT(x.y),TT(y.y),TT(x.z),TT(y.z)};}
             constexpr mat3x2<T> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z};}
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, v.y, 0, 0};}
@@ -1140,8 +1147,8 @@ namespace Math
             union {vec3<T> y, g, t;};
             union {vec3<T> z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -1161,6 +1168,7 @@ namespace Math
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr vec(T xx, T yx, T zx, T xy, T yy, T zy, T xz, T yz, T zz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz) {}
+            template <typename TT> constexpr mat3x3<TT> to() const {return {TT(x.x),TT(y.x),TT(z.x),TT(x.y),TT(y.y),TT(z.y),TT(x.z),TT(y.z),TT(z.z)};}
             constexpr mat3x3<T> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1};}
@@ -1292,8 +1300,8 @@ namespace Math
             union {vec3<T> z, b, p;};
             union {vec3<T> w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z) || bool(w); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -1316,6 +1324,7 @@ namespace Math
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr vec(T xx, T yx, T zx, T wx, T xy, T yy, T zy, T wy, T xz, T yz, T zz, T wz) : x(xx,xy,xz), y(yx,yy,yz), z(zx,zy,zz), w(wx,wy,wz) {}
+            template <typename TT> constexpr mat4x3<TT> to() const {return {TT(x.x),TT(y.x),TT(z.x),TT(w.x),TT(x.y),TT(y.y),TT(z.y),TT(w.y),TT(x.z),TT(y.z),TT(z.z),TT(w.z)};}
             constexpr mat3x4<T> transpose() const {return {x.x,x.y,x.z,y.x,y.y,y.z,z.x,z.y,z.z,w.x,w.y,w.z};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0};}
@@ -1438,8 +1447,8 @@ namespace Math
             union {vec4<T> x, r, s;};
             union {vec4<T> y, g, t;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py) : x(px), y(py) {}
@@ -1456,6 +1465,7 @@ namespace Math
             constexpr vec set_g(T o) const {return {x, o};}
             constexpr vec set_t(T o) const {return {x, o};}
             constexpr vec(T xx, T yx, T xy, T yy, T xz, T yz, T xw, T yw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw) {}
+            template <typename TT> constexpr mat2x4<TT> to() const {return {TT(x.x),TT(y.x),TT(x.y),TT(y.y),TT(x.z),TT(y.z),TT(x.w),TT(y.w)};}
             constexpr mat4x2<T> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w};}
             static constexpr vec identity() {return {1, 0, 0, 1, 0, 0, 0, 0};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, v.y, 0, 0, 0, 0};}
@@ -1536,8 +1546,8 @@ namespace Math
             union {vec4<T> y, g, t;};
             union {vec4<T> z, b, p;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz) : x(px), y(py), z(pz) {}
@@ -1557,6 +1567,7 @@ namespace Math
             constexpr vec set_b(T o) const {return {x, y, o};}
             constexpr vec set_p(T o) const {return {x, y, o};}
             constexpr vec(T xx, T yx, T zx, T xy, T yy, T zy, T xz, T yz, T zz, T xw, T yw, T zw) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw) {}
+            template <typename TT> constexpr mat3x4<TT> to() const {return {TT(x.x),TT(y.x),TT(z.x),TT(x.y),TT(y.y),TT(z.y),TT(x.z),TT(y.z),TT(z.z),TT(x.w),TT(y.w),TT(z.w)};}
             constexpr mat4x3<T> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, v.y, 0, 0, 0, 1, 0, 0, 0};}
@@ -1651,8 +1662,8 @@ namespace Math
             union {vec4<T> z, b, p;};
             union {vec4<T> w, a, q;};
             template <typename I> T &operator[](I pos) {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: static T ret; ret = {}; return ret;}}
-            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return T{};}}
-            explicit constexpr operator bool() const {return (bool)x || (bool)y || (bool)z || (bool)w; static_assert(!std::is_same_v<T, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
+            template <typename I> constexpr T operator[](I pos) const {switch (pos) {case 0: return x; case 1: return y; case 2: return z; case 3: return w; default: return {};}}
+            explicit constexpr operator bool() const {return bool(x) || bool(y) || bool(z) || bool(w); static_assert(!std::is_same_v<base_type_t<vec>, bool>, "Use .none(), .any(), or .all() for vectors/matrices of bool.");}
             vec() = default;
             explicit constexpr vec(T obj) : x(obj), y(obj), z(obj), w(obj) {}
             constexpr vec(decltype(x) px, decltype(x) py, decltype(x) pz, decltype(x) pw) : x(px), y(py), z(pz), w(pw) {}
@@ -1675,6 +1686,7 @@ namespace Math
             constexpr vec set_a(T o) const {return {x, y, z, o};}
             constexpr vec set_q(T o) const {return {x, y, z, o};}
             constexpr vec(T xx, T yx, T zx, T wx, T xy, T yy, T zy, T wy, T xz, T yz, T zz, T wz, T xw, T yw, T zw, T ww) : x(xx,xy,xz,xw), y(yx,yy,yz,yw), z(zx,zy,zz,zw), w(wx,wy,wz,ww) {}
+            template <typename TT> constexpr mat4x4<TT> to() const {return {TT(x.x),TT(y.x),TT(z.x),TT(w.x),TT(x.y),TT(y.y),TT(z.y),TT(w.y),TT(x.z),TT(y.z),TT(z.z),TT(w.z),TT(x.w),TT(y.w),TT(z.w),TT(w.w)};}
             constexpr mat4x4<T> transpose() const {return {x.x,x.y,x.z,x.w,y.x,y.y,y.z,y.w,z.x,z.y,z.z,z.w,w.x,w.y,w.z,w.w};}
             static constexpr vec identity() {return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
             static constexpr vec dia(const vec2<T> &v) {return {v.x, 0, 0, 0, 0, v.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};}
