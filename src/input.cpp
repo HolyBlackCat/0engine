@@ -245,7 +245,7 @@ namespace Input
         return mouse_shift;
     }
 
-    bool MouseInRect(ivec2 pos, ivec2 size) {return mouse_pos >= pos && mouse_pos < pos + size;}
+    bool MouseInRect(ivec2 pos, ivec2 size) {return (mouse_pos >= pos).all() && (mouse_pos < pos + size).all();}
 
     bool MouseButtonDown    (int id) {Assert("Mouse button ID out of range.", IsValidMouseButton(id)); return mouse_buttons[id];}
     bool MouseButtonPressed (int id) {Assert("Mouse button ID out of range.", IsValidMouseButton(id)); return mouse_buttons_pr[id];}

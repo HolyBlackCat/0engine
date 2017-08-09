@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.2"
+#define VERSION "2.4.3"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -383,9 +383,10 @@ return *ptr - '0';
     {
         // Operator list
         static constexpr const char *ops_bin[]{"+","-","*","/","%","^","&","|","<<",">>","<",">","<=",">="},
-                                    *ops_un[]{"~","!","+","-"},
+                                    *ops_un[]{"~","+","-"},
                                     *ops_fix[]{"++","--"},
-                                    *ops_bool[]{"&&","||"},
+                                    *ops_bool_bin[]{"&&","||"},
+                                    *ops_bool_un[]{"!"},
                                     *ops_as[]{"+=","-=","*=","/=","%=","^=","&=","|=","<<=",">>="};
 
         // .to_string_pretty() settings
@@ -1321,6 +1322,15 @@ return ret;
                 }
                 l "};}\n";
             }
+            for (const char *op : ops_bool_bin)
+            {
+                // vec @ vec
+                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return bool(first) " << op << " bool(second);}\n";
+                // vec @ other
+                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return bool(first) " << op << " second;}\n";
+                // other @ vec
+                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return first " << op << " bool(second);}\n";
+            }
             for (const char *op : ops_un)
             {
                 l "template <typename T> constexpr vec" << sz << "<decltype(" << op << "T{})> operator" << op << "(const vec" << sz << "<T> &object) {return {";
@@ -1330,6 +1340,10 @@ return ret;
                     l op << "object." << field_names_main[i];
                 }
                 l "};}\n";
+            }
+            for (const char *op : ops_bool_un)
+            {
+                l "template <typename T> constexpr vec" << sz << "<decltype(" << op << "T{})> operator" << op << "(const vec" << sz << "<T> &object) {return " << op << "bool(object);}\n";
             }
             for (const char *op : ops_fix)
             {
@@ -1349,33 +1363,7 @@ return ret;
                 }
                 l "};}\n";
             }
-            for (const char *op : ops_bool)
-            {
-                // vec @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return ";
-                for (int i = 0; i < sz; i++)
-                {
-                    if (i != 0) l ' ' << op << ' ';
-                    l "first." << field_names_main[i] << ' ' << op << ' ' << "second." << field_names_main[i];
-                }
-                l ";}\n";
-                // vec @ other
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return ";
-                for (int i = 0; i < sz; i++)
-                {
-                    if (i != 0) l ' ' << op << ' ';
-                    l "first." << field_names_main[i];
-                }
-                l ' ' << op << " second;}\n";
-                // other @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return first " << op << ' ';
-                for (int i = 0; i < sz; i++)
-                {
-                    if (i != 0) l ' ' << op << ' ';
-                    l "second." << field_names_main[i];
-                }
-                l ";}\n";
-            }
+
             for (const char *op : ops_as)
             {
                 // vec @ vec

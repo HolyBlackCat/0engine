@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.4.2 by HolyBlackCat
+// Version 2.4.3 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -1933,20 +1933,20 @@ namespace Math
         template <typename T1, typename T2> constexpr vec2<decltype(T1{}>=T2{})> operator>=(const vec2<T1> &first, const vec2<T2> &second) {return {first.x>=second.x,first.y>=second.y};}
         template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T2>::io_or_op>> constexpr vec2<decltype(T1{}>=T2{})> operator>=(const vec2<T1> &first, const T2 &second) {return {first.x>=second,first.y>=second};}
         template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T1>::io_or_op>> constexpr vec2<decltype(T1{}>=T2{})> operator>=(const T1 &first, const vec2<T2> &second) {return {first>=second.x,first>=second.y};}
+        template <typename T1, typename T2> constexpr bool operator&&(const vec2<T1> &first, const vec2<T2> &second) {return bool(first) && bool(second);}
+        template <typename T1, typename T2> constexpr bool operator&&(const vec2<T1> &first, const T2 &second) {return bool(first) && second;}
+        template <typename T1, typename T2> constexpr bool operator&&(const T1 &first, const vec2<T2> &second) {return first && bool(second);}
+        template <typename T1, typename T2> constexpr bool operator||(const vec2<T1> &first, const vec2<T2> &second) {return bool(first) || bool(second);}
+        template <typename T1, typename T2> constexpr bool operator||(const vec2<T1> &first, const T2 &second) {return bool(first) || second;}
+        template <typename T1, typename T2> constexpr bool operator||(const T1 &first, const vec2<T2> &second) {return first || bool(second);}
         template <typename T> constexpr vec2<decltype(~T{})> operator~(const vec2<T> &object) {return {~object.x,~object.y};}
-        template <typename T> constexpr vec2<decltype(!T{})> operator!(const vec2<T> &object) {return {!object.x,!object.y};}
         template <typename T> constexpr vec2<decltype(+T{})> operator+(const vec2<T> &object) {return {+object.x,+object.y};}
         template <typename T> constexpr vec2<decltype(-T{})> operator-(const vec2<T> &object) {return {-object.x,-object.y};}
+        template <typename T> constexpr vec2<decltype(!T{})> operator!(const vec2<T> &object) {return !bool(object);}
         template <typename T> constexpr vec2<T> &operator++(vec2<T> &object) {++object.x; ++object.y; return object;}
         template <typename T> constexpr vec2<T> operator++(vec2<T> &object, int) {return {object.x++,object.y++};}
         template <typename T> constexpr vec2<T> &operator--(vec2<T> &object) {--object.x; --object.y; return object;}
         template <typename T> constexpr vec2<T> operator--(vec2<T> &object, int) {return {object.x--,object.y--};}
-        template <typename T1, typename T2> constexpr bool operator&&(const vec2<T1> &first, const vec2<T2> &second) {return first.x && second.x && first.y && second.y;}
-        template <typename T1, typename T2> constexpr bool operator&&(const vec2<T1> &first, const T2 &second) {return first.x && first.y && second;}
-        template <typename T1, typename T2> constexpr bool operator&&(const T1 &first, const vec2<T2> &second) {return first && second.x && second.y;}
-        template <typename T1, typename T2> constexpr bool operator||(const vec2<T1> &first, const vec2<T2> &second) {return first.x || second.x || first.y || second.y;}
-        template <typename T1, typename T2> constexpr bool operator||(const vec2<T1> &first, const T2 &second) {return first.x || first.y || second;}
-        template <typename T1, typename T2> constexpr bool operator||(const T1 &first, const vec2<T2> &second) {return first || second.x || second.y;}
         template <typename T1, typename T2> constexpr vec2<T1> &operator+=(vec2<T1> &first, const vec2<T2> &second) {first.x += second.x; first.y += second.y; return first;}
         template <typename T1, typename T2> constexpr vec2<T1> &operator+=(vec2<T1> &first, const T2 &second) {first.x += second; first.y += second; return first;}
         template <typename T1, typename T2> constexpr vec2<T1> &operator-=(vec2<T1> &first, const vec2<T2> &second) {first.x -= second.x; first.y -= second.y; return first;}
@@ -2016,20 +2016,20 @@ namespace Math
         template <typename T1, typename T2> constexpr vec3<decltype(T1{}>=T2{})> operator>=(const vec3<T1> &first, const vec3<T2> &second) {return {first.x>=second.x,first.y>=second.y,first.z>=second.z};}
         template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T2>::io_or_op>> constexpr vec3<decltype(T1{}>=T2{})> operator>=(const vec3<T1> &first, const T2 &second) {return {first.x>=second,first.y>=second,first.z>=second};}
         template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T1>::io_or_op>> constexpr vec3<decltype(T1{}>=T2{})> operator>=(const T1 &first, const vec3<T2> &second) {return {first>=second.x,first>=second.y,first>=second.z};}
+        template <typename T1, typename T2> constexpr bool operator&&(const vec3<T1> &first, const vec3<T2> &second) {return bool(first) && bool(second);}
+        template <typename T1, typename T2> constexpr bool operator&&(const vec3<T1> &first, const T2 &second) {return bool(first) && second;}
+        template <typename T1, typename T2> constexpr bool operator&&(const T1 &first, const vec3<T2> &second) {return first && bool(second);}
+        template <typename T1, typename T2> constexpr bool operator||(const vec3<T1> &first, const vec3<T2> &second) {return bool(first) || bool(second);}
+        template <typename T1, typename T2> constexpr bool operator||(const vec3<T1> &first, const T2 &second) {return bool(first) || second;}
+        template <typename T1, typename T2> constexpr bool operator||(const T1 &first, const vec3<T2> &second) {return first || bool(second);}
         template <typename T> constexpr vec3<decltype(~T{})> operator~(const vec3<T> &object) {return {~object.x,~object.y,~object.z};}
-        template <typename T> constexpr vec3<decltype(!T{})> operator!(const vec3<T> &object) {return {!object.x,!object.y,!object.z};}
         template <typename T> constexpr vec3<decltype(+T{})> operator+(const vec3<T> &object) {return {+object.x,+object.y,+object.z};}
         template <typename T> constexpr vec3<decltype(-T{})> operator-(const vec3<T> &object) {return {-object.x,-object.y,-object.z};}
+        template <typename T> constexpr vec3<decltype(!T{})> operator!(const vec3<T> &object) {return !bool(object);}
         template <typename T> constexpr vec3<T> &operator++(vec3<T> &object) {++object.x; ++object.y; ++object.z; return object;}
         template <typename T> constexpr vec3<T> operator++(vec3<T> &object, int) {return {object.x++,object.y++,object.z++};}
         template <typename T> constexpr vec3<T> &operator--(vec3<T> &object) {--object.x; --object.y; --object.z; return object;}
         template <typename T> constexpr vec3<T> operator--(vec3<T> &object, int) {return {object.x--,object.y--,object.z--};}
-        template <typename T1, typename T2> constexpr bool operator&&(const vec3<T1> &first, const vec3<T2> &second) {return first.x && second.x && first.y && second.y && first.z && second.z;}
-        template <typename T1, typename T2> constexpr bool operator&&(const vec3<T1> &first, const T2 &second) {return first.x && first.y && first.z && second;}
-        template <typename T1, typename T2> constexpr bool operator&&(const T1 &first, const vec3<T2> &second) {return first && second.x && second.y && second.z;}
-        template <typename T1, typename T2> constexpr bool operator||(const vec3<T1> &first, const vec3<T2> &second) {return first.x || second.x || first.y || second.y || first.z || second.z;}
-        template <typename T1, typename T2> constexpr bool operator||(const vec3<T1> &first, const T2 &second) {return first.x || first.y || first.z || second;}
-        template <typename T1, typename T2> constexpr bool operator||(const T1 &first, const vec3<T2> &second) {return first || second.x || second.y || second.z;}
         template <typename T1, typename T2> constexpr vec3<T1> &operator+=(vec3<T1> &first, const vec3<T2> &second) {first.x += second.x; first.y += second.y; first.z += second.z; return first;}
         template <typename T1, typename T2> constexpr vec3<T1> &operator+=(vec3<T1> &first, const T2 &second) {first.x += second; first.y += second; first.z += second; return first;}
         template <typename T1, typename T2> constexpr vec3<T1> &operator-=(vec3<T1> &first, const vec3<T2> &second) {first.x -= second.x; first.y -= second.y; first.z -= second.z; return first;}
@@ -2099,20 +2099,20 @@ namespace Math
         template <typename T1, typename T2> constexpr vec4<decltype(T1{}>=T2{})> operator>=(const vec4<T1> &first, const vec4<T2> &second) {return {first.x>=second.x,first.y>=second.y,first.z>=second.z,first.w>=second.w};}
         template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T2>::io_or_op>> constexpr vec4<decltype(T1{}>=T2{})> operator>=(const vec4<T1> &first, const T2 &second) {return {first.x>=second,first.y>=second,first.z>=second,first.w>=second};}
         template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T1>::io_or_op>> constexpr vec4<decltype(T1{}>=T2{})> operator>=(const T1 &first, const vec4<T2> &second) {return {first>=second.x,first>=second.y,first>=second.z,first>=second.w};}
+        template <typename T1, typename T2> constexpr bool operator&&(const vec4<T1> &first, const vec4<T2> &second) {return bool(first) && bool(second);}
+        template <typename T1, typename T2> constexpr bool operator&&(const vec4<T1> &first, const T2 &second) {return bool(first) && second;}
+        template <typename T1, typename T2> constexpr bool operator&&(const T1 &first, const vec4<T2> &second) {return first && bool(second);}
+        template <typename T1, typename T2> constexpr bool operator||(const vec4<T1> &first, const vec4<T2> &second) {return bool(first) || bool(second);}
+        template <typename T1, typename T2> constexpr bool operator||(const vec4<T1> &first, const T2 &second) {return bool(first) || second;}
+        template <typename T1, typename T2> constexpr bool operator||(const T1 &first, const vec4<T2> &second) {return first || bool(second);}
         template <typename T> constexpr vec4<decltype(~T{})> operator~(const vec4<T> &object) {return {~object.x,~object.y,~object.z,~object.w};}
-        template <typename T> constexpr vec4<decltype(!T{})> operator!(const vec4<T> &object) {return {!object.x,!object.y,!object.z,!object.w};}
         template <typename T> constexpr vec4<decltype(+T{})> operator+(const vec4<T> &object) {return {+object.x,+object.y,+object.z,+object.w};}
         template <typename T> constexpr vec4<decltype(-T{})> operator-(const vec4<T> &object) {return {-object.x,-object.y,-object.z,-object.w};}
+        template <typename T> constexpr vec4<decltype(!T{})> operator!(const vec4<T> &object) {return !bool(object);}
         template <typename T> constexpr vec4<T> &operator++(vec4<T> &object) {++object.x; ++object.y; ++object.z; ++object.w; return object;}
         template <typename T> constexpr vec4<T> operator++(vec4<T> &object, int) {return {object.x++,object.y++,object.z++,object.w++};}
         template <typename T> constexpr vec4<T> &operator--(vec4<T> &object) {--object.x; --object.y; --object.z; --object.w; return object;}
         template <typename T> constexpr vec4<T> operator--(vec4<T> &object, int) {return {object.x--,object.y--,object.z--,object.w--};}
-        template <typename T1, typename T2> constexpr bool operator&&(const vec4<T1> &first, const vec4<T2> &second) {return first.x && second.x && first.y && second.y && first.z && second.z && first.w && second.w;}
-        template <typename T1, typename T2> constexpr bool operator&&(const vec4<T1> &first, const T2 &second) {return first.x && first.y && first.z && first.w && second;}
-        template <typename T1, typename T2> constexpr bool operator&&(const T1 &first, const vec4<T2> &second) {return first && second.x && second.y && second.z && second.w;}
-        template <typename T1, typename T2> constexpr bool operator||(const vec4<T1> &first, const vec4<T2> &second) {return first.x || second.x || first.y || second.y || first.z || second.z || first.w || second.w;}
-        template <typename T1, typename T2> constexpr bool operator||(const vec4<T1> &first, const T2 &second) {return first.x || first.y || first.z || first.w || second;}
-        template <typename T1, typename T2> constexpr bool operator||(const T1 &first, const vec4<T2> &second) {return first || second.x || second.y || second.z || second.w;}
         template <typename T1, typename T2> constexpr vec4<T1> &operator+=(vec4<T1> &first, const vec4<T2> &second) {first.x += second.x; first.y += second.y; first.z += second.z; first.w += second.w; return first;}
         template <typename T1, typename T2> constexpr vec4<T1> &operator+=(vec4<T1> &first, const T2 &second) {first.x += second; first.y += second; first.z += second; first.w += second; return first;}
         template <typename T1, typename T2> constexpr vec4<T1> &operator-=(vec4<T1> &first, const vec4<T2> &second) {first.x -= second.x; first.y -= second.y; first.z -= second.z; first.w -= second.w; return first;}
