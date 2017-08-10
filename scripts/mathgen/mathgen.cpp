@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.4"
+#define VERSION "2.4.5"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -374,6 +374,127 @@ if (chars_consumed)
     *chars_consumed = 1;
 return *ptr - '0';
 }
+}
+
+
+template <typename ...P> int from_string_mid(const char *src, int base, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, P &... params)
+{
+int chars_consumed = 0;
+
+auto lambda = [&](auto &ref)->bool{
+using T = std::remove_reference_t<decltype(ref)>;
+using T_no_cv = std::remove_cv_t<T>;
+if constexpr (std::is_same_v<T_no_cv, std::string> || std::is_same_v<std::decay_t<T>, const char *>)
+{
+const char *ptr;
+std::size_t len;
+if constexpr (std::is_same_v<T_no_cv, std::string>)
+{
+ptr = ref.c_str();
+len = ref.size();
+}
+else
+{
+ptr = ref;
+len = std::strlen(ref);
+}
+
+if (strncmp(src+chars_consumed, ptr, len))
+    return 0;
+
+chars_consumed += len;
+
+return 1;
+}
+else
+{
+static_assert(!std::is_const_v<T>, "Output variables must be mutable.");
+
+if constexpr (type_category<T_no_cv>::vec)
+{
+int ret;
+
+)";
+
+        for (int i = 2; i <= 4; i++)
+        {
+            l "if constexpr (T_no_cv::size == " << i << ") ret = from_string_mid(src+chars_consumed, base, \"\", \"\", \"\", \"\", start, ";
+            for (int j = 0; j < i; j++)
+            {
+                if (j != 0) l "sep, ";
+                l "ref." << field_names_main[j] << ", ";
+            }
+            l "end);\n";
+        }
+
+r R"(
+
+if (ret == 0)
+    return 0;
+
+chars_consumed += ret;
+
+return 1;
+}
+else if constexpr (type_category<T_no_cv>::mat)
+{
+int ret;
+
+)";
+
+        for (int h = 2; h <= 4; h++)
+        for (int w = 2; w <= 4; w++)
+        {
+            l "if constexpr (T_no_cv::width == " << w << " && T_no_cv::height == " << h << ") ret = from_string_mid(src+chars_consumed, base, \"\", \"\", \"\", \"\", start, ";
+            for (int hh = 0; hh < h; hh++)
+            {
+                if (hh != 0) l "row_sep, ";
+                for (int ww = 0; ww < w; ww++)
+                {
+                    if (ww != 0) l "sep, ";
+                    l "ref." << field_names_main[ww] << "." << field_names_main[hh] << ", ";
+                }
+            }
+            l "end);\n";
+        }
+
+r R"(
+
+if (ret == 0)
+    return 0;
+
+chars_consumed += ret;
+
+return 1;
+}
+else
+{
+int offset;
+
+ref = number_from_string<T_no_cv>(src+chars_consumed, &offset, base);
+
+if (!offset)
+    return 0;
+
+chars_consumed += offset;
+
+return 1;
+}
+}
+};
+
+bool ok = (lambda(params) && ...);
+
+if (!ok)
+    return 0;
+
+return chars_consumed;
+}
+
+template <typename ...P> int from_string(const char *src, int base, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, P &... params)
+{
+int ret = from_string_mid(src, base, start, sep, row_sep, end, params...);
+return src[ret] == '\0';
 }
 }
 )";

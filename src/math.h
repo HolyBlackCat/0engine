@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.4.4 by HolyBlackCat
+// Version 2.4.5 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -280,6 +280,106 @@ namespace Math
                     *chars_consumed = 1;
                 return *ptr - '0';
             }
+        }
+
+
+        template <typename ...P> int from_string_mid(const char *src, int base, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, P &... params)
+        {
+            int chars_consumed = 0;
+
+            auto lambda = [&](auto &ref)->bool{
+                using T = std::remove_reference_t<decltype(ref)>;
+                using T_no_cv = std::remove_cv_t<T>;
+                if constexpr (std::is_same_v<T_no_cv, std::string> || std::is_same_v<std::decay_t<T>, const char *>)
+                {
+                    const char *ptr;
+                    std::size_t len;
+                    if constexpr (std::is_same_v<T_no_cv, std::string>)
+                    {
+                        ptr = ref.c_str();
+                        len = ref.size();
+                    }
+                    else
+                    {
+                        ptr = ref;
+                        len = std::strlen(ref);
+                    }
+
+                    if (strncmp(src+chars_consumed, ptr, len))
+                        return 0;
+
+                    chars_consumed += len;
+
+                    return 1;
+                }
+                else
+                {
+                    static_assert(!std::is_const_v<T>, "Output variables must be mutable.");
+
+                    if constexpr (type_category<T_no_cv>::vec)
+                    {
+                        int ret;
+
+                        if constexpr (T_no_cv::size == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x, sep, ref.y, end);
+                        if constexpr (T_no_cv::size == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x, sep, ref.y, sep, ref.z, end);
+                        if constexpr (T_no_cv::size == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x, sep, ref.y, sep, ref.z, sep, ref.w, end);
+
+                        if (ret == 0)
+                            return 0;
+
+                        chars_consumed += ret;
+
+                        return 1;
+                    }
+                    else if constexpr (type_category<T_no_cv>::mat)
+                    {
+                        int ret;
+
+                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, end);
+                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, end);
+                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, end);
+                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, row_sep, ref.x.z, sep, ref.y.z, end);
+                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, end);
+                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, sep, ref.w.z, end);
+                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, row_sep, ref.x.z, sep, ref.y.z, row_sep, ref.x.w, sep, ref.y.w, end);
+                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, row_sep, ref.x.w, sep, ref.y.w, sep, ref.z.w, end);
+                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, sep, ref.w.z, row_sep, ref.x.w, sep, ref.y.w, sep, ref.z.w, sep, ref.w.w, end);
+
+                        if (ret == 0)
+                            return 0;
+
+                        chars_consumed += ret;
+
+                        return 1;
+                    }
+                    else
+                    {
+                        int offset;
+
+                        ref = number_from_string<T_no_cv>(src+chars_consumed, &offset, base);
+
+                        if (!offset)
+                            return 0;
+
+                        chars_consumed += offset;
+
+                        return 1;
+                    }
+                }
+            };
+
+            bool ok = (lambda(params) && ...);
+
+            if (!ok)
+                return 0;
+
+            return chars_consumed;
+        }
+
+        template <typename ...P> int from_string(const char *src, int base, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, P &... params)
+        {
+            int ret = from_string_mid(src, base, start, sep, row_sep, end, params...);
+            return src[ret] == '\0';
         }
     }
 
