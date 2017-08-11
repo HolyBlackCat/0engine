@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.5"
+#define VERSION "2.4.6"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("math.h");
@@ -384,7 +384,7 @@ int chars_consumed = 0;
 auto lambda = [&](auto &ref)->bool{
 using T = std::remove_reference_t<decltype(ref)>;
 using T_no_cv = std::remove_cv_t<T>;
-if constexpr (std::is_same_v<T_no_cv, std::string> || std::is_same_v<std::decay_t<T>, const char *>)
+if constexpr (std::is_same_v<T_no_cv, std::string> || std::is_same_v<std::decay_t<T_no_cv>, char *>)
 {
 const char *ptr;
 std::size_t len;
@@ -418,7 +418,7 @@ int ret;
 
         for (int i = 2; i <= 4; i++)
         {
-            l "if constexpr (T_no_cv::size == " << i << ") ret = from_string_mid(src+chars_consumed, base, \"\", \"\", \"\", \"\", start, ";
+            l "if constexpr (T_no_cv::size == " << i << ") ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ";
             for (int j = 0; j < i; j++)
             {
                 if (j != 0) l "sep, ";
@@ -445,7 +445,7 @@ int ret;
         for (int h = 2; h <= 4; h++)
         for (int w = 2; w <= 4; w++)
         {
-            l "if constexpr (T_no_cv::width == " << w << " && T_no_cv::height == " << h << ") ret = from_string_mid(src+chars_consumed, base, \"\", \"\", \"\", \"\", start, ";
+            l "if constexpr (T_no_cv::width == " << w << " && T_no_cv::height == " << h << ") ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ";
             for (int hh = 0; hh < h; hh++)
             {
                 if (hh != 0) l "row_sep, ";
@@ -1059,42 +1059,15 @@ return inv * det;
                       "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
 
                     // From string
-                    l "static vec" << sz << R"(<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-{
-if (chars_consumed) *chars_consumed = 0;
-if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-int offset; vec ret;
-)";
-                    for (int i = 0; i < sz; i++)
-                    {
-                        if (i != 0)
-                            l "if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} "
-                              "pos += sep.size();\n";
-                        l "ret." << field_names_main[i] << " = number_from_string<T>(src+pos, &offset, base); "
-                          "if (!offset) {return {};} "
-                          "pos += offset;\n";
-                    }
-                    l "if (strncmp(src+pos, end.c_str(), end.size())) {return {};} "
-                      "pos += end.size();\n"
-                      "if (chars_consumed) *chars_consumed = pos;\n"
-                      "return ret;\n"
-                      "}\n";
+                    l "static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0) "
+                      "{vec ret; int val = Strings::from_string_mid(src, base, start, sep, \"\", end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}\n";
 
-                    l "static vec" << sz << R"(<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-{
-int ch_con;
-vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
-if (src[ch_con] != '\0')
-{
-if (chars_consumed) *chars_consumed = 0;
-return {};
-}
-if (chars_consumed) *chars_consumed = ch_con;
-return ret;
-}
-)";
-                    l "static vec" << sz << "<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
-                    l "static vec" << sz << "<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
+                    l "static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) "
+                      "{vec ret; bool val = Strings::from_string(src, base, start, sep, \"\", end, ret); if (success) *success = val; if (val) return ret; else return {};}\n";
+
+                    l "static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
+
+                    l "static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \"]\", base);}\n";
                 }
 
                 l "};\n";
@@ -1380,49 +1353,15 @@ $       0, 0, 0, s};
                       "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
 
                     // From string
-                    l "static mat" << w << "x" << h << R"(<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-{
-if (chars_consumed) *chars_consumed = 0;
-if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-int offset; vec ret;
-)";
-                    for (int hh = 0; hh < h; hh++)
-                    {
-                        if (hh != 0)
-                            l "if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} "
-                              "pos += sep.size();\n";
+                    l "static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) "
+                      "{vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}\n";
 
-                        for (int ww = 0; ww < w; ww++)
-                        {
-                            if (ww != 0)
-                                l "if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} "
-                                  "pos += sep.size();\n";
-                            l "ret." << field_names_main[ww] << "." << field_names_main[hh] << " = number_from_string<T>(src+pos, &offset, base); "
-                              "if (!offset) {return {};} "
-                              "pos += offset;\n";
-                        }
-                    }
-                    l "if (strncmp(src+pos, end.c_str(), end.size())) {return {};} "
-                      "pos += end.size();\n"
-                      "if (chars_consumed) *chars_consumed = pos;\n"
-                      "return ret;\n"
-                      "}\n";
+                    l "static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) "
+                      "{vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}\n";
 
-                    l "static mat" << w << "x" << h << R"(<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-{
-int ch_con;
-vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-if (src[ch_con] != '\0')
-{
-if (chars_consumed) *chars_consumed = 0;
-return {};
-}
-if (chars_consumed) *chars_consumed = ch_con;
-return ret;
-}
-)";
-                    l "static mat" << w << "x" << h << "<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
-                    l "static mat" << w << "x" << h << "<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
+                    l "static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
+
+                    l "static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \";\", \"]\", base);}\n";
                 }
 
                 l "};\n";
@@ -1964,6 +1903,7 @@ int main()
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 
 namespace Math

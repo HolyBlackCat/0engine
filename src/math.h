@@ -1,7 +1,7 @@
 #ifndef MATH_H_INCLUDED
 #define MATH_H_INCLUDED
 
-// Version 2.4.5 by HolyBlackCat
+// Version 2.4.6 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -17,6 +17,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 
 namespace Math
@@ -290,7 +291,7 @@ namespace Math
             auto lambda = [&](auto &ref)->bool{
                 using T = std::remove_reference_t<decltype(ref)>;
                 using T_no_cv = std::remove_cv_t<T>;
-                if constexpr (std::is_same_v<T_no_cv, std::string> || std::is_same_v<std::decay_t<T>, const char *>)
+                if constexpr (std::is_same_v<T_no_cv, std::string> || std::is_same_v<std::decay_t<T_no_cv>, char *>)
                 {
                     const char *ptr;
                     std::size_t len;
@@ -320,9 +321,9 @@ namespace Math
                     {
                         int ret;
 
-                        if constexpr (T_no_cv::size == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x, sep, ref.y, end);
-                        if constexpr (T_no_cv::size == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x, sep, ref.y, sep, ref.z, end);
-                        if constexpr (T_no_cv::size == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x, sep, ref.y, sep, ref.z, sep, ref.w, end);
+                        if constexpr (T_no_cv::size == 2) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x, sep, ref.y, end);
+                        if constexpr (T_no_cv::size == 3) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x, sep, ref.y, sep, ref.z, end);
+                        if constexpr (T_no_cv::size == 4) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x, sep, ref.y, sep, ref.z, sep, ref.w, end);
 
                         if (ret == 0)
                             return 0;
@@ -335,15 +336,15 @@ namespace Math
                     {
                         int ret;
 
-                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, end);
-                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, end);
-                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, end);
-                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, row_sep, ref.x.z, sep, ref.y.z, end);
-                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, end);
-                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, sep, ref.w.z, end);
-                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, row_sep, ref.x.z, sep, ref.y.z, row_sep, ref.x.w, sep, ref.y.w, end);
-                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, row_sep, ref.x.w, sep, ref.y.w, sep, ref.z.w, end);
-                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, "", "", "", "", start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, sep, ref.w.z, row_sep, ref.x.w, sep, ref.y.w, sep, ref.z.w, sep, ref.w.w, end);
+                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, end);
+                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, end);
+                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 2) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, end);
+                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, row_sep, ref.x.z, sep, ref.y.z, end);
+                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, end);
+                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 3) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, sep, ref.w.z, end);
+                        if constexpr (T_no_cv::width == 2 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, row_sep, ref.x.y, sep, ref.y.y, row_sep, ref.x.z, sep, ref.y.z, row_sep, ref.x.w, sep, ref.y.w, end);
+                        if constexpr (T_no_cv::width == 3 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, sep, ref.z.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, row_sep, ref.x.w, sep, ref.y.w, sep, ref.z.w, end);
+                        if constexpr (T_no_cv::width == 4 && T_no_cv::height == 4) ret = from_string_mid(src+chars_consumed, base, start, sep, row_sep, end, start, ref.x.x, sep, ref.y.x, sep, ref.z.x, sep, ref.w.x, row_sep, ref.x.y, sep, ref.y.y, sep, ref.z.y, sep, ref.w.y, row_sep, ref.x.z, sep, ref.y.z, sep, ref.z.z, sep, ref.w.z, row_sep, ref.x.w, sep, ref.y.w, sep, ref.z.w, sep, ref.w.w, end);
 
                         if (ret == 0)
                             return 0;
@@ -618,32 +619,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
-            static vec2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static vec2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static vec2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
-            static vec2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, "", end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, "", end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", "]", base);}
         };
         template <typename T> struct vec<3,T> // vec3
         {
@@ -698,34 +677,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
-            static vec3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static vec3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static vec3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
-            static vec3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, "", end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, "", end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", "]", base);}
         };
         template <typename T> struct vec<4,T> // vec4
         {
@@ -782,36 +737,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
-            static vec4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static vec4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static vec4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
-            static vec4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, "", end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, "", end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", "]", base);}
         };
         template <typename T> struct vec<2,vec<2,T>> // mat2x2
         {
@@ -900,36 +829,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat2x2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat2x2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat2x2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat2x2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<3,vec<2,T>> // mat3x2
         {
@@ -1000,40 +903,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat3x2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat3x2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat3x2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat3x2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<4,vec<2,T>> // mat4x2
         {
@@ -1103,44 +976,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat4x2<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat4x2<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat4x2<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat4x2<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<2,vec<3,T>> // mat2x3
         {
@@ -1201,40 +1040,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat2x3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat2x3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat2x3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat2x3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<3,vec<3,T>> // mat3x3
         {
@@ -1347,46 +1156,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat3x3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat3x3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat3x3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat3x3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<4,vec<3,T>> // mat4x3
         {
@@ -1490,52 +1263,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat4x3<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat4x3<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat4x3<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat4x3<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<2,vec<4,T>> // mat2x4
         {
@@ -1596,44 +1327,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat2x4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat2x4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat2x4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat2x4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<3,vec<4,T>> // mat3x4
         {
@@ -1703,52 +1400,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat3x4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat3x4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat3x4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat3x4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
         template <typename T> struct vec<4,vec<4,T>> // mat4x4
         {
@@ -1947,60 +1602,10 @@ namespace Math
             std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
             std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
             std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
-            static mat4x4<T> from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                if (chars_consumed) *chars_consumed = 0;
-                if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size();
-                int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
-                if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
-                if (chars_consumed) *chars_consumed = pos;
-                return ret;
-            }
-            static mat4x4<T> from_string(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
-            {
-                int ch_con;
-                vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base);
-                if (src[ch_con] != '\0')
-                {
-                    if (chars_consumed) *chars_consumed = 0;
-                    return {};
-                }
-                if (chars_consumed) *chars_consumed = ch_con;
-                return ret;
-            }
-            static mat4x4<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
-            static mat4x4<T> from_string(const char *src, int *chars_consumed = 0, int base = 0) {return from_string(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; int val = Strings::from_string_mid(src, base, start, sep, row_sep, end, ret); if (chars_consumed) *chars_consumed = val; if (val) return ret; else return {};}
+            static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {vec ret; bool val = Strings::from_string(src, base, start, sep, row_sep, end, ret); if (success) *success = val; if (val) return ret; else return {};}
+            static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, "[", ",", ";", "]", base);}
+            static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, "[", ",", ";", "]", base);}
         };
 
         template <typename T1, typename T2> constexpr vec2<decltype(T1{}+T2{})> operator+(const vec2<T1> &first, const vec2<T2> &second) {return {first.x+second.x,first.y+second.y};}
