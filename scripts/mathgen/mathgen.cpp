@@ -958,9 +958,9 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                       "return ret;\n"
                       "}\n";
 
-                    l "static vec" << sz << "<T> from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {int ch_con; vec ret = from_string_mid(src, &ch_con, start, sep, end, base); ch_con = src[ch_con] == '\\0'; if (success) {*success = ch_con;} if (ch_con) {return ret;} else {return {};}}\n";
-                    l "static vec" << sz << "<T> from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
-                    l "static vec" << sz << "<T> from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \"]\", base);}\n";
+                    l "static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {int ch_con; vec ret = from_string_mid(src, &ch_con, start, sep, end, base); ch_con = src[ch_con] == '\\0'; if (success) {*success = ch_con;} if (ch_con) {return ret;} else {return {};}}\n";
+                    l "static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
+                    l "static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \"]\", base);}\n";
                 }
 
                 l "};\n";
