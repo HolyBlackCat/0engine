@@ -124,7 +124,7 @@ namespace Math
                                     std::is_signed_v        <std::remove_extent_t<T>> ? 'i' :
                                     /* else */                                          'u'),
                   char ...flags>
-        std::string number_to_string(std::remove_extent_t<T> param)
+        std::string num_to_string(std::remove_extent_t<T> param)
         {
             char buffer[(std::is_array_v<T> ? std::extent_v<T> : 64) + 1];
 
@@ -199,7 +199,7 @@ namespace Math
         }
 
 
-        template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
+        template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
         {
             if (std::isspace(*ptr))
             {
@@ -229,7 +229,7 @@ namespace Math
                 *chars_consumed = end - ptr;
             return value;
         }
-        template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int base = 0)
+        template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int base = 0)
         {
             if (std::isspace(*ptr))
             {
@@ -267,11 +267,23 @@ namespace Math
                 *chars_consumed = end - ptr;
             return value;
         }
-        template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
+        template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
         {
             switch (*ptr)
             {
               default:
+                if (!strncmp(ptr, "true", 4))
+                {
+                    if (chars_consumed)
+                        *chars_consumed = 4;
+                    return 1;
+                }
+                if (!strncmp(ptr, "false", 5))
+                {
+                    if (chars_consumed)
+                        *chars_consumed = 5;
+                    return 0;
+                }
                 if (chars_consumed)
                     *chars_consumed = 0;
                 return 0;
@@ -281,6 +293,18 @@ namespace Math
                     *chars_consumed = 1;
                 return *ptr - '0';
             }
+        }
+
+        template <typename T> T num_from_string(const char *ptr, bool *success = 0, int base = 0)
+        {
+            int ch_con;
+            T ret = num_from_string<T>(ptr, &ch_con, base);
+            ch_con = ptr[ch_con] == '\0';
+            if (success) *success = ch_con;
+            if (ch_con)
+                return ret;
+            else
+                return 0;
         }
     }
 
@@ -516,16 +540,16 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x*o.x.x+y*o.x.y, x*o.y.x+y*o.y.y, x*o.z.x+y*o.z.y, x*o.w.x+y*o.w.y};}
             constexpr T min() const {return std::min({x,y});}
             constexpr T max() const {return std::max({x,y});}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x) + sep + f(y) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",num_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -584,18 +608,18 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z, x*o.y.x+y*o.y.y+z*o.y.z, x*o.z.x+y*o.z.y+z*o.z.z, x*o.w.x+y*o.w.y+z*o.w.z};}
             constexpr T min() const {return std::min({x,y,z});}
             constexpr T max() const {return std::max({x,y,z});}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",num_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -656,20 +680,20 @@ namespace Math
             template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x*o.x.x+y*o.x.y+z*o.x.z+w*o.x.w, x*o.y.x+y*o.y.y+z*o.y.z+w*o.y.w, x*o.z.x+y*o.z.y+z*o.z.z+w*o.z.w, x*o.w.x+y*o.w.y+z*o.w.z+w*o.w.w};}
             constexpr T min() const {return std::min({x,y,z,w});}
             constexpr T max() const {return std::max({x,y,z,w});}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",number_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x) + sep + f(y) + sep + f(z) + sep + f(w) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("[ "," "," ]",num_to_string<T[12],12,4,'g','#'>); else return to_string("[ "," "," ]",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -762,20 +786,20 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -850,24 +874,24 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -941,28 +965,28 @@ namespace Math
             template <typename TT> constexpr mat2x2<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w};}
             template <typename TT> constexpr mat3x2<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w};}
             template <typename TT> constexpr mat4x2<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -1027,24 +1051,24 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -1161,30 +1185,30 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -1292,36 +1316,36 @@ namespace Math
             template <typename TT> constexpr mat2x3<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w};}
             template <typename TT> constexpr mat3x3<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w};}
             template <typename TT> constexpr mat4x3<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -1386,28 +1410,28 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x2<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y, x.x*o.y.x+y.x*o.y.y, x.x*o.z.x+y.x*o.z.y, x.x*o.w.x+y.x*o.w.y, x.y*o.x.x+y.y*o.x.y, x.y*o.y.x+y.y*o.y.y, x.y*o.z.x+y.y*o.z.y, x.y*o.w.x+y.y*o.w.y, x.z*o.x.x+y.z*o.x.y, x.z*o.y.x+y.z*o.y.y, x.z*o.z.x+y.z*o.z.y, x.z*o.w.x+y.z*o.w.y, x.w*o.x.x+y.w*o.x.y, x.w*o.y.x+y.w*o.y.y, x.w*o.z.x+y.w*o.z.y, x.w*o.w.x+y.w*o.w.y};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + row_sep + f(x.y) + sep + f(y.y) + row_sep + f(x.z) + sep + f(y.z) + row_sep + f(x.w) + sep + f(y.w) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -1481,36 +1505,36 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x3<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -1713,44 +1737,44 @@ namespace Math
             template <typename TT> constexpr mat2x4<larger_type_t<T,TT>> mul(const mat2x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w};}
             template <typename TT> constexpr mat3x4<larger_type_t<T,TT>> mul(const mat3x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w};}
             template <typename TT> constexpr mat4x4<larger_type_t<T,TT>> mul(const mat4x4<TT> &o) const {return {x.x*o.x.x+y.x*o.x.y+z.x*o.x.z+w.x*o.x.w, x.x*o.y.x+y.x*o.y.y+z.x*o.y.z+w.x*o.y.w, x.x*o.z.x+y.x*o.z.y+z.x*o.z.z+w.x*o.z.w, x.x*o.w.x+y.x*o.w.y+z.x*o.w.z+w.x*o.w.w, x.y*o.x.x+y.y*o.x.y+z.y*o.x.z+w.y*o.x.w, x.y*o.y.x+y.y*o.y.y+z.y*o.y.z+w.y*o.y.w, x.y*o.z.x+y.y*o.z.y+z.y*o.z.z+w.y*o.z.w, x.y*o.w.x+y.y*o.w.y+z.y*o.w.z+w.y*o.w.w, x.z*o.x.x+y.z*o.x.y+z.z*o.x.z+w.z*o.x.w, x.z*o.y.x+y.z*o.y.y+z.z*o.y.z+w.z*o.y.w, x.z*o.z.x+y.z*o.z.y+z.z*o.z.z+w.z*o.z.w, x.z*o.w.x+y.z*o.w.y+z.z*o.w.z+w.z*o.w.w, x.w*o.x.x+y.w*o.x.y+z.w*o.x.z+w.w*o.x.w, x.w*o.y.x+y.w*o.y.y+z.w*o.y.z+w.w*o.y.w, x.w*o.z.x+y.w*o.z.y+z.w*o.z.z+w.w*o.z.w, x.w*o.w.x+y.w*o.w.y+z.w*o.w.z+w.w*o.w.w};}
-            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
-            std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
-            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",number_to_string<T[12],12,-1>);}
+            std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start + f(x.x) + sep + f(y.x) + sep + f(z.x) + sep + f(w.x) + row_sep + f(x.y) + sep + f(y.y) + sep + f(z.y) + sep + f(w.y) + row_sep + f(x.z) + sep + f(y.z) + sep + f(z.z) + sep + f(w.z) + row_sep + f(x.w) + sep + f(y.w) + sep + f(z.w) + sep + f(w.w) + end;}
+            std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string("[", ",", ";", "]", f);}
+            std::string to_string_pretty() const {if constexpr (is_floating_point) return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,4,'g','#'>); else return to_string("/ "," "," |\n| "," /",num_to_string<T[12],12,-1>);}
             static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
             {
                 if (chars_consumed) *chars_consumed = 0;
                 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
-                ret.x.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.x = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.x = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.y = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.y = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.z = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.z = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, row_sep.c_str(), row_sep.size())) {return {};} pos += sep.size();
-                ret.x.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.x.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.y.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.y.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.z.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.z.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} pos += sep.size();
-                ret.w.w = number_from_string<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
+                ret.w.w = num_from_string_mid<T>(src+pos, &offset, base); if (!offset) {return {};} pos += offset;
                 if (strncmp(src+pos, end.c_str(), end.size())) {return {};} pos += end.size();
                 if (chars_consumed) *chars_consumed = pos;
                 return ret;
@@ -2330,8 +2354,8 @@ namespace Math
         using namespace Operators;
         using namespace Misc;
 
-        using Strings::number_to_string;
-        using Strings::number_from_string;
+        using Strings::num_to_string;
+        using Strings::num_from_string_mid;
     }
 }
 

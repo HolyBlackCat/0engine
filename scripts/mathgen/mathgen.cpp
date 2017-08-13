@@ -217,7 +217,7 @@ template <typename T,
                             std::is_signed_v        <std::remove_extent_t<T>> ? 'i' :
                             /* else */                                          'u'),
           char ...flags>
-std::string number_to_string(std::remove_extent_t<T> param)
+std::string num_to_string(std::remove_extent_t<T> param)
 {
 char buffer[(std::is_array_v<T> ? std::extent_v<T> : 64) + 1];
 
@@ -292,7 +292,7 @@ return buffer;
 }
 
 
-template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
+template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
 {
 if (std::isspace(*ptr))
 {
@@ -322,7 +322,7 @@ if (chars_consumed)
     *chars_consumed = end - ptr;
 return value;
 }
-template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> number_from_string(const char *ptr, int *chars_consumed = 0, int base = 0)
+template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int base = 0)
 {
 if (std::isspace(*ptr))
 {
@@ -360,11 +360,23 @@ if (chars_consumed)
     *chars_consumed = end - ptr;
 return value;
 }
-template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> number_from_string(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
+template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
 {
 switch (*ptr)
 {
 @default:
+if (!strncmp(ptr, "true", 4))
+{
+if (chars_consumed)
+    *chars_consumed = 4;
+return 1;
+}
+if (!strncmp(ptr, "false", 5))
+{
+if (chars_consumed)
+    *chars_consumed = 5;
+return 0;
+}
 if (chars_consumed)
     *chars_consumed = 0;
 return 0;
@@ -374,6 +386,18 @@ if (chars_consumed)
     *chars_consumed = 1;
 return *ptr - '0';
 }
+}
+
+template <typename T> T num_from_string(const char *ptr, bool *success = 0, int base = 0)
+{
+int ch_con;
+T ret = num_from_string<T>(ptr, &ch_con, base);
+ch_con = ptr[ch_con] == '\0';
+if (success) *success = ch_con;
+if (ch_con)
+    return ret;
+else
+    return 0;
 }
 }
 )";
@@ -922,7 +946,7 @@ return inv * det;
                 }
                 { // String operations
                     // To string
-                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start";
+                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0)
@@ -931,11 +955,11 @@ return inv * det;
                     }
                     l " + end;}\n";
 
-                    l "std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
+                    l "std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
 
                     l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
-                      "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
-                      "return to_string(" R"("[ "," "," ]")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
+                      "return to_string(" R"("[ "," "," ]")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
+                      "return to_string(" R"("[ "," "," ]")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
 
                     // From string
                     l R"(static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
@@ -948,7 +972,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                         if (i != 0)
                             l "if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} "
                               "pos += sep.size();\n";
-                        l "ret." << field_names_main[i] << " = number_from_string<T>(src+pos, &offset, base); "
+                        l "ret." << field_names_main[i] << " = num_from_string_mid<T>(src+pos, &offset, base); "
                           "if (!offset) {return {};} "
                           "pos += offset;\n";
                     }
@@ -1225,7 +1249,7 @@ $       0, 0, 0, s};
                     MatrixMul(w, i, h);
                 { // String operations
                     // To string
-                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = number_to_string<T>) const {return start";
+                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start";
                     for (int hh = 0; hh < h; hh++)
                     {
                         if (hh != 0)
@@ -1239,11 +1263,11 @@ $       0, 0, 0, s};
                     }
                     l " + end;}\n";
 
-                    l "std::string to_string(std::string(*f)(T) = number_to_string<T>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
+                    l "std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
 
                     l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
-                      "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
-                      "return to_string(" R"("/ "," "," |\n| "," /")" ",number_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
+                      "return to_string(" R"("/ "," "," |\n| "," /")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
+                      "return to_string(" R"("/ "," "," |\n| "," /")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
 
                     // From string
                     l R"(static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
@@ -1262,7 +1286,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                             if (ww != 0)
                                 l "if (strncmp(src+pos, sep.c_str(), sep.size())) {return {};} "
                                   "pos += sep.size();\n";
-                            l "ret." << field_names_main[ww] << "." << field_names_main[hh] << " = number_from_string<T>(src+pos, &offset, base); "
+                            l "ret." << field_names_main[ww] << "." << field_names_main[hh] << " = num_from_string_mid<T>(src+pos, &offset, base); "
                               "if (!offset) {return {};} "
                               "pos += offset;\n";
                         }
@@ -1757,8 +1781,8 @@ using namespace Quaternion;
 using namespace Operators;
 using namespace Misc;
 
-using Strings::number_to_string;
-using Strings::number_from_string;
+using Strings::num_to_string;
+using Strings::num_from_string_mid;
 }
 )";
     }

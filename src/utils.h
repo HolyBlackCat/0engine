@@ -16,8 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include <type_traits>
-
 #include "lib/sdl.h"
 #include "exceptions.h"
 #include "strings.h"
@@ -42,9 +40,9 @@ namespace Utils
         template <typename T, typename ...P> struct TypeAt<0, T, P...> {using type = T;};
     }
 
-    template <typename T> class Object
+    template <typename T> class LocalStorage
     {
-        static_assert(noexcept(std::declval<T>().~T()), "Object destructor must be noexcept.");
+        static_assert(noexcept(std::declval<T>().~T()), "Type destructor must be noexcept.");
 
         bool is_alive;
         std::aligned_storage_t<sizeof(T), alignof(T)> data;
@@ -52,20 +50,20 @@ namespace Utils
       public:
         using type = T;
 
-        constexpr Object() : is_alive(0) {}
-        Object(const T &o)
+        constexpr LocalStorage() : is_alive(0) {}
+        LocalStorage(const T &o)
         {
             is_alive = 0;
             ::new (&data) T(o);
             is_alive = 1;
         }
-        Object(T &&o)
+        LocalStorage(T &&o)
         {
             is_alive = 0;
             ::new (&data) T((T &&)o);
             is_alive = 1;
         }
-        Object &operator=(const T &o)
+        LocalStorage &operator=(const T &o)
         {
             if (!is_alive)
             {
@@ -79,7 +77,7 @@ namespace Utils
 
             return *this;
         }
-        Object &operator=(T &&o)
+        LocalStorage &operator=(T &&o)
         {
             if (!is_alive)
             {
@@ -94,7 +92,7 @@ namespace Utils
             return *this;
         }
 
-        Object(const Object &o)
+        LocalStorage(const LocalStorage &o)
         {
             is_alive = 0;
 
@@ -104,7 +102,7 @@ namespace Utils
                 is_alive = 1;
             }
         }
-        Object(Object &&o)
+        LocalStorage(LocalStorage &&o)
         {
             is_alive = 0;
 
@@ -112,38 +110,46 @@ namespace Utils
             {
                 ::new (&data) T((T &&)o);
                 is_alive = 1;
+                o.destroy();
             }
         }
-        Object &operator=(const Object &o)
+        LocalStorage &operator=(const LocalStorage &o)
         {
             if (this == &o)
                 return *this;
             if (o.is_alive)
-                return *this = *o;
+            {
+                *this = *o;
+                return *this;
+            }
             destroy();
             return *this;
         }
-        Object &operator=(Object &&o)
+        LocalStorage &operator=(LocalStorage &&o)
         {
             if (this == &o)
                 return *this;
             if (o.is_alive)
-                return *this = (T &&)*o;
+            {
+                *this = (T &&)*o;
+                o.destroy();
+                return *this;
+            }
             destroy();
             return *this;
         }
 
-        ~Object()
+        ~LocalStorage()
         {
             if (is_alive)
                 (*this)->~T();
         }
 
-        operator       T *()       {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (      T *)&data;}
-        operator const T *() const {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (const T *)&data;}
+              T &operator *()       {Assert("Deferencing Utils::LocalStorage which is not alive.", is_alive); return *(      T *)&data;}
+        const T &operator *() const {Assert("Deferencing Utils::LocalStorage which is not alive.", is_alive); return *(const T *)&data;}
 
-              T *operator->()       {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (      T *)&data;}
-        const T *operator->() const {Assert("Deferencing Utils::Object which is not alive.", is_alive); return (const T *)&data;}
+              T *operator->()       {Assert("Deferencing Utils::LocalStorage which is not alive.", is_alive); return (      T *)&data;}
+        const T *operator->() const {Assert("Deferencing Utils::LocalStorage which is not alive.", is_alive); return (const T *)&data;}
 
         template <typename ...P> void create(P &&... p)
         {

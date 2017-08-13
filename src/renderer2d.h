@@ -22,8 +22,8 @@ class Renderer2D
 
   private:
     ivec2 size;
-    Utils::Object<Graphics::RenderQueue<VertexFormat, 3>> render_queue;
-    Utils::Object<Graphics::Shader> main_shader;
+    Utils::LocalStorage<Graphics::RenderQueue<VertexFormat, 3>> render_queue;
+    Utils::LocalStorage<Graphics::Shader> main_shader;
     int current_tex = -1;
     ivec2 current_tex_size;
 
