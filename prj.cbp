@@ -118,6 +118,10 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
+		<Unit filename="scripts/ppgen/ppgen.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="src/audio.cpp" />
 		<Unit filename="src/audio.h" />
 		<Unit filename="src/exceptions.h" />
@@ -146,6 +150,8 @@
 		<Unit filename="src/network.cpp" />
 		<Unit filename="src/network.h" />
 		<Unit filename="src/os.h" />
+		<Unit filename="src/preprocessor.h" />
+		<Unit filename="src/reflection.h" />
 		<Unit filename="src/renderer2d.cpp" />
 		<Unit filename="src/renderer2d.h" />
 		<Unit filename="src/strings.h" />

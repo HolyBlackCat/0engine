@@ -12,15 +12,33 @@ void PreInit()
     Sys::SetCurrentFunction(Boot);
 }
 
-
 void Resize()
 {
     Graphics::ViewportFullscreen();
 }
 
+struct S
+{
+    Reflect
+    (
+        (int , x)
+        (float , y , =1.23)
+    )
+};
+
 void Boot()
 {
     MarkLocation("Boot");
+
+    S s;
+    s.x = 42;
+
+    Reflection::for_each(s,
+        [](auto ref)
+        {
+            std::cout << ref.type_name << " " << ref.name << " = " << ref.value << '\n';
+        }
+    );
 
     while (1)
     {

@@ -18,6 +18,8 @@
 #include "math.h"
 #include "network.h"
 #include "os.h"
+#include "preprocessor.h"
+#include "reflection.h"
 #include "renderer2d.h"
 #include "strings.h"
 #include "system.h"
