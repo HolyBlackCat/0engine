@@ -1,7 +1,29 @@
 #ifndef PREPROCESSOR_H_INCLUDED
 #define PREPROCESSOR_H_INCLUDED
 
-// Version 0.0.1 by HolyBlackCat
+// Version 0.0.2 by HolyBlackCat
+
+#include <type_traits>
+
+
+// COUNTER
+
+#define PP0_COUNTER_DEFINE(type_tag, storage) storage constexpr std::integral_constant<int,0> _pp0_impl_counter(type_tag,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short) {return {};}
+#define PP0_COUNTER_READ(type_tag) PP0_COUNTER_READ_CONTEXT(type_tag,)
+#define PP0_COUNTER_READ_CONTEXT(type_tag, context) (void(), decltype(context _pp0_impl_counter(type_tag{},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))::value)
+#define PP0_COUNTER_INCR(type_tag, storage) storage constexpr std::integral_constant<int,PP0_COUNTER_READ()+1> _pp0_impl_counter(type_tag, \
+    PP0_CNT_ARG(  0),PP0_CNT_ARG(  1),PP0_CNT_ARG(  2),PP0_CNT_ARG(  3),PP0_CNT_ARG(  4),PP0_CNT_ARG(  5),PP0_CNT_ARG(  6),PP0_CNT_ARG(  7), \
+    PP0_CNT_ARG(  8),PP0_CNT_ARG(  9),PP0_CNT_ARG( 10),PP0_CNT_ARG( 11),PP0_CNT_ARG( 12),PP0_CNT_ARG( 13),PP0_CNT_ARG( 14),PP0_CNT_ARG( 15), \
+    PP0_CNT_ARG( 16),PP0_CNT_ARG( 17),PP0_CNT_ARG( 18),PP0_CNT_ARG( 19),PP0_CNT_ARG( 20),PP0_CNT_ARG( 21),PP0_CNT_ARG( 22),PP0_CNT_ARG( 23), \
+    PP0_CNT_ARG( 24),PP0_CNT_ARG( 25),PP0_CNT_ARG( 26),PP0_CNT_ARG( 27),PP0_CNT_ARG( 28),PP0_CNT_ARG( 29),PP0_CNT_ARG( 30),PP0_CNT_ARG( 31), \
+    PP0_CNT_ARG( 32),PP0_CNT_ARG( 33),PP0_CNT_ARG( 34),PP0_CNT_ARG( 35),PP0_CNT_ARG( 36),PP0_CNT_ARG( 37),PP0_CNT_ARG( 38),PP0_CNT_ARG( 39), \
+    PP0_CNT_ARG( 40),PP0_CNT_ARG( 41),PP0_CNT_ARG( 42),PP0_CNT_ARG( 43),PP0_CNT_ARG( 44),PP0_CNT_ARG( 45),PP0_CNT_ARG( 46),PP0_CNT_ARG( 47), \
+    PP0_CNT_ARG( 48),PP0_CNT_ARG( 49),PP0_CNT_ARG( 50),PP0_CNT_ARG( 51),PP0_CNT_ARG( 52),PP0_CNT_ARG( 53),PP0_CNT_ARG( 54),PP0_CNT_ARG( 55), \
+    PP0_CNT_ARG( 56),PP0_CNT_ARG( 57),PP0_CNT_ARG( 58),PP0_CNT_ARG( 59),PP0_CNT_ARG( 60),PP0_CNT_ARG( 61),PP0_CNT_ARG( 62),PP0_CNT_ARG( 63)) {return {};}
+#define PP0_CNT_ARG(x) std::conditional_t<(x <= PP0_COUNTER_READ()), int, short>
+
+
+// UTILS
 
 #define PP0_F_NULL()
 #define PP0_F_COMMA() ,
@@ -29,11 +51,6 @@
 #define PP0_VA_CALL(name, ...) PP0_CC(name, PP0_VA_SIZE(__VA_ARGS__))
 
 #define PP0_SEQ_CALL(name, seq) PP0_CC(name, PP0_SEQ_SIZE(seq))
-
-#define PP0_SEQ_TO_VA(seq) PP0_SEQ_APPLY(seq, PP0_E, PP0_F_COMMA)
-#define PP0_SEQ_TO_VA_PARENS(seq) PP0_SEQ_APPLY(seq, PP0_PARENS, PP0_F_COMMA)
-#define PP0_SEQ_EXPAND(seq) PP0_SEQ_APPLY(seq, PP0_E, PP0_F_NULL)
-#define PP0_VA_EXPAND(seq) PP0_SEQ_APPLY(PP0_VA_TO_SEQ(seq), PP0_E, PP0_F_NULL)
 
 #define PP0_SEQ_DEL_FIRST(seq) PP0_SEQ_DEL_FIRST_IMPL_ seq
 #define PP0_SEQ_DEL_FIRST_IMPL_(...)

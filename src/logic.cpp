@@ -19,9 +19,12 @@ void Resize()
 
 struct S
 {
+    Reflectable(S)
+
     Reflect
     (
         (int , x)
+        (private:)
         (float , y , =1.23)
     )
 };

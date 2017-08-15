@@ -1,12 +1,13 @@
 #include <algorithm>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "0.0.1"
+#define VERSION "0.0.2"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("preprocessor.h");
@@ -14,12 +15,13 @@ std::ofstream out_file("preprocessor.h");
 int indentation = 0;
 bool new_line = 0;
 
+std::stringstream ss;
+
 template <typename ...P> const char *Jo(P &&... p)
 {
     static constexpr int ret_buffers_c = 32;
     static std::string ret_buffers[ret_buffers_c];
     static int ret_pos = 0;
-    static std::stringstream ss;
     ss.clear();
     ss.str("");
     int dummy[] {(ss << p, 0)...};
@@ -88,6 +90,40 @@ struct
 #define l o <<
 
 static constexpr int pp_args = 64;
+static constexpr int counter_max = 64;
+
+
+namespace Gen
+{
+    void Counter()
+    {
+        l "// COUNTER\n\n";
+        // Definition
+        l "#define PP0_COUNTER_DEFINE(type_tag, storage) storage constexpr std::integral_constant<int,0> _pp0_impl_counter(type_tag";
+        for (int i = 0; i < counter_max; i++) l ",short";
+        l ") {return {};}\n";
+
+        // Read
+        l "#define PP0_COUNTER_READ(type_tag) PP0_COUNTER_READ_CONTEXT(type_tag,)\n";
+        // Read with context
+        l "#define PP0_COUNTER_READ_CONTEXT(type_tag, context) (void(), decltype(context _pp0_impl_counter(type_tag{}";
+        for (int i = 0; i < counter_max; i++) l ",0";
+        l "))::value)\n";
+
+        // Increment
+        l "#define PP0_COUNTER_INCR(type_tag, storage) storage constexpr std::integral_constant<int,PP0_COUNTER_READ()+1> _pp0_impl_counter(type_tag";
+        for (int i = 0; i < counter_max; i++)
+        {
+            l ",";
+            if (i % 8 == 0 && i != 1) l " \\\n    ";
+            l "PP0_CNT_ARG(" << (ss << std::setw(3), i) << ")";
+        }
+        l ") {return {};}\n";
+        // Increment helper
+        l "#define PP0_CNT_ARG(x) std::conditional_t<(x <= PP0_COUNTER_READ()), int, short>\n";
+    }
+}
+
 
 int main()
 {
@@ -97,8 +133,15 @@ int main()
 
 // Version )" VERSION R"( by HolyBlackCat
 
+#include <type_traits>
+
+
 )";
+    Gen::Counter();
+    l "\n\n";
+
     // Utils
+    l "// UTILS\n\n";
     l "#define PP0_F_NULL()\n";
     l "#define PP0_F_COMMA() ,\n";
     l '\n';
@@ -139,13 +182,6 @@ int main()
 
     // Seq overload
     l "#define PP0_SEQ_CALL(name, seq) PP0_CC(name, PP0_SEQ_SIZE(seq))\n";
-    l '\n';
-
-    // Seq ops
-    l "#define PP0_SEQ_TO_VA(seq) PP0_SEQ_APPLY(seq, PP0_E, PP0_F_COMMA)\n";
-    l "#define PP0_SEQ_TO_VA_PARENS(seq) PP0_SEQ_APPLY(seq, PP0_PARENS, PP0_F_COMMA)\n";
-    l "#define PP0_SEQ_EXPAND(seq) PP0_SEQ_APPLY(seq, PP0_E, PP0_F_NULL)\n";
-    l "#define PP0_VA_EXPAND(seq) PP0_SEQ_APPLY(PP0_VA_TO_SEQ(seq), PP0_E, PP0_F_NULL)\n";
     l '\n';
 
     // Seq remove first
