@@ -12,7 +12,7 @@
                                                  REFL0_MAKE_VAR_FUNC(type_, name_, init_, const,         ) \
                                                  REFL0_MAKE_VAR_FUNC(type_, name_, init_,      , volatile) \
                                                  REFL0_MAKE_VAR_FUNC(type_, name_, init_, const, volatile) \
-                                                 PP0_COUNTER_INCR(::Reflection::field_counter_tag,static)
+                                                 PP0_COUNTER_INCR(::ReflectionBase::field_counter_tag,static)
 #define REFL0_MAKE_VAR_FUNC(type_, name_, init_, c_, v_) template <typename This> struct _refl_impl_field_t_0##c_##0##v_##0##name_ \
                                                          { \
                                                              using enclosing_class = This; \
@@ -23,7 +23,7 @@
                                                              static constexpr type_ This::*mem_ptr = &This::name_; \
                                                              type_cv &value; \
                                                          }; \
-                                                         auto _refl_field_by_tag(std::integral_constant<int,PP0_COUNTER_READ(::Reflection::field_counter_tag)>) c_ v_ \
+                                                         auto _refl_field_by_tag(std::integral_constant<int,PP0_COUNTER_READ(::ReflectionBase::field_counter_tag)>) c_ v_ \
                                                          { \
                                                              using ret_t = _refl_impl_field_t_0##c_##0##v_##0##name_<std::remove_reference_t<decltype(*this)>>; \
                                                              return ret_t{this->*ret_t::mem_ptr}; \
@@ -34,34 +34,43 @@
     PP0_SEQ_APPLY(seq, REFL0_MAKE_VAR, PP0_F_NULL)
 
 #define Reflectable(opt_name) \
-    friend class Reflection; \
+    template <typename T> friend class Reflection; \
     static constexpr const char *_refl_name = #opt_name; \
     template <int I> auto _refl_field()                {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
     template <int I> auto _refl_field() const          {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
     template <int I> auto _refl_field()       volatile {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
     template <int I> auto _refl_field() const volatile {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
-    PP0_COUNTER_DEFINE(::Reflection::field_counter_tag,static)
+    PP0_COUNTER_DEFINE(::ReflectionBase::field_counter_tag,static)
 
-class Reflection
+class ReflectionBase
 {
-    ~Reflection() = delete;
   public:
-
     template <int ...Seq> using int_seq = std::integer_sequence<int, Seq...>;
     template <int I> using make_int_seq = std::make_integer_sequence<int, I>;
-
     struct field_counter_tag {constexpr field_counter_tag() {}};
+};
+
+template <typename T> class Reflection : public ReflectionBase
+{
+    Reflection(const Reflection &) = delete;
+    Reflection(Reflection &&) = delete;
+    Reflection &operator=(const Reflection &) = delete;
+    Reflection &operator=(Reflection &&) = delete;
+
+  public:
+    T &ref;
+    Reflection(T &ref) : ref(ref) {}
+
+    static constexpr int field_count = PP0_COUNTER_READ_CONTEXT(::ReflectionBase::field_counter_tag, T::);
 
 
-    template <typename T> static constexpr int field_count = PP0_COUNTER_READ_CONTEXT(::Reflection::field_counter_tag, T::);
-
-    template <typename T, typename F, int ...Seq> static void for_constexpr_indices(T &&obj, F &&func, int_seq<Seq...>)
+    template <typename F, int ...Seq> void for_constexpr_indices(F &&func, int_seq<Seq...>)
     {
-        (func(obj.template _refl_field<Seq>()) , ...);
+        (func(ref.template _refl_field<Seq>()) , ...);
     }
-    template <typename T, typename F> static void for_each(T &&obj, F &&func)
+    template <typename F> void for_each(F &&func)
     {
-        for_constexpr_indices((T&&)obj, (F&&)func, make_int_seq<field_count<std::remove_reference_t<T>>>{});
+        for_constexpr_indices((F&&)func, make_int_seq<field_count>{});
     }
 };
 

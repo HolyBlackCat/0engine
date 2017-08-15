@@ -36,7 +36,7 @@ void Boot()
     S s;
     s.x = 42;
 
-    Reflection::for_each(s,
+    Reflection(s).for_each(
         [](auto ref)
         {
             std::cout << ref.type_name << " " << ref.name << " = " << ref.value << '\n';
