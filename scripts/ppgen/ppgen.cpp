@@ -7,7 +7,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "0.0.2"
+#define VERSION "0.0.3"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("preprocessor.h");
@@ -89,8 +89,11 @@ struct
 #define r o << 1+
 #define l o <<
 
-static constexpr int pp_args = 64;
-static constexpr int counter_max = 64;
+constexpr int pp_args = 64;
+constexpr int counter_max = 64;
+
+const std::string small_suffixes[] {"", "_A", "_B"},
+                  large_suffixes[] {"", "_A"};
 
 
 namespace Gen
@@ -142,8 +145,8 @@ int main()
 
     // Utils
     l "// UTILS\n\n";
-    l "#define PP0_F_NULL()\n";
-    l "#define PP0_F_COMMA() ,\n";
+    l "#define PP0_F_NULL(...)\n";
+    l "#define PP0_F_COMMA(...) ,\n";
     l '\n';
     l "#define PP0_E(...) __VA_ARGS__\n";
     l '\n';
@@ -153,11 +156,13 @@ int main()
     l "#define PP0_PARENS(...) (__VA_ARGS__)\n";
     l "#define PP0_DEL_PARENS(...) PP0_E __VA_ARGS__\n";
     l "#define PP0_2_PARENS(...) ((__VA_ARGS__))\n";
+    l "#define PP0_PARENS_COMMA(...) (__VA_ARGS__),\n";
     l '\n';
     l "#define PP0_CC(a, b) PP0_CC_IMPL_(a,b)\n";
     l "#define PP0_CC_IMPL_(a, b) a##b\n";
     l '\n';
-    l "#define PP0_CALL(macro, ...) macro(__VA_ARGS__)\n";
+    for (std::string suffix : small_suffixes)
+        l "#define PP0_CALL" << suffix << "(macro, ...) macro(__VA_ARGS__)\n";
     l '\n';
 
     // Variadic size
@@ -184,30 +189,19 @@ int main()
     l "#define PP0_SEQ_CALL(name, seq) PP0_CC(name, PP0_SEQ_SIZE(seq))\n";
     l '\n';
 
-    // Seq remove first
-    l "#define PP0_SEQ_DEL_FIRST(seq) PP0_SEQ_DEL_FIRST_IMPL_ seq\n";
-    l "#define PP0_SEQ_DEL_FIRST_IMPL_(...)\n";
-    l '\n';
-
     // Seq first
-    l "#define PP0_SEQ_FIRST(seq) PP0_DEL_PARENS(PP0_VA_FIRST(PP0_SEQ_FIRST_IMPL_ seq,))\n";
-    l "#define PP0_SEQ_FIRST_IMPL_(...) (__VA_ARGS__),\n";
+    l "#define PP0_SEQ_FIRST(seq) PP0_DEL_PARENS(PP0_VA_FIRST(PP0_PARENS_COMMA seq,))\n";
     l '\n';
 
     // Va to seq
-    l "#define PP0_VA_TO_SEQ(...) PP0_VA_CALL(PP0_VA_TO_SEQ_, __VA_ARGS__)(__VA_ARGS__)\n";
-    for (int i = 0; i <= pp_args; i++)
+    l "#define PP0_VA_TO_SEQ(...) PP0_VA_CALL(PP0_VA_TO_SEQ_, __VA_ARGS__,)(__VA_ARGS__,)\n";
+    l "#define PP0_VA_TO_SEQ_DISCARD_LAST(...) PP0_VA_CALL(PP0_VA_TO_SEQ_, __VA_ARGS__)(__VA_ARGS__)\n";
+    l "#define PP0_VA_TO_SEQ_NULL\n";
+    l "#define PP0_VA_TO_SEQ_1(x) PP0_VA_TO_SEQ_##x##NULL\n";
+    for (int i = 1; i <= pp_args; i++)
     {
-        l "#define PP0_VA_TO_SEQ_" << i << "(";
-        for (int j = 0; j < i; j++)
-        {
-            if (j != 0) l ",";
-            l "i" << j;
-        }
-        l ") ";
-        for (int j = 0; j < i; j++)
-            l "(i" << j << ")";
-        l "\n";
+        // Note that 1 is added to all the indices in this block. This was done to simplify VA_TO_SEQ_DISCARD_LAST
+        l "#define PP0_VA_TO_SEQ_" << i+1 << "(x, ...) (x)PP0_VA_TO_SEQ_" << i << "(__VA_ARGS__)\n";
     }
     l '\n';
 
@@ -219,26 +213,32 @@ int main()
         l "#define PP0_SEQ_SIZE_" << i << "_VAL " << i << "\n";
     l '\n';
 
-    // At
+    // Va at
     l "#define PP0_VA_AT(index, ...) PP0_CC(PP0_VA_AT_, index)(__VA_ARGS__,)\n";
-    l "#define PP0_SEQ_AT(index, seq) PP0_DEL_PARENS(PP0_VA_AT(index, PP0_SEQ_APPLY(seq, PP0_PARENS, PP0_F_COMMA)))\n";
-    for (int i = 0; i <= pp_args; i++)
+    l "#define PP0_VA_AT_0(ret, ...) ret\n";
+    for (int i = 1; i <= pp_args; i++)
+        l "#define PP0_VA_AT_" << i << "(_, ...) PP0_VA_AT_" << i-1 << "(__VA_ARGS__)\n";
+    l '\n';
+
+    // Seq at
+    l "#define PP0_SEQ_AT(index, seq) PP0_SEQ_FIRST( PP0_CC(PP0_SEQ_AT_EAT_, index)(seq) )\n";
+    l "#define PP0_SEQ_AT_EAT_0(seq) seq\n";
+    for (int i = 1; i <= pp_args; i++)
+        l "#define PP0_SEQ_AT_EAT_" << i << "(seq) PP0_SEQ_AT_EAT_" << i-1 << "(PP0_F_NULL seq)\n";
+
+    // Seq apply
+    l "// macro(i, data, element...)\n";
+    for (std::string suffix : large_suffixes)
     {
-        l "#define PP0_VA_AT_" << i << "(";
-        for (int j = 0; j < i; j++)
-            l "i" << j << ",";
-        l "ret, ...) ret\n";
+        l "#define PP0_SEQ_APPLY" << suffix << "(seq, macro, macro_sep_f, data) PP0_SEQ_CALL(PP0_SEQ_APPLY" << suffix << "_, seq)(macro, macro_sep_f, data, seq, )\n";
+        l "#define PP0_SEQ_APPLY" << suffix << "_0(macro, macro_sep_f, data, seq, seq_)\n";
+        l "#define PP0_SEQ_APPLY" << suffix << "_1(macro, macro_sep_f, data, seq, seq_) PP0_CALL" << suffix << "(macro, PP0_SEQ_SIZE(seq_), data, PP0_SEQ_FIRST(seq))\n";
+        for (int i = 2; i <= pp_args; i++)
+            l "#define PP0_SEQ_APPLY" << suffix << "_" << i << "(macro, macro_sep_f, data, seq, seq_) PP0_CALL" << suffix << "(macro, PP0_SEQ_SIZE(seq_), data, PP0_SEQ_FIRST(seq)) macro_sep_f() PP0_SEQ_CALL(PP0_SEQ_APPLY" << suffix << "_, PP0_F_NULL seq)(macro, macro_sep_f, data, PP0_F_NULL seq, (PP0_SEQ_FIRST(seq)) seq_)\n";
     }
     l '\n';
 
-    // Seq apply
-    l "// macro(i, element)\n";
-    l "#define PP0_SEQ_APPLY(seq, macro, macro_sep_f) PP0_SEQ_CALL(PP0_SEQ_APPLY_, seq)(macro, macro_sep_f, seq, )\n";
-    l "#define PP0_SEQ_APPLY_0(macro, macro_sep_f, seq, seq_)\n";
-    l "#define PP0_SEQ_APPLY_1(macro, macro_sep_f, seq, seq_) PP0_CALL(macro, PP0_SEQ_SIZE(seq_), PP0_SEQ_FIRST(seq))\n";
-    for (int i = 2; i <= pp_args; i++)
-        l "#define PP0_SEQ_APPLY_" << i << "(macro, macro_sep_f, seq, seq_) PP0_CALL(macro, PP0_SEQ_SIZE(seq_), PP0_SEQ_FIRST(seq)) macro_sep_f() PP0_SEQ_CALL(PP0_SEQ_APPLY_, PP0_SEQ_DEL_FIRST(seq))(macro, macro_sep_f, PP0_SEQ_DEL_FIRST(seq), (PP0_SEQ_FIRST(seq)) seq_)\n";
-    l '\n';
+
 
     l "\n#endif\n";
 }

@@ -17,15 +17,20 @@ void Resize()
     Graphics::ViewportFullscreen();
 }
 
+
+
 struct S
 {
     Reflectable(S)
 
     Reflect
     (
-        (int , x)
-        (private:)
-        (float , y , =1.23)
+        (int)(a,b),
+        (int)(c,d)(=42),
+        (private:),
+        (int)(e)(=9001),
+        (public:),
+        (float)(f,g,h),
     )
 };
 
@@ -33,8 +38,10 @@ void Boot()
 {
     MarkLocation("Boot");
 
+
     S s;
-    s.x = 42;
+    s.a = s.b = 1;
+    s.f = s.g = s.h = 2;
 
     Reflection(s).for_each(
         [](auto ref)
