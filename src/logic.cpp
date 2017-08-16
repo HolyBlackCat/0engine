@@ -27,9 +27,9 @@ struct S
     (
         (int)(a,b),
         (int)(c,d)(=42),
-        (private:),
+      (private:),
         (int)(e)(=9001),
-        (public:),
+      (public:),
         (float)(f,g,h),
     )
 };
