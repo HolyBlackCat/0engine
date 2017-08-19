@@ -23,7 +23,7 @@ struct A
 
     Reflect
     (
-        (fmat3)(m),
+        (fmat3)(m)({}),
         (int)(a)(=1),
         (float)(b)(=2),
     )
@@ -34,8 +34,7 @@ void Boot()
     MarkLocation("Boot");
 
 
-    A a;
-    a.m = fmat3::rotate({1,1,1},1);
+    const A a;
 
     std::cout << Reflection(&a).to_string_pretty();
 

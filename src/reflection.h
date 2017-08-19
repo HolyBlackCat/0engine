@@ -104,10 +104,11 @@ namespace Refl
 
             template <int I> static auto field(type *ptr)
             {
-                     if constexpr (I == 0) return Reflection<TT, field_data<'x',&type_no_cv::x>>(&ptr->x);
-                else if constexpr (I == 1) return Reflection<TT, field_data<'y',&type_no_cv::y>>(&ptr->y);
-                else if constexpr (I == 2) return Reflection<TT, field_data<'z',&type_no_cv::z>>(&ptr->z);
-                else             /*I == 3*/return Reflection<TT, field_data<'w',&type_no_cv::w>>(&ptr->w);
+                using vec_field_type = std::remove_reference_t<decltype((ptr->x))>; // Note the (()). Without them compiler ignores cv-qualifiers on the decltype.
+                     if constexpr (I == 0) return Reflection<vec_field_type, field_data<'x',&type_no_cv::x>>(&ptr->x);
+                else if constexpr (I == 1) return Reflection<vec_field_type, field_data<'y',&type_no_cv::y>>(&ptr->y);
+                else if constexpr (I == 2) return Reflection<vec_field_type, field_data<'z',&type_no_cv::z>>(&ptr->z);
+                else             /*I == 3*/return Reflection<vec_field_type, field_data<'w',&type_no_cv::w>>(&ptr->w);
             }
         };
     }
