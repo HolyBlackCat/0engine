@@ -1,9 +1,11 @@
 #ifndef PREPROCESSOR_H_INCLUDED
 #define PREPROCESSOR_H_INCLUDED
 
-// Version 0.0.3 by HolyBlackCat
+// Version 0.0.5 by HolyBlackCat
 
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 
 
 // COUNTER
@@ -11,17 +13,82 @@
 #define PP0_COUNTER_DEFINE(type_tag, storage) storage constexpr std::integral_constant<int,0> _pp0_impl_counter(type_tag,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short) {return {};}
 #define PP0_COUNTER_READ(type_tag) PP0_COUNTER_READ_CONTEXT(type_tag,)
 #define PP0_COUNTER_READ_CONTEXT(type_tag, context) (void(), decltype(context _pp0_impl_counter(type_tag{},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))::value)
-#define PP0_COUNTER_INCR(type_tag, storage) storage constexpr std::integral_constant<int,PP0_COUNTER_READ()+1> _pp0_impl_counter(type_tag, \
-    PP0_CNT_ARG(  0),PP0_CNT_ARG(  1),PP0_CNT_ARG(  2),PP0_CNT_ARG(  3),PP0_CNT_ARG(  4),PP0_CNT_ARG(  5),PP0_CNT_ARG(  6),PP0_CNT_ARG(  7), \
-    PP0_CNT_ARG(  8),PP0_CNT_ARG(  9),PP0_CNT_ARG( 10),PP0_CNT_ARG( 11),PP0_CNT_ARG( 12),PP0_CNT_ARG( 13),PP0_CNT_ARG( 14),PP0_CNT_ARG( 15), \
-    PP0_CNT_ARG( 16),PP0_CNT_ARG( 17),PP0_CNT_ARG( 18),PP0_CNT_ARG( 19),PP0_CNT_ARG( 20),PP0_CNT_ARG( 21),PP0_CNT_ARG( 22),PP0_CNT_ARG( 23), \
-    PP0_CNT_ARG( 24),PP0_CNT_ARG( 25),PP0_CNT_ARG( 26),PP0_CNT_ARG( 27),PP0_CNT_ARG( 28),PP0_CNT_ARG( 29),PP0_CNT_ARG( 30),PP0_CNT_ARG( 31), \
-    PP0_CNT_ARG( 32),PP0_CNT_ARG( 33),PP0_CNT_ARG( 34),PP0_CNT_ARG( 35),PP0_CNT_ARG( 36),PP0_CNT_ARG( 37),PP0_CNT_ARG( 38),PP0_CNT_ARG( 39), \
-    PP0_CNT_ARG( 40),PP0_CNT_ARG( 41),PP0_CNT_ARG( 42),PP0_CNT_ARG( 43),PP0_CNT_ARG( 44),PP0_CNT_ARG( 45),PP0_CNT_ARG( 46),PP0_CNT_ARG( 47), \
-    PP0_CNT_ARG( 48),PP0_CNT_ARG( 49),PP0_CNT_ARG( 50),PP0_CNT_ARG( 51),PP0_CNT_ARG( 52),PP0_CNT_ARG( 53),PP0_CNT_ARG( 54),PP0_CNT_ARG( 55), \
-    PP0_CNT_ARG( 56),PP0_CNT_ARG( 57),PP0_CNT_ARG( 58),PP0_CNT_ARG( 59),PP0_CNT_ARG( 60),PP0_CNT_ARG( 61),PP0_CNT_ARG( 62),PP0_CNT_ARG( 63)) {return {};}
-#define PP0_CNT_ARG(x) std::conditional_t<(x <= PP0_COUNTER_READ()), int, short>
+#define PP0_COUNTER_INCR_TO_X_PLUS_1(value, type_tag, storage) storage constexpr std::integral_constant<int,value+1> _pp0_impl_counter(type_tag, \
+    PP0_CNT_ARG(value, 0),PP0_CNT_ARG(value, 1),PP0_CNT_ARG(value, 2),PP0_CNT_ARG(value, 3),PP0_CNT_ARG(value, 4),PP0_CNT_ARG(value, 5),PP0_CNT_ARG(value, 6),PP0_CNT_ARG(value, 7), \
+    PP0_CNT_ARG(value, 8),PP0_CNT_ARG(value, 9),PP0_CNT_ARG(value,10),PP0_CNT_ARG(value,11),PP0_CNT_ARG(value,12),PP0_CNT_ARG(value,13),PP0_CNT_ARG(value,14),PP0_CNT_ARG(value,15), \
+    PP0_CNT_ARG(value,16),PP0_CNT_ARG(value,17),PP0_CNT_ARG(value,18),PP0_CNT_ARG(value,19),PP0_CNT_ARG(value,20),PP0_CNT_ARG(value,21),PP0_CNT_ARG(value,22),PP0_CNT_ARG(value,23), \
+    PP0_CNT_ARG(value,24),PP0_CNT_ARG(value,25),PP0_CNT_ARG(value,26),PP0_CNT_ARG(value,27),PP0_CNT_ARG(value,28),PP0_CNT_ARG(value,29),PP0_CNT_ARG(value,30),PP0_CNT_ARG(value,31), \
+    PP0_CNT_ARG(value,32),PP0_CNT_ARG(value,33),PP0_CNT_ARG(value,34),PP0_CNT_ARG(value,35),PP0_CNT_ARG(value,36),PP0_CNT_ARG(value,37),PP0_CNT_ARG(value,38),PP0_CNT_ARG(value,39), \
+    PP0_CNT_ARG(value,40),PP0_CNT_ARG(value,41),PP0_CNT_ARG(value,42),PP0_CNT_ARG(value,43),PP0_CNT_ARG(value,44),PP0_CNT_ARG(value,45),PP0_CNT_ARG(value,46),PP0_CNT_ARG(value,47), \
+    PP0_CNT_ARG(value,48),PP0_CNT_ARG(value,49),PP0_CNT_ARG(value,50),PP0_CNT_ARG(value,51),PP0_CNT_ARG(value,52),PP0_CNT_ARG(value,53),PP0_CNT_ARG(value,54),PP0_CNT_ARG(value,55), \
+    PP0_CNT_ARG(value,56),PP0_CNT_ARG(value,57),PP0_CNT_ARG(value,58),PP0_CNT_ARG(value,59),PP0_CNT_ARG(value,60),PP0_CNT_ARG(value,61),PP0_CNT_ARG(value,62),PP0_CNT_ARG(value,63)) {return {};}
+#define PP0_COUNTER_INCR(type_tag, storage) PP0_COUNTER_INCR_TO_X_PLUS_1(PP0_COUNTER_READ(type_tag), type_tag, storage)
+#define PP0_CNT_ARG(cur,x) std::conditional_t<(x <= cur), int, short>
 
+
+namespace pp0
+{
+    static constexpr std::size_t max_str_lit_len = 256;
+
+    template <std::size_t I, std::size_t N> constexpr char sl_at(const char (&str)[N])
+    {
+        if constexpr(I < N)
+            return str[I];
+        else
+            return '\0';
+    }
+
+    constexpr std::size_t sl_len(const char *str)
+    {
+        for (std::size_t i = 0; i < max_str_lit_len; i++)
+            if (str[i] == '\0')
+                return i;
+        return 0;
+    }
+
+    template <char ...C> struct str_lit
+    {
+        static constexpr char value[] {C..., '\0'};
+        static constexpr int size = sl_len(value);
+
+        template <typename F, typename ...P> struct concat_impl {using type = typename concat_impl<F>::type::template concat_impl<P...>::type;};
+        template <char ...CC> struct concat_impl<str_lit<CC...>> {using type = str_lit<C..., CC...>;};
+        template <typename ...P> using concat = typename concat_impl<P...>::type;
+    };
+
+    template <typename, const char *> struct trim_str_lit_impl;
+    template <std::size_t ...I, const char *S> struct trim_str_lit_impl<std::index_sequence<I...>, S>
+    {
+        using type = str_lit<S[I]...>;
+    };
+    template <std::size_t N, const char *S> using trim_str_lit = typename trim_str_lit_impl<std::make_index_sequence<N>, S>::type;
+
+    #define PP0_STR_LIT(str) ::pp0::trim_str_lit<::pp0::sl_len(str), ::pp0::str_lit<PP0_STR_TO_VA(str)>::value>
+    #define PP0_STR_TO_VA(str) PP0_STR_TO_VA_16(str,0),PP0_STR_TO_VA_16(str,16),PP0_STR_TO_VA_16(str,32),PP0_STR_TO_VA_16(str,48)
+    #define PP0_STR_TO_VA_16(str,off) PP0_STR_TO_VA_4(str,0+off),PP0_STR_TO_VA_4(str,4+off),PP0_STR_TO_VA_4(str,8+off),PP0_STR_TO_VA_4(str,12+off)
+    #define PP0_STR_TO_VA_4(str,off) ::pp0::sl_at<off+0>(str),::pp0::sl_at<off+1>(str),::pp0::sl_at<off+2>(str),::pp0::sl_at<off+3>(str)
+
+    template <char ...C> constexpr str_lit<C...> make_str_lit(str_lit<C...>) {return {};}
+    template <std::size_t N> constexpr auto make_str_lit(const char (&str)[N])
+    {
+        return trim_str_lit<sl_len((const char (&)[N])str), str>{};
+    }
+
+    template <std::size_t A, std::size_t B> struct cexpr_pow {static constexpr std::size_t value = A * cexpr_pow<A,B-1>::value;};
+    template <std::size_t A> struct cexpr_pow<A,0> {static constexpr std::size_t value = 1;};
+    template <std::size_t N, std::size_t X, typename = std::make_index_sequence<X>> struct num_to_sl_impl;
+    template <std::size_t N, std::size_t X, std::size_t ...Seq> struct num_to_sl_impl<N, X, std::index_sequence<Seq...>>
+    {
+        static constexpr auto func()
+        {
+            if constexpr (N >= cexpr_pow<10,X>::value)
+                return num_to_sl_impl<N, X+1>::func();
+            else
+                return str_lit<(N / cexpr_pow<10,X-1-Seq>::value % 10 + '0')...>{};
+        }
+    };
+    template <std::size_t N> using num_to_sl = decltype(num_to_sl_impl<N,1>::func());
+}
 
 // UTILS
 

@@ -15,7 +15,7 @@
 #include "graphics.h"
 #include "input.h"
 #include "input_enums.h"
-#include "math.h"
+#include "extended_math.h"
 #include "network.h"
 #include "os.h"
 #include "preprocessor.h"

@@ -6,7 +6,7 @@
 #include <type_traits>
 
 #include "input_enums.h"
-#include "math.h"
+#include "extended_math.h"
 #include "utils.h"
 
 namespace Input

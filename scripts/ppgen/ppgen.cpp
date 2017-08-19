@@ -7,7 +7,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "0.0.3"
+#define VERSION "0.0.5"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("preprocessor.h");
@@ -91,6 +91,7 @@ struct
 
 constexpr int pp_args = 64;
 constexpr int counter_max = 64;
+constexpr int sl_len_max = 64;
 
 const std::string small_suffixes[] {"", "_A", "_B"},
                   large_suffixes[] {"", "_A"};
@@ -113,17 +114,87 @@ namespace Gen
         for (int i = 0; i < counter_max; i++) l ",0";
         l "))::value)\n";
 
-        // Increment
-        l "#define PP0_COUNTER_INCR(type_tag, storage) storage constexpr std::integral_constant<int,PP0_COUNTER_READ()+1> _pp0_impl_counter(type_tag";
+        // Increment to x+1
+        l "#define PP0_COUNTER_INCR_TO_X_PLUS_1(value, type_tag, storage) storage constexpr std::integral_constant<int,value+1> _pp0_impl_counter(type_tag";
         for (int i = 0; i < counter_max; i++)
         {
             l ",";
             if (i % 8 == 0 && i != 1) l " \\\n    ";
-            l "PP0_CNT_ARG(" << (ss << std::setw(3), i) << ")";
+            l "PP0_CNT_ARG(value," << (ss << std::setw(2), i) << ")";
         }
         l ") {return {};}\n";
+        // Increment by 1
+        l "#define PP0_COUNTER_INCR(type_tag, storage) PP0_COUNTER_INCR_TO_X_PLUS_1(PP0_COUNTER_READ(type_tag), type_tag, storage)\n";
         // Increment helper
-        l "#define PP0_CNT_ARG(x) std::conditional_t<(x <= PP0_COUNTER_READ()), int, short>\n";
+        l "#define PP0_CNT_ARG(cur,x) std::conditional_t<(x <= cur), int, short>\n";
+    }
+
+    void Strings()
+    {
+        r R"(
+namespace pp0
+{
+static constexpr std::size_t max_str_lit_len = 256;
+
+template <std::size_t I, std::size_t N> constexpr char sl_at(const char (&str)[N])
+{
+if constexpr(I < N)
+    return str[I];
+else
+    return '\0';
+}
+
+constexpr std::size_t sl_len(const char *str)
+{
+for (std::size_t i = 0; i < max_str_lit_len; i++)
+    if (str[i] == '\0')
+        return i;
+return 0;
+}
+
+template <char ...C> struct str_lit
+{
+static constexpr char value[] {C..., '\0'};
+static constexpr int size = sl_len(value);
+
+template <typename F, typename ...P> struct concat_impl {using type = typename concat_impl<F>::type::template concat_impl<P...>::type;};
+template <char ...CC> struct concat_impl<str_lit<CC...>> {using type = str_lit<C..., CC...>;};
+template <typename ...P> using concat = typename concat_impl<P...>::type;
+};
+
+template <typename, const char *> struct trim_str_lit_impl;
+template <std::size_t ...I, const char *S> struct trim_str_lit_impl<std::index_sequence<I...>, S>
+{
+using type = str_lit<S[I]...>;
+};
+template <std::size_t N, const char *S> using trim_str_lit = typename trim_str_lit_impl<std::make_index_sequence<N>, S>::type;
+
+#define STR_LIT(str) ::pp0::trim_str_lit<::sl_len(str), ::pp0::str_lit<STR_TO_VA(str)>::value>
+#define STR_TO_VA(str) STR_TO_VA_16(str,0),STR_TO_VA_16(str,16),STR_TO_VA_16(str,32),STR_TO_VA_16(str,48)
+#define STR_TO_VA_16(str,off) STR_TO_VA_4(str,0+off),STR_TO_VA_4(str,4+off),STR_TO_VA_4(str,8+off),STR_TO_VA_4(str,12+off)
+#define STR_TO_VA_4(str,off) ::pp0::sl_at<off+0>(str),::pp0::sl_at<off+1>(str),::pp0::sl_at<off+2>(str),::pp0::sl_at<off+3>(str)
+
+template <char ...C> constexpr str_lit<C...> make_str_lit(str_lit<C...>) {return {};}
+template <std::size_t N> constexpr auto make_str_lit(const char (&str)[N])
+{
+return trim_str_lit<sl_len((const char (&)[N])str), str>{};
+}
+
+template <std::size_t A, std::size_t B> struct cexpr_pow {static constexpr std::size_t value = A * cexpr_pow<A,B-1>::value;};
+template <std::size_t A> struct cexpr_pow<A,0> {static constexpr std::size_t value = 1;};
+template <std::size_t N, std::size_t X, typename = std::make_index_sequence<X>> struct num_to_sl_impl;
+template <std::size_t N, std::size_t X, std::size_t ...Seq> struct num_to_sl_impl<N, X, std::index_sequence<Seq...>>
+{
+static constexpr auto func()
+{
+if constexpr (N >= cexpr_pow<10,X>::value)
+    return num_to_sl_impl<N, X+1>::func();
+else
+    return str_lit<(N / cexpr_pow<10,X-1-Seq>::value % 10 + '0')...>{};
+}
+};
+template <std::size_t N> using num_to_sl = decltype(num_to_sl_impl<N,1>::func());
+})";
     }
 }
 
@@ -136,11 +207,16 @@ int main()
 
 // Version )" VERSION R"( by HolyBlackCat
 
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 
 
 )";
     Gen::Counter();
+    l "\n\n";
+
+    Gen::Strings();
     l "\n\n";
 
     // Utils

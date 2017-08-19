@@ -1,7 +1,7 @@
-#ifndef MATH_H_INCLUDED
-#define MATH_H_INCLUDED
+#ifndef EXTENDED_MATH_H_INCLUDED
+#define EXTENDED_MATH_H_INCLUDED
 
-// Version 2.4.7 by HolyBlackCat
+// Version 2.4.9 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>
@@ -177,7 +177,7 @@ namespace Math
                               format_ch == 'x' ||
                               format_ch == 'X', "Invalid format char for the type.");
 
-                using signed_type = std::make_signed_t<type>;
+                using signed_type = typename std::conditional_t<std::is_same_v<type, bool>, std::enable_if<1, bool>, std::make_signed<type>>::type;
                 if constexpr (std::is_same_v<signed_type, long long>)
                 {
                     static constexpr char format[] = {'%', flags..., '*', '.', '*', 'l', 'l', format_ch, '\0'};

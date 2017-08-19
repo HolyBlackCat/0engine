@@ -17,20 +17,36 @@ void Resize()
     Graphics::ViewportFullscreen();
 }
 
-
-
-struct S
+struct A
 {
-    Reflectable(S)
+    struct B
+    {
+        struct C
+        {
+            Reflectable(C)
+
+            Reflect
+            (
+                (int)(meh),
+            )
+        };
+
+        Reflectable(B)
+
+        Reflect
+        (
+            (C)(c),
+            (int)(foo,bar),
+        )
+    };
+
+    Reflectable(A)
 
     Reflect
     (
-        (int)(a,b),
-        (int)(c,d)(=42),
-      (private:),
-        (int)(e)(=9001),
-      (public:),
-        (float)(f,g,h),
+        (B)(b),
+        (int)(meow),
+        (float)(test),
     )
 };
 
@@ -39,16 +55,9 @@ void Boot()
     MarkLocation("Boot");
 
 
-    S s;
-    s.a = s.b = 1;
-    s.f = s.g = s.h = 2;
+    A a{};
 
-    Reflection(s).for_each(
-        [](auto ref)
-        {
-            std::cout << ref.type_name << " " << ref.name << " = " << ref.value << '\n';
-        }
-    );
+    std::cout << Reflection(&a).to_string();
 
     while (1)
     {

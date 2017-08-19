@@ -6,10 +6,10 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.7"
+#define VERSION "2.4.9"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
-std::ofstream out_file("math.h");
+std::ofstream out_file("extended_math.h");
 
 int indentation = 0;
 bool new_line = 0;
@@ -270,7 +270,7 @@ static_assert(format_ch == 'u' ||
               format_ch == 'x' ||
               format_ch == 'X', "Invalid format char for the type.");
 
-using signed_type = std::make_signed_t<type>;
+using signed_type = typename std::conditional_t<std::is_same_v<type, bool>, std::enable_if<1, bool>, std::make_signed<type>>::type;
 if constexpr (std::is_same_v<signed_type, long long>)
 {
 static constexpr char format[] = {'%', flags..., '*', '.', '*', 'l', 'l', format_ch, '\0'};
@@ -1822,8 +1822,8 @@ return 0;
 int main()
 {
     r R"(
-#ifndef MATH_H_INCLUDED
-#define MATH_H_INCLUDED
+#ifndef EXTENDED_MATH_H_INCLUDED
+#define EXTENDED_MATH_H_INCLUDED
 
 // Version )" VERSION R"( by HolyBlackCat
 

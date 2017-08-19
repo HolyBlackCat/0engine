@@ -146,7 +146,7 @@
 			<Option compile="1" />
 			<Option weight="25" />
 		</Unit>
-		<Unit filename="src/math.h" />
+		<Unit filename="src/maths.h" />
 		<Unit filename="src/network.cpp" />
 		<Unit filename="src/network.h" />
 		<Unit filename="src/os.h" />
