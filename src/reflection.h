@@ -15,14 +15,7 @@ namespace Refl
     struct field_counter_tag {};
 
 
-    struct Context_Nothing
-    {
-        using context_tag = void;
-
-        using name_str = pp0::str_lit<>;
-        static constexpr const char *name = name_str::value;
-    };
-    template <typename Data> struct Context_Field
+    template <typename Data> struct Context
     {
         /* `Data` must provide:
          *   using name_str = PP0_STR_LIT("blah"); // Aka pp0::str_lit<'b','l','a','h'>.
@@ -30,8 +23,6 @@ namespace Refl
          *   using enclosing_class_type = T_without_cv;
          *   static constexpr ?? enclosing_class_type::* mem_ptr = foo;
          */
-
-        using context_tag = void;
 
         static_assert(!std::is_const_v   <typename Data::enclosing_class_type> &&
                       !std::is_volatile_v<typename Data::enclosing_class_type>, "Data member types must have no cv-qualifiers.");
@@ -42,73 +33,102 @@ namespace Refl
         static constexpr auto enclosing_class_type::* mem_ptr = Data::mem_ptr;
         using mem_ptr_type = decltype(mem_ptr);
     };
+    template <> struct Context<void>
+    {
+        using name_str = pp0::str_lit<>;
+        static constexpr const char *name = name_str::value;
+    };
+
+
+    template <typename T, typename Context = void> struct Reflection; // forward declaration
 
 
     namespace Primitive
     {
-        /* `Primitive::Traits<T>` must provide:
+        /* `Primitive::Traits<T,T_no_cv>` must provide:
          *   static std::string to_string(T *) {}
          *   static std::string to_string_pretty(T *) {}
          */
 
-        template <typename T, typename = void> struct Traits
+        template <typename T, typename T_no_cv, typename = void> struct Traits
         {
             static std::string to_string(T *) {return "??";}
             static std::string to_string_pretty(T *ptr) {return to_string(ptr);}
         };
 
-        template <typename T> struct Traits<T, std::enable_if_t<std::is_arithmetic_v<T>, void>>
+        template <typename T, typename T_no_cv> struct Traits<T, T_no_cv, std::enable_if_t<std::is_arithmetic_v<T_no_cv>, void>>
         {
             static std::string to_string(T *ptr) {return Math::num_to_string<T>(*ptr);}
             static std::string to_string_pretty(T *ptr) {return to_string(ptr);}
         };
 
-        template <> struct Traits<bool, void>
+        template <typename T> struct Traits<T, bool, void>
         {
             static std::string to_string(bool *ptr) {return Math::num_to_string<bool>(*ptr);}
             static std::string to_string_pretty(bool *ptr) {return (*ptr ? "true" : "false");}
         };
     }
 
+    namespace Structure
+    {
+        /* `Structure::Traits<T,T_no_cv>` (or a type returned by ADL call of `_refl_tratis()`) must provide:
+         *   template <int I> static auto field(T *ptr) {} // (or equivalent) Returns class Reflection to a field.
+         *
+         *   One of: static constexpr int field_count = blah;          // For actual `Structure::Traits`.
+         *           PP0_COUNTER tagged with ::Refl::field_counter_tag // For structures using `_refl_tratis()`.
+         */
 
+        template <typename T, typename T_no_cv, typename = void> struct Traits
+        {
+            using not_found = void;
+        };
+        template <typename T, typename T_no_cv> struct Traits<T, T_no_cv, std::void_t<decltype(_refl_traits(std::declval<T>()))>> : decltype(_refl_traits(std::declval<T>()))
+        {
+            static constexpr int field_count = PP0_COUNTER_READ_CONTEXT(Refl::field_counter_tag, T::);
+        };
 
-    template <typename T, typename Context = Context_Nothing> struct Reflection; // forward declaration
+        template <typename T, typename TT, unsigned int D> struct Traits<T, vec<D,TT>, void>
+        {
+            using type = T;
+            using type_no_cv = vec<D,TT>;
+
+            static constexpr int field_count = D;
+
+            template <char Name, TT type_no_cv::* MemPtr> struct field_data
+            {
+                using name_str = pp0::str_lit<Name>;
+                static constexpr const char *name = name_str::value;
+                using enclosing_class_type = type_no_cv;
+                static constexpr auto mem_ptr = MemPtr;
+            };
+
+            template <int I> static auto field(type *ptr)
+            {
+                     if constexpr (I == 0) return Reflection<TT, field_data<'x',&type_no_cv::x>>(&ptr->x);
+                else if constexpr (I == 1) return Reflection<TT, field_data<'y',&type_no_cv::y>>(&ptr->y);
+                else if constexpr (I == 2) return Reflection<TT, field_data<'z',&type_no_cv::z>>(&ptr->z);
+                else             /*I == 3*/return Reflection<TT, field_data<'w',&type_no_cv::w>>(&ptr->w);
+            }
+        };
+    }
 
 
     enum Category {primitive, structure};
 
 
-    template <typename T, typename = void> struct Wrapper
+    template <typename T, typename = void> struct Wrapper // structures
     {
-        static constexpr Category category = primitive;
-
-        T &value;
-        Wrapper(T *ptr) : value(*ptr) {}
-
-        std::string to_string() const
-        {
-            return Primitive::Traits<T>::to_string(&value);
-        }
-        std::string to_string_pretty() const
-        {
-            return Primitive::Traits<T>::to_string_pretty(&value);
-        }
-    };
-    template <typename T> struct Wrapper<T, std::void_t<decltype(_refl_traits(std::declval<T>()))>>
-    {
-        using refl_traits = decltype(_refl_traits(std::declval<T>()));
+        using traits = Structure::Traits<T,std::remove_cv_t<T>>;
 
         static constexpr Category category = structure;
 
         T &value;
         Wrapper(T *ptr) : value(*ptr) {}
 
-        static constexpr int field_count = PP0_COUNTER_READ_CONTEXT(Refl::field_counter_tag, T::);
-
         template <int I> auto field_at() const // Returns class Reflection for the field.
         {
-            static_assert(I >= 0 && I < field_count, "Field index is out of range.");
-            return refl_traits::template field<I>(&value);
+            static_assert(I >= 0 && I < traits::field_count, "Field index is out of range.");
+            return traits::template field<I>(&value);
         }
 
         template <typename F, int ...Seq> void for_fields_at(F &&func, int_seq<Seq...>)
@@ -122,11 +142,11 @@ namespace Refl
 
         template <typename F> void for_each_field(F &&func)
         {
-            for_fields_at((F&&)func, make_int_seq<field_count>{});
+            for_fields_at((F&&)func, make_int_seq<traits::field_count>{});
         }
         template <typename F> void for_each_field(F &&func) const
         {
-            for_fields_at((F&&)func, make_int_seq<field_count>{});
+            for_fields_at((F&&)func, make_int_seq<traits::field_count>{});
         }
 
         std::string to_string() const
@@ -143,11 +163,11 @@ namespace Refl
         {
             constexpr char indentation[] = ".";
 
-            if (field_count == 0)
+            if (traits::field_count == 0)
                 return "{}";
 
             std::string ret;
-            for_each_field([&ret, fields_left = field_count](auto refl) mutable
+            for_each_field([&ret, fields_left = traits::field_count](auto refl) mutable
             {
                 if (refl.category == structure)
                 {
@@ -184,12 +204,28 @@ namespace Refl
             return ret;
         }
     };
-
-
-    template <typename T, typename Context /* = Context_Nothing */> struct Reflection : Context, Wrapper<T>
+    template <typename T> struct Wrapper<T, std::void_t<typename Structure::Traits<T,std::remove_cv_t<T>>::not_found>> // primitives
     {
-        static_assert(std::is_same_v<typename Context::context_tag, void>, "Invalid context.");
+        using traits = Primitive::Traits<T,std::remove_cv_t<T>>;
 
+        static constexpr Category category = primitive;
+
+        T &value;
+        Wrapper(T *ptr) : value(*ptr) {}
+
+        std::string to_string() const
+        {
+            return traits::to_string(&value);
+        }
+        std::string to_string_pretty() const
+        {
+            return traits::to_string_pretty(&value);
+        }
+    };
+
+
+    template <typename T, typename ContextData /* = void */> struct Reflection : Context<ContextData>, Wrapper<T>
+    {
         using type_cv = T;
         using type    = std::remove_cv_t<T>;
         static constexpr bool is_const    = std::is_const_v   <type_cv>;
@@ -197,24 +233,6 @@ namespace Refl
 
         Reflection(type_cv *ptr) : Wrapper<T>(ptr) {}
     };
-
-
-
-
-
-    /*
-    template <typename T> class Reflection
-    {
-      public:
-        T &ref;
-        Reflection(T &ref) : ref(ref) {}
-
-        static constexpr const char name[] = T::_refl_name;
-        static constexpr int field_count = PP0_COUNTER_READ_CONTEXT(ReflectionBase::field_counter_tag, T::);
-
-
-    };
-    */
 }
 
 
@@ -278,14 +296,14 @@ using namespace Refl;
     REFL0_Reflect_MakeFunc(name_, const,         ) \
     REFL0_Reflect_MakeFunc(name_,      , volatile) \
     REFL0_Reflect_MakeFunc(name_, const, volatile) \
-    PP0_COUNTER_INCR_TO_X_PLUS_1(_refl_field_index_##name_, ::Refl::field_counter_tag, static)
+    PP0_COUNTER_INCR_TO_X(_refl_field_index_##name_+1, ::Refl::field_counter_tag, static)
 
 #define REFL0_Reflect_MakeFunc(name_, c_, v_) \
     auto _refl_field_by_tag(std::integral_constant<int,_refl_field_index_##name_>) c_ v_ \
     { \
         using this_t = std::remove_reference_t<decltype(*this)>; \
         using data = _refl_field_data_##name_<this_t>; \
-        return Reflection<c_ v_ _refl_field_type_##name_, ::Refl::Context_Field<data>>(&(this->*data::mem_ptr)); \
+        return Reflection<c_ v_ _refl_field_type_##name_, data>(&(this->*data::mem_ptr)); \
     }
 
 

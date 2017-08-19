@@ -7,7 +7,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "0.0.5"
+#define VERSION "0.0.6"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("preprocessor.h");
@@ -115,7 +115,7 @@ namespace Gen
         l "))::value)\n";
 
         // Increment to x+1
-        l "#define PP0_COUNTER_INCR_TO_X_PLUS_1(value, type_tag, storage) storage constexpr std::integral_constant<int,value+1> _pp0_impl_counter(type_tag";
+        l "#define PP0_COUNTER_INCR_TO_X(value, type_tag, storage) storage constexpr std::integral_constant<int,value> _pp0_impl_counter(type_tag";
         for (int i = 0; i < counter_max; i++)
         {
             l ",";
@@ -124,9 +124,9 @@ namespace Gen
         }
         l ") {return {};}\n";
         // Increment by 1
-        l "#define PP0_COUNTER_INCR(type_tag, storage) PP0_COUNTER_INCR_TO_X_PLUS_1(PP0_COUNTER_READ(type_tag), type_tag, storage)\n";
+        l "#define PP0_COUNTER_INCR(type_tag, storage) PP0_COUNTER_INCR_TO_X(PP0_COUNTER_READ(type_tag)+1, type_tag, storage)\n";
         // Increment helper
-        l "#define PP0_CNT_ARG(cur,x) std::conditional_t<(x <= cur), int, short>\n";
+        l "#define PP0_CNT_ARG(cur,x) std::conditional_t<(x < cur), int, short>\n";
     }
 
     void Strings()
@@ -169,10 +169,10 @@ using type = str_lit<S[I]...>;
 };
 template <std::size_t N, const char *S> using trim_str_lit = typename trim_str_lit_impl<std::make_index_sequence<N>, S>::type;
 
-#define STR_LIT(str) ::pp0::trim_str_lit<::sl_len(str), ::pp0::str_lit<STR_TO_VA(str)>::value>
-#define STR_TO_VA(str) STR_TO_VA_16(str,0),STR_TO_VA_16(str,16),STR_TO_VA_16(str,32),STR_TO_VA_16(str,48)
-#define STR_TO_VA_16(str,off) STR_TO_VA_4(str,0+off),STR_TO_VA_4(str,4+off),STR_TO_VA_4(str,8+off),STR_TO_VA_4(str,12+off)
-#define STR_TO_VA_4(str,off) ::pp0::sl_at<off+0>(str),::pp0::sl_at<off+1>(str),::pp0::sl_at<off+2>(str),::pp0::sl_at<off+3>(str)
+#define PP0_STR_LIT(str) ::pp0::trim_str_lit<::pp0::sl_len(str), ::pp0::str_lit<PP0_STR_TO_VA(str)>::value>
+#define PP0_STR_TO_VA(str) PP0_STR_TO_VA_16(str,0),PP0_STR_TO_VA_16(str,16),PP0_STR_TO_VA_16(str,32),PP0_STR_TO_VA_16(str,48)
+#define PP0_STR_TO_VA_16(str,off) PP0_STR_TO_VA_4(str,0+off),PP0_STR_TO_VA_4(str,4+off),PP0_STR_TO_VA_4(str,8+off),PP0_STR_TO_VA_4(str,12+off)
+#define PP0_STR_TO_VA_4(str,off) ::pp0::sl_at<off+0>(str),::pp0::sl_at<off+1>(str),::pp0::sl_at<off+2>(str),::pp0::sl_at<off+3>(str)
 
 template <char ...C> constexpr str_lit<C...> make_str_lit(str_lit<C...>) {return {};}
 template <std::size_t N> constexpr auto make_str_lit(const char (&str)[N])

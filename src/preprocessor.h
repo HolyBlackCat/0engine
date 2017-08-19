@@ -1,7 +1,7 @@
 #ifndef PREPROCESSOR_H_INCLUDED
 #define PREPROCESSOR_H_INCLUDED
 
-// Version 0.0.5 by HolyBlackCat
+// Version 0.0.6 by HolyBlackCat
 
 #include <cstddef>
 #include <type_traits>
@@ -13,7 +13,7 @@
 #define PP0_COUNTER_DEFINE(type_tag, storage) storage constexpr std::integral_constant<int,0> _pp0_impl_counter(type_tag,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,short) {return {};}
 #define PP0_COUNTER_READ(type_tag) PP0_COUNTER_READ_CONTEXT(type_tag,)
 #define PP0_COUNTER_READ_CONTEXT(type_tag, context) (void(), decltype(context _pp0_impl_counter(type_tag{},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))::value)
-#define PP0_COUNTER_INCR_TO_X_PLUS_1(value, type_tag, storage) storage constexpr std::integral_constant<int,value+1> _pp0_impl_counter(type_tag, \
+#define PP0_COUNTER_INCR_TO_X(value, type_tag, storage) storage constexpr std::integral_constant<int,value> _pp0_impl_counter(type_tag, \
     PP0_CNT_ARG(value, 0),PP0_CNT_ARG(value, 1),PP0_CNT_ARG(value, 2),PP0_CNT_ARG(value, 3),PP0_CNT_ARG(value, 4),PP0_CNT_ARG(value, 5),PP0_CNT_ARG(value, 6),PP0_CNT_ARG(value, 7), \
     PP0_CNT_ARG(value, 8),PP0_CNT_ARG(value, 9),PP0_CNT_ARG(value,10),PP0_CNT_ARG(value,11),PP0_CNT_ARG(value,12),PP0_CNT_ARG(value,13),PP0_CNT_ARG(value,14),PP0_CNT_ARG(value,15), \
     PP0_CNT_ARG(value,16),PP0_CNT_ARG(value,17),PP0_CNT_ARG(value,18),PP0_CNT_ARG(value,19),PP0_CNT_ARG(value,20),PP0_CNT_ARG(value,21),PP0_CNT_ARG(value,22),PP0_CNT_ARG(value,23), \
@@ -22,8 +22,8 @@
     PP0_CNT_ARG(value,40),PP0_CNT_ARG(value,41),PP0_CNT_ARG(value,42),PP0_CNT_ARG(value,43),PP0_CNT_ARG(value,44),PP0_CNT_ARG(value,45),PP0_CNT_ARG(value,46),PP0_CNT_ARG(value,47), \
     PP0_CNT_ARG(value,48),PP0_CNT_ARG(value,49),PP0_CNT_ARG(value,50),PP0_CNT_ARG(value,51),PP0_CNT_ARG(value,52),PP0_CNT_ARG(value,53),PP0_CNT_ARG(value,54),PP0_CNT_ARG(value,55), \
     PP0_CNT_ARG(value,56),PP0_CNT_ARG(value,57),PP0_CNT_ARG(value,58),PP0_CNT_ARG(value,59),PP0_CNT_ARG(value,60),PP0_CNT_ARG(value,61),PP0_CNT_ARG(value,62),PP0_CNT_ARG(value,63)) {return {};}
-#define PP0_COUNTER_INCR(type_tag, storage) PP0_COUNTER_INCR_TO_X_PLUS_1(PP0_COUNTER_READ(type_tag), type_tag, storage)
-#define PP0_CNT_ARG(cur,x) std::conditional_t<(x <= cur), int, short>
+#define PP0_COUNTER_INCR(type_tag, storage) PP0_COUNTER_INCR_TO_X(PP0_COUNTER_READ(type_tag)+1, type_tag, storage)
+#define PP0_CNT_ARG(cur,x) std::conditional_t<(x < cur), int, short>
 
 
 namespace pp0

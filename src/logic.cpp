@@ -19,34 +19,13 @@ void Resize()
 
 struct A
 {
-    struct B
-    {
-        struct C
-        {
-            Reflectable(C)
-
-            Reflect
-            (
-                (int)(meh),
-            )
-        };
-
-        Reflectable(B)
-
-        Reflect
-        (
-            (C)(c),
-            (int)(foo,bar),
-        )
-    };
-
     Reflectable(A)
 
     Reflect
     (
-        (B)(b),
-        (int)(meow),
-        (float)(test),
+        (fmat3)(m),
+        (int)(a)(=1),
+        (float)(b)(=2),
     )
 };
 
@@ -55,9 +34,10 @@ void Boot()
     MarkLocation("Boot");
 
 
-    A a{};
+    A a;
+    a.m = fmat3::rotate({1,1,1},1);
 
-    std::cout << Reflection(&a).to_string();
+    std::cout << Reflection(&a).to_string_pretty();
 
     while (1)
     {
