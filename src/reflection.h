@@ -39,50 +39,306 @@ namespace Refl
         static constexpr const char *name = name_str::value;
     };
 
-
-    template <typename T, typename Context = void> struct Reflection; // forward declaration
-
-
-    namespace Primitive
+    struct GenericContext
     {
-        /* `Primitive::Traits<T,T_no_cv>` must provide:
-         *   static std::string to_string(T *) {}
-         *   static std::string to_string_pretty(T *) {}
-         */
+        std::string name;
 
-        template <typename T, typename T_no_cv, typename = void> struct Traits
-        {
-            static std::string to_string(T *) {return "??";}
-            static std::string to_string_pretty(T *ptr) {return to_string(ptr);}
-        };
+        GenericContext() : GenericContext(Context<void>{}) {}
+        template <typename Data> GenericContext(Context<Data>) : name(Context<Data>::name) {}
+    };
 
-        template <typename T, typename T_no_cv> struct Traits<T, T_no_cv, std::enable_if_t<std::is_arithmetic_v<T_no_cv>, void>>
-        {
-            static std::string to_string(T *ptr) {return Math::num_to_string<T>(*ptr);}
-            static std::string to_string_pretty(T *ptr) {return to_string(ptr);}
-        };
 
-        template <typename T> struct Traits<T, bool, void>
+    enum Category {primitive, structure};
+
+
+    class GenericReflection
+    {
+        struct impl_table
         {
-            static std::string to_string(bool *ptr) {return Math::num_to_string<bool>(*ptr);}
-            static std::string to_string_pretty(bool *ptr) {return (*ptr ? "true" : "false");}
+            Category category;
+
+            int               (*field_count     )(const void *     );
+            GenericReflection (*field           )(const void *, int);
+            std::string       (*to_string       )(const void *     );
+            std::string       (*to_string_pretty)(const void *     );
         };
+        impl_table *pimpl;
+      protected:
+        const void *ptr;
+        GenericContext con;
+        GenericReflection(const void *ptr, GenericContext con) : ptr(ptr), con(con) {set_impl_table<void>();}
+        template <typename T> void set_impl_table()
+        {
+            if constexpr (std::is_same_v<T, void>)
+            {
+                static impl_table table
+                {
+                    primitive,
+
+                    [](const void *     )->int              {return 0;       },
+                    [](const void *, int)->GenericReflection{return {};      },
+                    [](const void *     )->std::string      {return "<null>";},
+                    [](const void *     )->std::string      {return "<null>";},
+                };
+                pimpl = &table;
+            }
+            else
+            {
+                static impl_table table
+                {
+                    T::impl_category,
+
+                    T::impl_field_count,
+                    T::impl_field,
+                    T::impl_to_string,
+                    T::impl_to_string_pretty,
+                };
+                pimpl = &table;
+            }
+        }
+      public:
+        GenericReflection() : ptr(0) {}
+        const void *pointer() const {return ptr;}
+        const GenericContext &context() const {return con;}
+
+        Category category() const
+        {
+            return pimpl->category;
+        }
+        int field_count() const
+        {
+            return pimpl->field_count(ptr);
+        };
+        GenericReflection field(int index) const
+        {
+            return pimpl->field(ptr, index);
+        }
+        std::string to_string() const
+        {
+            return pimpl->to_string(ptr);
+        }
+        std::string to_string_pretty() const
+        {
+            return pimpl->to_string_pretty(ptr);
+        }
+    };
+
+
+    /* `refl_traits_(const volatile T *)` (a member of ::Refl namespace or found by ADL) must return a type providing:
+     *
+     *   static constexpr Category category() {return ::Refl[::Category]::blah;}
+     *
+     *   static [constexpr] int field_count(const T *) {} // `constexpr` is mandratory for `category == structure`, then the parameter must be unused.
+     *
+     *   if category = structure
+     *   (
+     *     // Returns class Reflection<..> to a field.
+     *     template <int I, typename T_with_opt_cv> static auto cexpr_field(T_with_opt_cv *ptr) {}
+     *   )
+     *
+     *   if category = primitive
+     *   (
+     *     static std::string to_string(const T *) {}
+     *     static std::string to_string_pretty(const T *) {}
+     *   )
+     *
+     * `refl_traits_structure_generated_(const volatile T *)` can be used instead, with following differences:
+     *   field_count() is replaced by a PP0_COUNTER tagged with ::Refl::field_counter_tag.
+     */
+
+    // For generated structs
+    template <typename T, typename = decltype(refl_traits_structure_generated_(std::declval<const volatile T *>()))> constexpr auto refl_traits_(const volatile T *)
+    {
+        struct S : decltype(refl_traits_structure_generated_(std::declval<const volatile T *>()))
+        {
+            static constexpr Category category() {return structure;}
+
+            static constexpr int field_count(const T *)
+            {
+                return PP0_COUNTER_READ_CONTEXT(field_counter_tag, T::);
+            }
+        };
+        return S{};
     }
 
+
+    inline namespace PrimitiveTraits
+    {
+        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> auto refl_traits_(const volatile T *)
+        {
+            struct S
+            {
+                static constexpr Category category() {return primitive;}
+                static constexpr int field_count(const T *) {return 0;}
+                static std::string to_string(const T *ptr) {return Math::num_to_string<T>(*ptr);}
+                static std::string to_string_pretty(const T *ptr) {return to_string(ptr);}
+            };
+            return S{};
+        }
+
+        auto refl_traits_(const volatile bool *)
+        {
+            struct S
+            {
+                static constexpr Category category() {return primitive;}
+                static constexpr int field_count(const bool *) {return 0;}
+                static std::string to_string(const bool *ptr) {return (*ptr ? "true" : "false");}
+                static std::string to_string_pretty(const bool *ptr) {return to_string(ptr);}
+            };
+            return S{};
+        }
+    }
+
+
+    template <typename T> struct DefaultTraits
+    {
+        static constexpr Category category() {return primitive;}
+        static constexpr int field_count(const T *) {return 0;}
+        static std::string to_string(const T *) {return "??";}
+        static std::string to_string_pretty(const T *) {return "??";}
+    };
+
+    template <typename T, typename = void> struct Traits_impl
+    {
+        using type = DefaultTraits<T>;
+    };
+    template <typename T> struct Traits_impl<T, std::void_t<decltype(refl_traits_(std::declval<const volatile T *>()))>>
+    {
+        using type = decltype(refl_traits_(std::declval<const volatile T *>()));
+    };
+
+    template <typename T> using Traits = typename Traits_impl<T>::type;
+
+
+    template <typename T, Category = Traits<T>::category> struct CategoryReflection;
+    template <typename T> struct CategoryReflection<T, primitive> : GenericReflection
+    {
+        static constexpr Category impl_category = primitive;
+
+        CategoryReflection(const void *ptr, GenericContext con) : GenericReflection(ptr, con)
+        {
+            set_impl_table<CategoryReflection>();
+        }
+
+        static int impl_field_count(const void *)
+        {
+            return 0;
+        }
+        static GenericReflection impl_field(const void *, int /*index*/)
+        {
+            return {};
+        }
+
+        static std::string impl_to_string(const void *ptr)
+        {
+            return Traits<T>::to_string((const T *)ptr);
+        }
+        static std::string impl_to_string_pretty(const void *ptr)
+        {
+            return Traits<T>::to_string_pretty((const T *)ptr);
+        }
+    };
+    template <typename T> struct CategoryReflection<T, structure> : GenericReflection
+    {
+        static constexpr Category impl_category = structure;
+
+        CategoryReflection(const void *ptr, GenericContext con) : GenericReflection(ptr, con)
+        {
+            set_impl_table<CategoryReflection>();
+        }
+
+        static int impl_field_count(const void *)
+        {
+            return Traits<T>::field_count(0);
+        }
+
+      private:
+        template <int ...Seq> static GenericReflection impl_field_impl(const void *ptr, int index, int_seq<Seq...>)
+        {
+            if (index < 0 || index >= Traits<T>::field_count(0))
+                return {};
+
+            GenericReflection ret;
+            ( (index-- == 0 ? void(ret = Traits<T>::template cexpr_field<Seq>((T *)ptr)) : void()) , ... );
+            return ret;
+        }
+      public:
+        static GenericReflection impl_field(const void *ptr, int index)
+        {
+            return impl_field_impl(ptr, index, make_int_seq<Traits<T>::field_count(0)>{});
+        }
+        template <int I> auto field() const
+        {
+            return Traits<T>::template cexpr_field<I>((T *)pointer());
+        }
+
+        static std::string impl_to_string(const void *ptr)
+        {
+            std::string ret = "{";
+            for (int i = 0; i < impl_field_count(ptr); i++)
+            {
+                if (i != 0) ret += ",";
+                ret += impl_field(ptr, i).to_string();
+            }
+            ret += "}";
+            return ret;
+        }
+        static std::string impl_to_string_pretty(const void *ptr)
+        {
+            //auto indent = [](std::string, )
+            std::string ret;
+            int field_c = impl_field_count(ptr);
+            for (int i = 0; i < field_c; i++)
+            {
+                auto f = impl_field(ptr, i);
+
+                if (i != 0) ret += "\n";
+                ret += (i != field_c-1 ? "|-" : "`-");
+                ret += f.context().name;
+                if (f.category() == structure)
+                {
+                    std::string tmp = "\n" + f.to_string_pretty();
+                    auto lf_c = std::count(tmp.begin(), tmp.end(), '\n');
+                    std::string indented;
+                    indented.reserve(tmp.size() + lf_c*2);
+                    for (char ch : tmp)
+                    {
+                        if (ch != '\n')
+                            indented += ch;
+                        else
+                            indented += (i != field_c-1 ? "\n| " : "\n  ");
+                    }
+                    ret += indented;
+                }
+                else
+                {
+                    ret += "=";
+                    ret += f.to_string_pretty();
+                }
+            }
+            return ret;
+        }
+    };
+
+    template <typename T, typename ObjContext = void> struct Reflection : CategoryReflection<T, Traits<T>::category()>
+    {
+        using type = T;
+        using type_no_cv = std::remove_cv_t<T>;
+        static constexpr bool is_const = std::is_const_v<T>;
+
+        Reflection(T &ref) : CategoryReflection<T, Traits<T>::category()>(&ref, Context<ObjContext>{}) {}
+        T &value() const {return *(T*)this->pointer();}
+    };
+
+
+/*
     namespace Structure
     {
-        /* `Structure::Traits<T,T_no_cv>` (or a type returned by ADL call of `_refl_tratis()`) must provide:
-         *   template <int I> static auto field(T *ptr) {} // (or equivalent) Returns class Reflection to a field.
-         *
-         *   One of: static constexpr int field_count = blah;          // For actual `Structure::Traits`.
-         *           PP0_COUNTER tagged with ::Refl::field_counter_tag // For structures using `_refl_tratis()`.
-         */
-
         template <typename T, typename T_no_cv, typename = void> struct Traits
         {
             using not_found = void;
         };
-        template <typename T, typename T_no_cv> struct Traits<T, T_no_cv, std::void_t<decltype(_refl_traits(std::declval<T>()))>> : decltype(_refl_traits(std::declval<T>()))
+        template <typename T, typename T_no_cv> struct Traits<T, T_no_cv, std::void_t<decltype(refl_traits_(std::declval<T>()))>> : decltype(refl_traits_(std::declval<T>()))
         {
             static constexpr int field_count = PP0_COUNTER_READ_CONTEXT(Refl::field_counter_tag, T::);
         };
@@ -108,14 +364,10 @@ namespace Refl
                      if constexpr (I == 0) return Reflection<vec_field_type, field_data<'x',&type_no_cv::x>>(&ptr->x);
                 else if constexpr (I == 1) return Reflection<vec_field_type, field_data<'y',&type_no_cv::y>>(&ptr->y);
                 else if constexpr (I == 2) return Reflection<vec_field_type, field_data<'z',&type_no_cv::z>>(&ptr->z);
-                else             /*I == 3*/return Reflection<vec_field_type, field_data<'w',&type_no_cv::w>>(&ptr->w);
+                else                       return Reflection<vec_field_type, field_data<'w',&type_no_cv::w>>(&ptr->w);
             }
         };
     }
-
-
-    enum Category {primitive, structure};
-
 
     template <typename T, typename = void> struct Wrapper // structures
     {
@@ -223,9 +475,10 @@ namespace Refl
             return traits::to_string_pretty(&value);
         }
     };
+*/
 
-
-    template <typename T, typename ContextData /* = void */> struct Reflection : Context<ContextData>, Wrapper<T>
+/*
+    template <typename T, typename ContextData > struct Reflection : Context<ContextData>, Wrapper<T>
     {
         using type_cv = T;
         using type    = std::remove_cv_t<T>;
@@ -233,15 +486,12 @@ namespace Refl
         static constexpr bool is_volatile = std::is_volatile_v<type_cv>;
 
         Reflection(type_cv *ptr) : Wrapper<T>(ptr) {}
-    };
+    };*/
 }
 
 
-using namespace Refl;
-
-
-#define REFL0_Support_Integral(type) \
-    auto _refl_traits()
+using Refl::GenericReflection;
+using Refl::Reflection;
 
 
 #define Reflectable(name_) \
@@ -250,17 +500,16 @@ using namespace Refl;
     static constexpr const char *name = _refl_name_str::value; \
     template <int I> auto _refl_field()                {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
     template <int I> auto _refl_field() const          {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
-    template <int I> auto _refl_field()       volatile {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
-    template <int I> auto _refl_field() const volatile {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
     PP0_COUNTER_DEFINE(::Refl::field_counter_tag,static) \
     struct _refl_traits_t \
     { \
-        template <int I, typename T> static auto field(T *ptr) {return ptr->template _refl_field<I>();} \
+        template <int I, typename T> static auto cexpr_field(T *ptr) {return ptr->template _refl_field<I>();} \
     }; \
-    friend constexpr auto _refl_traits(name_) \
+    friend constexpr auto refl_traits_structure_generated_(const volatile name_ *) \
     { \
         return _refl_traits_t{}; \
-    };
+    }; \
+    Reflect
 
 
 #define Reflect(...) \
@@ -293,18 +542,16 @@ using namespace Refl;
         static constexpr const char *name = name_str::value; \
         static constexpr type This::*mem_ptr = &This::name_; \
     }; \
-    REFL0_Reflect_MakeFunc(name_,      ,         ) \
-    REFL0_Reflect_MakeFunc(name_, const,         ) \
-    REFL0_Reflect_MakeFunc(name_,      , volatile) \
-    REFL0_Reflect_MakeFunc(name_, const, volatile) \
+    REFL0_Reflect_MakeFunc(name_,      ) \
+    REFL0_Reflect_MakeFunc(name_, const) \
     PP0_COUNTER_INCR_TO_X(_refl_field_index_##name_+1, ::Refl::field_counter_tag, static)
 
-#define REFL0_Reflect_MakeFunc(name_, c_, v_) \
-    auto _refl_field_by_tag(std::integral_constant<int,_refl_field_index_##name_>) c_ v_ \
+#define REFL0_Reflect_MakeFunc(name_, c_) \
+    auto _refl_field_by_tag(std::integral_constant<int,_refl_field_index_##name_>) c_ \
     { \
         using this_t = std::remove_reference_t<decltype(*this)>; \
         using data = _refl_field_data_##name_<this_t>; \
-        return Reflection<c_ v_ _refl_field_type_##name_, data>(&(this->*data::mem_ptr)); \
+        return Reflection<c_ _refl_field_type_##name_, data>(this->*data::mem_ptr); \
     }
 
 

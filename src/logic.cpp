@@ -17,15 +17,30 @@ void Resize()
     Graphics::ViewportFullscreen();
 }
 
+struct C
+{
+    Reflectable(C)
+    (
+        (int)(foo,bar)(=42),
+    )
+};
+
+struct B
+{
+    Reflectable(B)
+    (
+        (int)(w,h)(=1),
+        (C)(c),
+    )
+};
+
 struct A
 {
     Reflectable(A)
-
-    Reflect
     (
-        (fmat3)(m)({}),
-        (int)(a)(=1),
-        (float)(b)(=2),
+        (B)(b),
+        (int)(x)(=1),
+        (float)(y)(=2),
     )
 };
 
@@ -34,9 +49,11 @@ void Boot()
     MarkLocation("Boot");
 
 
-    const A a;
+    A a;
 
-    std::cout << Reflection(&a).to_string_pretty();
+    std::cout << "a\n";
+    std::cout << Reflection(a).to_string_pretty() << '\n' << '\n';
+    //std::cout << Reflection((const A &)a).to_string_pretty() << '\n';
 
     while (1)
     {
