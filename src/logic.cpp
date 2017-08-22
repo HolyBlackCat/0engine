@@ -52,8 +52,8 @@ void Boot()
     A a;
 
     std::cout << "a\n";
-    std::cout << Reflection(a).to_string_pretty() << '\n' << '\n';
-    //std::cout << Reflection((const A &)a).to_string_pretty() << '\n';
+    std::cout << Reflection(a).to_string_tree() << '\n' << '\n';
+    //std::cout << Reflection((const A &)a).to_string_tree() << '\n';
 
     while (1)
     {

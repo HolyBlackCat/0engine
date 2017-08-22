@@ -56,17 +56,18 @@ namespace Refl
         struct impl_table
         {
             Category category;
+            bool is_const;
 
-            int               (*field_count     )(const void *     );
-            GenericReflection (*field           )(const void *, int);
-            std::string       (*to_string       )(const void *     );
-            std::string       (*to_string_pretty)(const void *     );
+            int               (*field_count   )(const GenericReflection *           );
+            GenericReflection (*field         )(const GenericReflection *, int index);
+            std::string       (*to_string     )(const GenericReflection *           );
+            std::string       (*to_string_tree)(const GenericReflection *, int depth); // `depth == 0` means infinte depth (this is the default).
         };
         impl_table *pimpl;
       protected:
-        const void *ptr;
+        const void *value_ptr;
         GenericContext con;
-        GenericReflection(const void *ptr, GenericContext con) : ptr(ptr), con(con) {set_impl_table<void>();}
+        GenericReflection(const void *value_ptr, GenericContext con) : value_ptr(value_ptr), con(con) {set_impl_table<void>();}
         template <typename T> void set_impl_table()
         {
             if constexpr (std::is_same_v<T, void>)
@@ -74,11 +75,12 @@ namespace Refl
                 static impl_table table
                 {
                     primitive,
+                    1,
 
-                    [](const void *     )->int              {return 0;       },
-                    [](const void *, int)->GenericReflection{return {};      },
-                    [](const void *     )->std::string      {return "<null>";},
-                    [](const void *     )->std::string      {return "<null>";},
+                    [](const GenericReflection *     )->int              {return 0;       },
+                    [](const GenericReflection *, int)->GenericReflection{return {};      },
+                    [](const GenericReflection *     )->std::string      {return "<null>";},
+                    [](const GenericReflection *, int)->std::string      {return "<null>";},
                 };
                 pimpl = &table;
             }
@@ -87,39 +89,44 @@ namespace Refl
                 static impl_table table
                 {
                     T::impl_category,
+                    T::impl_is_const,
 
                     T::impl_field_count,
                     T::impl_field,
                     T::impl_to_string,
-                    T::impl_to_string_pretty,
+                    T::impl_to_string_tree,
                 };
                 pimpl = &table;
             }
         }
       public:
-        GenericReflection() : ptr(0) {}
-        const void *pointer() const {return ptr;}
+        GenericReflection() : value_ptr(0) {}
+        const void *pointer() const {return value_ptr;}
         const GenericContext &context() const {return con;}
 
         Category category() const
         {
             return pimpl->category;
         }
+        bool is_const() const
+        {
+            return pimpl->is_const;
+        }
         int field_count() const
         {
-            return pimpl->field_count(ptr);
+            return pimpl->field_count(this);
         };
         GenericReflection field(int index) const
         {
-            return pimpl->field(ptr, index);
+            return pimpl->field(this, index);
         }
         std::string to_string() const
         {
-            return pimpl->to_string(ptr);
+            return pimpl->to_string(this);
         }
-        std::string to_string_pretty() const
+        std::string to_string_tree(int depth = 0) const
         {
-            return pimpl->to_string_pretty(ptr);
+            return pimpl->to_string_tree(this, depth);
         }
     };
 
@@ -128,10 +135,11 @@ namespace Refl
      *
      *   static constexpr Category category() {return ::Refl[::Category]::blah;}
      *
-     *   static [constexpr] int field_count(const T *) {} // `constexpr` is mandratory for `category == structure`, then the parameter must be unused.
      *
      *   if category = structure
      *   (
+     *     static constexpr int field_count() {}
+     *
      *     // Returns class Reflection<..> to a field.
      *     template <int I, typename T_with_opt_cv> static auto cexpr_field(T_with_opt_cv *ptr) {}
      *   )
@@ -139,7 +147,7 @@ namespace Refl
      *   if category = primitive
      *   (
      *     static std::string to_string(const T *) {}
-     *     static std::string to_string_pretty(const T *) {}
+     *     static std::string to_string_tree(const T *) {}
      *   )
      *
      * `refl_traits_structure_generated_(const volatile T *)` can be used instead, with following differences:
@@ -153,7 +161,7 @@ namespace Refl
         {
             static constexpr Category category() {return structure;}
 
-            static constexpr int field_count(const T *)
+            static constexpr int field_count()
             {
                 return PP0_COUNTER_READ_CONTEXT(field_counter_tag, T::);
             }
@@ -169,9 +177,9 @@ namespace Refl
             struct S
             {
                 static constexpr Category category() {return primitive;}
-                static constexpr int field_count(const T *) {return 0;}
+
                 static std::string to_string(const T *ptr) {return Math::num_to_string<T>(*ptr);}
-                static std::string to_string_pretty(const T *ptr) {return to_string(ptr);}
+                static std::string to_string_tree(const T *ptr) {return to_string(ptr);}
             };
             return S{};
         }
@@ -181,9 +189,9 @@ namespace Refl
             struct S
             {
                 static constexpr Category category() {return primitive;}
-                static constexpr int field_count(const bool *) {return 0;}
+
                 static std::string to_string(const bool *ptr) {return (*ptr ? "true" : "false");}
-                static std::string to_string_pretty(const bool *ptr) {return to_string(ptr);}
+                static std::string to_string_tree(const bool *ptr) {return to_string(ptr);}
             };
             return S{};
         }
@@ -193,9 +201,9 @@ namespace Refl
     template <typename T> struct DefaultTraits
     {
         static constexpr Category category() {return primitive;}
-        static constexpr int field_count(const T *) {return 0;}
+
         static std::string to_string(const T *) {return "??";}
-        static std::string to_string_pretty(const T *) {return "??";}
+        static std::string to_string_tree(const T *) {return "??";}
     };
 
     template <typename T, typename = void> struct Traits_impl
@@ -215,47 +223,51 @@ namespace Refl
     {
         static constexpr Category impl_category = primitive;
 
+        static constexpr bool impl_is_const = std::is_const_v<T>;
+
         CategoryReflection(const void *ptr, GenericContext con) : GenericReflection(ptr, con)
         {
             set_impl_table<CategoryReflection>();
         }
 
-        static int impl_field_count(const void *)
+        static int impl_field_count(const GenericReflection *)
         {
             return 0;
         }
-        static GenericReflection impl_field(const void *, int /*index*/)
+        static GenericReflection impl_field(const GenericReflection *, int /*index*/)
         {
             return {};
         }
 
-        static std::string impl_to_string(const void *ptr)
+        static std::string impl_to_string(const GenericReflection *refl)
         {
-            return Traits<T>::to_string((const T *)ptr);
+            return Traits<T>::to_string((const T *)refl->pointer());
         }
-        static std::string impl_to_string_pretty(const void *ptr)
+        static std::string impl_to_string_tree(const GenericReflection *refl, int /*depth*/)
         {
-            return Traits<T>::to_string_pretty((const T *)ptr);
+            return Traits<T>::to_string_tree((const T *)refl->pointer());
         }
     };
     template <typename T> struct CategoryReflection<T, structure> : GenericReflection
     {
         static constexpr Category impl_category = structure;
 
+        static constexpr bool impl_is_const = std::is_const_v<T>;
+
         CategoryReflection(const void *ptr, GenericContext con) : GenericReflection(ptr, con)
         {
             set_impl_table<CategoryReflection>();
         }
 
-        static int impl_field_count(const void *)
+        static int impl_field_count(const GenericReflection *)
         {
-            return Traits<T>::field_count(0);
+            return Traits<T>::field_count();
         }
 
       private:
         template <int ...Seq> static GenericReflection impl_field_impl(const void *ptr, int index, int_seq<Seq...>)
         {
-            if (index < 0 || index >= Traits<T>::field_count(0))
+            if (index < 0 || index >= Traits<T>::field_count())
                 return {};
 
             GenericReflection ret;
@@ -263,57 +275,61 @@ namespace Refl
             return ret;
         }
       public:
-        static GenericReflection impl_field(const void *ptr, int index)
+        static GenericReflection impl_field(const GenericReflection *refl, int index)
         {
-            return impl_field_impl(ptr, index, make_int_seq<Traits<T>::field_count(0)>{});
+            return impl_field_impl(refl->pointer(), index, make_int_seq<Traits<T>::field_count()>{});
         }
         template <int I> auto field() const
         {
             return Traits<T>::template cexpr_field<I>((T *)pointer());
         }
 
-        static std::string impl_to_string(const void *ptr)
+        static std::string impl_to_string(const GenericReflection *refl)
         {
             std::string ret = "{";
-            for (int i = 0; i < impl_field_count(ptr); i++)
+            for (int i = 0; i < impl_field_count(refl); i++)
             {
                 if (i != 0) ret += ",";
-                ret += impl_field(ptr, i).to_string();
+                ret += impl_field(refl, i).to_string();
             }
             ret += "}";
             return ret;
         }
-        static std::string impl_to_string_pretty(const void *ptr)
+        static std::string impl_to_string_tree(const GenericReflection *refl, int depth)
         {
             //auto indent = [](std::string, )
             std::string ret;
-            int field_c = impl_field_count(ptr);
+            int field_c = impl_field_count(refl);
             for (int i = 0; i < field_c; i++)
             {
-                auto f = impl_field(ptr, i);
+                auto f = impl_field(refl, i);
 
-                if (i != 0) ret += "\n";
-                ret += (i != field_c-1 ? "|-" : "`-");
+                if (i != 0) ret += '\n';
+                ret += (i != field_c-1 ? '|' : '`');
+                ret += (depth == 1 && f.category() == structure ? '*' : '-');
                 ret += f.context().name;
                 if (f.category() == structure)
                 {
-                    std::string tmp = "\n" + f.to_string_pretty();
-                    auto lf_c = std::count(tmp.begin(), tmp.end(), '\n');
-                    std::string indented;
-                    indented.reserve(tmp.size() + lf_c*2);
-                    for (char ch : tmp)
+                    if (depth != 1)
                     {
-                        if (ch != '\n')
-                            indented += ch;
-                        else
-                            indented += (i != field_c-1 ? "\n| " : "\n  ");
+                        std::string tmp = '\n' + f.to_string_tree(depth - 1);
+                        auto lf_c = std::count(tmp.begin(), tmp.end(), '\n');
+                        std::string indented;
+                        indented.reserve(tmp.size() + lf_c*2);
+                        for (char ch : tmp)
+                        {
+                            if (ch != '\n')
+                                indented += ch;
+                            else
+                                indented += (i != field_c-1 ? "\n| " : "\n  ");
+                        }
+                        ret += indented;
                     }
-                    ret += indented;
                 }
                 else
                 {
-                    ret += "=";
-                    ret += f.to_string_pretty();
+                    ret += '=';
+                    ret += f.to_string_tree(depth - 1);
                 }
             }
             return ret;
@@ -412,7 +428,7 @@ namespace Refl
                 ret += '}';
             return ret;
         }
-        std::string to_string_pretty() const
+        std::string to_string_tree() const
         {
             constexpr char indentation[] = ".";
 
@@ -424,7 +440,7 @@ namespace Refl
             {
                 if (refl.category == structure)
                 {
-                    std::string tmp = '\n' + refl.to_string_pretty();
+                    std::string tmp = '\n' + refl.to_string_tree();
                     std::string indented;
                     auto lf_count = std::count(tmp.begin(), tmp.end(), '\n');
                     indented.reserve(tmp.size() + lf_count * (sizeof(indentation)-1));
@@ -448,7 +464,7 @@ namespace Refl
                 {
                     ret += refl.name;
                     ret += " = ";
-                    ret += refl.to_string_pretty();
+                    ret += refl.to_string_tree();
                     if (--fields_left)
                         ret += '\n';
                 }
@@ -470,9 +486,9 @@ namespace Refl
         {
             return traits::to_string(&value);
         }
-        std::string to_string_pretty() const
+        std::string to_string_tree() const
         {
-            return traits::to_string_pretty(&value);
+            return traits::to_string_tree(&value);
         }
     };
 */
