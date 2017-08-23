@@ -12,6 +12,15 @@ namespace Refl
     template <int I> using make_int_seq = std::make_integer_sequence<int, I>;
 
 
+    template <std::size_t N> constexpr bool cexpr_is_string_empty(const char (&str)[N]) // Returns 1 if the string is "".
+    {
+        for (std::size_t i = 0; i < N; i++)
+            if (str[i] > ' ')
+                return 0;
+        return 1;
+    }
+
+
     struct field_counter_tag {};
 
 
@@ -22,6 +31,7 @@ namespace Refl
          *   static constexpr const char *name = name_str::value; // Or equivalent.
          *   using enclosing_class_type = T_without_cv;
          *   static constexpr ?? enclosing_class_type::* mem_ptr = foo;
+         *   static constexpr bool has_default_value = blah;
          */
 
         static_assert(!std::is_const_v   <typename Data::enclosing_class_type> &&
@@ -32,19 +42,22 @@ namespace Refl
         using enclosing_class_type = typename Data::enclosing_class_type;
         static constexpr auto enclosing_class_type::* mem_ptr = Data::mem_ptr;
         using mem_ptr_type = decltype(mem_ptr);
+        static constexpr bool has_default_value = Data::has_default_value;
     };
     template <> struct Context<void>
     {
         using name_str = pp0::str_lit<>;
         static constexpr const char *name = name_str::value;
+        static constexpr bool has_default_value = 0;
     };
 
     struct GenericContext
     {
         std::string name;
+        bool has_default_value;
 
         GenericContext() : GenericContext(Context<void>{}) {}
-        template <typename Data> GenericContext(Context<Data>) : name(Context<Data>::name) {}
+        template <typename Data> GenericContext(Context<Data>) : name(Context<Data>::name), has_default_value(Context<Data>::has_default_value) {}
     };
 
 
@@ -283,6 +296,7 @@ namespace Refl
         {
             return Traits<T>::template cexpr_field<I>((T *)pointer());
         }
+        using GenericReflection::field;
 
         static std::string impl_to_string(const GenericReflection *refl)
         {
@@ -512,10 +526,10 @@ using Refl::Reflection;
 
 #define Reflectable(name_) \
     template <typename T> friend class ::Refl::Reflection; \
-    using _refl_name_str = PP0_STR_LIT(#name_); \
-    static constexpr const char *name = _refl_name_str::value; \
-    template <int I> auto _refl_field()                {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
-    template <int I> auto _refl_field() const          {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
+    /*using _refl_name_str = PP0_STR_LIT(#name_);*/ \
+    /*static constexpr const char *name = _refl_name_str::value;*/ \
+    template <int I> auto _refl_field()       {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
+    template <int I> auto _refl_field() const {return _refl_field_by_tag(std::integral_constant<int,I>{});} \
     PP0_COUNTER_DEFINE(::Refl::field_counter_tag,static) \
     struct _refl_traits_t \
     { \
@@ -538,17 +552,18 @@ using Refl::Reflection;
     PP0_DEL_PARENS(expr)
 
 #define REFL0_Reflect_B_2(seq) \
-    REFL0_Reflect_B_3( seq () )
+    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (PP0_SEQ_FIRST(seq) , 0 , ))
 
 #define REFL0_Reflect_B_3(seq) \
-    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (PP0_SEQ_FIRST(seq) , PP0_SEQ_AT(2,seq)))
+    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (PP0_SEQ_FIRST(seq) , 1 , PP0_SEQ_AT(2,seq)))
 
 #define REFL0_Reflect_C(i, data, name) \
     PP0_CALL_B(REFL0_Reflect_D, name, PP0_DEL_PARENS(data))
 
-#define REFL0_Reflect_D(name_, type_, .../*init*/) \
+#define REFL0_Reflect_D(name_, type_, has_init_, .../*init*/) \
     using _refl_field_type_##name_ = type_; \
     _refl_field_type_##name_ name_ __VA_ARGS__; \
+    static_assert(has_init_ == 0 || !::Refl::cexpr_is_string_empty(#__VA_ARGS__), "Empty default value."); \
     static constexpr int _refl_field_index_##name_ = PP0_COUNTER_READ(::Refl::field_counter_tag); \
     template <typename This> struct _refl_field_data_##name_ \
     { \
@@ -557,6 +572,7 @@ using Refl::Reflection;
         using name_str = PP0_STR_LIT(#name_); \
         static constexpr const char *name = name_str::value; \
         static constexpr type This::*mem_ptr = &This::name_; \
+        static constexpr bool has_default_value = has_init_; \
     }; \
     REFL0_Reflect_MakeFunc(name_,      ) \
     REFL0_Reflect_MakeFunc(name_, const) \
