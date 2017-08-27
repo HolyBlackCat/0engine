@@ -41,6 +41,8 @@ struct A
         (B)(b),
         (int)(x)(=1),
         (float)(y)(=12.3),
+        (fvec3)(v1)(={1,2,3}),
+        (fmat3)(v2)(=fmat3::rotate({1,1,1},1)),
     )
 };
 
@@ -51,8 +53,7 @@ void Boot()
 
     A a;
 
-    std::cout << Reflection::to_string_tree(a) << '\n' << '\n';
-    //std::cout << Reflection((const A &)a).to_string_tree() << '\n';
+    std::cout << Reflection::to_string_tree(a) << '\n';
 
     while (1)
     {
