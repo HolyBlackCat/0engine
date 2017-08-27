@@ -15,29 +15,44 @@ namespace Reflection
         template <auto...> struct value_list {};
         template <int I> using int_const = std::integral_constant<int, I>;
 
+        /* Type categories:
+         *
+         * field_count > 0          -> structure
+         * is_container             -> container
+         * (a type can be a structure and a container at the same time)
+         * !structure && !container -> primitive
+         *
+         * Category groups:
+         *
+         * structure || container   -> composite
+         *
+         */
+
 
         // Default interface functions
 
-        inline constexpr int reflection_interface_field_count(const void *) {return 0;}
+        inline constexpr int reflection_interface_field_count(/*unused*/ const void *) {return 0;}
 
-        // These should return references to fields.
+        // This should return reference to the field.
         template <int I> inline void reflection_interface_field(const void *, int_const<I>) {}
 
-        template <int I> inline constexpr bool reflection_interface_field_has_default_value(const void *, int_const<I>) {return 0;}
+        template <int I> inline constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, int_const<I>) {return 0;}
 
-        template <int I> inline constexpr const char *reflection_interface_field_name(const void *, int_const<I>) {return "?";}
+        template <int I> inline constexpr const char *reflection_interface_field_name(/*unused*/ const void *, int_const<I>) {return "?";}
 
-        // Should not be used for structs.
-        inline std::string reflection_interface_to_string(const void *) {return "??";}
-        // Should be used for structs only and return a short single-line summary of contents. Optional.
-        inline std::string reflection_interface_summary_string(const void *) {return "...";}
+        // Should be used for primitives only.
+        inline std::string reflection_interface_primitive_to_string(const void *) {return "??";}
+        // Should be used for composites only and return a short single-line summary of contents. Optional.
+        inline std::string reflection_interface_composite_summary_string(const void *) {return "...";}
 
 
         // Interface function specializations
 
-        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> std::string reflection_interface_to_string(const T *obj) {return Math::num_to_string<T>(*obj);}
-        inline std::string reflection_interface_to_string(const bool *obj) {return (*obj ? "true" : "false");}
+        // Arithmetics
+        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> std::string reflection_interface_primitive_to_string(const T *obj) {return Math::num_to_string<T>(*obj);}
+        inline std::string reflection_interface_primitive_to_string(const bool *obj) {return (*obj ? "true" : "false");}
 
+        // Vectors/matrices
         template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline constexpr int reflection_interface_field_count(const T *)
         {
             if constexpr (Math::type_category<T>::vec)
@@ -59,7 +74,7 @@ namespace Reflection
             else if constexpr (I == 2) return "z";
             else if constexpr (I == 3) return "w";
         }
-        template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline std::string reflection_interface_summary_string(const T *ptr) {return ptr->to_string();}
+        template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline std::string reflection_interface_composite_summary_string(const T *ptr) {return ptr->to_string();}
 
 
         class Interface
@@ -76,9 +91,10 @@ namespace Reflection
 
             template <typename T, int I> static constexpr const char *field_name() {return reflection_interface_field_name((const T *)0, int_const<I>{});}
 
-            template <typename T> static std::string to_string(const T &obj) {return reflection_interface_to_string(&obj);}
-            template <typename T> static std::string summary_string(const T &obj) {return reflection_interface_summary_string(&obj);}
+            template <typename T> static std::string primitive_to_string(const T &obj) {return reflection_interface_primitive_to_string(&obj);}
+            template <typename T> static std::string composite_summary_string(const T &obj) {return reflection_interface_composite_summary_string(&obj);}
 
+            template <typename T> static constexpr bool is_structure() {return field_count<T>() > 0;}
 
             class Impl
             {
@@ -134,7 +150,7 @@ namespace Reflection
             const auto &field = Interface::field<index.value>(object);
             using field_t = std::remove_reference_t<decltype(field)>;
 
-            constexpr bool is_struct = Interface::field_count<field_t>() > 0;
+            constexpr bool is_struct = Interface::is_structure<field_t>();
 
             if (index.value != 0) ret += '\n';
             ret += (index.value != sizeof...(Seq)-1 ? '|' : '`');
@@ -145,7 +161,7 @@ namespace Reflection
                 if (depth == 0)
                 {
                     ret += '=';
-                    ret += Interface::summary_string(field);
+                    ret += Interface::composite_summary_string(field);
                 }
                 else
                 {
@@ -166,7 +182,7 @@ namespace Reflection
             else
             {
                 ret += '=';
-                ret += Interface::to_string(field);
+                ret += Interface::primitive_to_string(field);
             }
         };
 
@@ -177,7 +193,10 @@ namespace Reflection
 
     template <typename T> std::string to_string_tree(const T &obj, int depth = -1) // `depth == -1` means no limit.
     {
-        return impl_to_string_tree(obj, depth, std::make_integer_sequence<int, Interface::field_count<T>()>{});
+        if constexpr (Interface::is_structure<T>())
+            return impl_to_string_tree(obj, depth, std::make_integer_sequence<int, Interface::field_count<T>()>{});
+        else
+            return Interface::primitive_to_string(obj);
     }
 }
 
