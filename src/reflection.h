@@ -115,11 +115,11 @@ namespace Reflection
 
             if (index.value != 0) ret += '\n';
             ret += (index.value != sizeof...(Seq)-1 ? '|' : '`');
-            ret += (depth == 1 && is_struct ? '*' : '-');
+            ret += (depth == 0 && is_struct ? '*' : '-');
             ret += Interface::field_name<index.value>(object);
             if constexpr (is_struct)
             {
-                if (depth == 1)
+                if (depth == 0)
                 {
                     ret += '=';
                     ret += Interface::summary_string(field);
