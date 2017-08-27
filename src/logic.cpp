@@ -40,7 +40,7 @@ struct A
     (
         (B)(b),
         (int)(x)(=1),
-        (float)(y)(=2),
+        (float)(y)(=12.3),
     )
 };
 
@@ -51,8 +51,7 @@ void Boot()
 
     A a;
 
-    std::cout << "a\n";
-    std::cout << Reflection(a).to_string_tree() << '\n' << '\n';
+    std::cout << Reflection::to_string_tree(a) << '\n' << '\n';
     //std::cout << Reflection((const A &)a).to_string_tree() << '\n';
 
     while (1)
