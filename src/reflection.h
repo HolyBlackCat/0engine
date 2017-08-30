@@ -33,7 +33,7 @@ namespace Reflection
         {
             using type = std::conditional_t<sizeof...(A) == 0
                                              || sizeof...(B) == 0
-                                             || !char_is_alphanum<str<A...>::value[sizeof...(A)-1]>
+                                             || !char_is_alphanum<str<A...>::value[(sizeof...(A)-1) * bool(sizeof...(A))]>
                                              || !char_is_alphanum<str<B...>::value[0]>,
                                             str_cat<str<A...>, str<B...>>,
                                             str_cat<str<A...>, str<' '>, str<B...>>>;
