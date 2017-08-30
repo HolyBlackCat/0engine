@@ -1,32 +1,79 @@
 #ifndef REFLECTION_H_INCLUDED
 #define REFLECTION_H_INCLUDED
 
+#include <cstddef>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "extended_math.h"
 #include "preprocessor.h"
 
 namespace Reflection
 {
+    namespace Cexpr
+    {
+        // Strings
+
+        template <char ...C> struct str
+        {
+            static constexpr char value[] = {C..., '\0'};
+        };
+
+        template <typename F, typename ...P> struct str_cat_impl {using type = typename str_cat_impl<F, typename str_cat_impl<P...>::type>::type;};
+        template <typename T> struct str_cat_impl<T> {using type = T;};
+        template <char ...A, char ...B> struct str_cat_impl<str<A...>, str<B...>> {using type = str<A..., B...>;};
+        template <typename F, typename ...P> using str_cat = typename str_cat_impl<F, P...>::type;
+
+        template <char C> inline constexpr bool char_is_alphanum = (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') || (C >= '0' && C <= '9') || C == '_';
+
+        template <typename F, typename ...P> struct str_smart_cat_impl {using type = typename str_smart_cat_impl<F, typename str_smart_cat_impl<P...>::type>::type;};
+        template <typename T> struct str_smart_cat_impl<T> {using type = T;};
+        template <char ...A, char ...B> struct str_smart_cat_impl<str<A...>, str<B...>>
+        {
+            using type = std::conditional_t<sizeof...(A) == 0
+                                             || sizeof...(B) == 0
+                                             || !char_is_alphanum<str<A...>::value[sizeof...(A)-1]>
+                                             || !char_is_alphanum<str<B...>::value[0]>,
+                                            str_cat<str<A...>, str<B...>>,
+                                            str_cat<str<A...>, str<' '>, str<B...>>>;
+        };
+        template <typename F, typename ...P> using str_smart_cat = typename str_smart_cat_impl<F, P...>::type;
+
+        template <std::size_t A, std::size_t B> struct pow
+        {
+            static constexpr std::size_t value = A * pow<A, B-1>::value;
+        };
+        template <std::size_t A> struct pow<A, 0>
+        {
+            static constexpr std::size_t value = 1;
+        };
+
+        template <std::size_t N, std::size_t Pow, std::size_t ...Seq> constexpr auto num_to_str_impl(std::index_sequence<Seq...>)
+        {
+            if constexpr (N >= pow<10, Pow>::value)
+                return num_to_str_impl<N, Pow+1>(std::make_index_sequence<Pow+1>{});
+            else
+                return str<(N / pow<10, Pow-1-Seq>::value % 10 + '0')...>{};
+        }
+        template <std::size_t N> using num_to_str = decltype(num_to_str_impl<N, 1>(std::make_index_sequence<1>{}));
+
+
+        // Returns 1 only when the string consists of non-printable characters only.
+        template <std::size_t N> static constexpr bool cexpr_string_is_empty(const char (&str)[N])
+        {
+            for (std::size_t i = 0; i < N; i++)
+                if (str[i] > ' ')
+                    return 0;
+            return 1;
+        }
+    }
+
     namespace InterfaceDetails
     {
         template <typename...> struct type_list {};
         template <auto...> struct value_list {};
         template <int I> using int_const = std::integral_constant<int, I>;
-
-        /* Type categories:
-         *
-         * field_count > 0          -> structure
-         * is_container             -> container
-         * (a type can be a structure and a container at the same time)
-         * !structure && !container -> primitive
-         *
-         * Category groups:
-         *
-         * structure || container   -> composite
-         *
-         */
 
 
         // Default interface functions
@@ -100,15 +147,6 @@ namespace Reflection
             {
                 ~Impl() = delete;
               public:
-                // Returns 1 only when the string consists of non-printable characters only.
-                template <std::size_t N> static constexpr bool cexpr_string_is_empty(const char (&str)[N])
-                {
-                    for (std::size_t i = 0; i < N; i++)
-                        if (str[i] > ' ')
-                            return 0;
-                    return 1;
-                }
-
 
                 // Counter
 
@@ -231,7 +269,7 @@ namespace Reflection
     /* Define the field. */\
     std::enable_if_t<1, type_> name_ __VA_ARGS__; \
     /* Make sure there is no explicit empty init (because it would make `has_init_ == 1` without a good reason). */\
-    static_assert(has_init_ == 0 || !::Reflection::Interface::Impl::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
+    static_assert(has_init_ == 0 || !::Reflection::Cexpr::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
     /* Field index. */\
     static constexpr int _reflection_internal_field_index_##name_ = ::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value; \
     using _reflection_internal_field_indextype_##name_ = ::Reflection::InterfaceDetails::int_const<_reflection_internal_field_index_##name_>; \
