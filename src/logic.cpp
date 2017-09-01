@@ -1,5 +1,10 @@
 #include "master.h"
 
+#include <array>
+#include <tuple>
+#include <map>
+#include <vector>
+
 void Boot();
 
 static constexpr ivec2 screen_size = {480,270};
@@ -43,6 +48,10 @@ struct A
         (float)(y)(=12.3),
         (fvec3)(v1)(={1,2,3}),
         (fmat3)(v2)(=fmat3::rotate({1,1,1},1)),
+        (std::tuple<int,float,double>)(t)({1,2,3}),
+        (std::vector<fmat2>)(std_vec)({{},{},{}}),
+        (std::map<int,int>)(std_map)({{1,2},{3,4}}),
+        (int[3])(plain_arr)({5,6,7}),
     )
 };
 
@@ -54,6 +63,8 @@ void Boot()
     A a;
 
     std::cout << Reflection::to_string_tree(a) << '\n';
+
+    std::cout << Reflection::Interface::field_name<int[3],1>();
 
     while (1)
     {

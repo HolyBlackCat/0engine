@@ -59,9 +59,6 @@ namespace Reflection
         }
         template <std::size_t N> using num_to_str = decltype(num_to_str_impl<N, 1>(std::make_index_sequence<1>{}));
 
-        // The sequence of names is "a", ..., "z", "a0", ..., "z0", "a1", ...
-        template <std::size_t N> using num_to_name = std::conditional_t<(N >= 26), str_cat<str<N % 26 + 'a'>, num_to_str<((N - 26) / 26) * (N >= 26)>>, str<N % 26 + 'a'>>;
-
         // Returns 1 only when the string consists of non-printable characters only.
         template <std::size_t N> static constexpr bool cexpr_string_is_empty(const char (&str)[N])
         {
@@ -139,9 +136,14 @@ namespace Reflection
         template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> std::string reflection_interface_composite_summary_string(const T *ptr) {return ptr->to_string();}
 
         // Tuples, pairs and `std::array`s.
-        template <typename T       > constexpr last_of<decltype(std::tuple_size<T>::value), int         > reflection_interface_field_count(const T *                 ) {return std::tuple_size<T>::value;}
+        template <typename T       > constexpr last_of<decltype(std::tuple_size<T>::value), int         > reflection_interface_field_count(const T *              ) {return std::tuple_size<T>::value;}
         template <typename T, int I> constexpr auto reflection_interface_field(const T *ptr, int_const<I>) -> last_of<decltype(std::tuple_size<T>::value), decltype(std::get<I>(*ptr))> {return std::get<I>(*ptr);}
-        template <typename T, int I> constexpr last_of<decltype(std::tuple_size<T>::value), const char *> reflection_interface_field_name (const T *   , int_const<I>) {return Cexpr::num_to_name<I>::value;}
+        template <typename T, int I> constexpr last_of<decltype(std::tuple_size<T>::value), const char *> reflection_interface_field_name (const T *, int_const<I>) {return Cexpr::num_to_str<I>::value;}
+
+        // Plain arrays.
+        template <typename T       > constexpr std::enable_if_t<std::is_array_v<T>, int                            > reflection_interface_field_count(const T *              ) {return std::extent_v<T>;}
+        template <typename T, int I> constexpr std::enable_if_t<std::is_array_v<T>, const std::remove_extent_t<T> &> reflection_interface_field(const T *ptr, int_const<I>) {return (*ptr)[I];}
+        template <typename T, int I> constexpr std::enable_if_t<std::is_array_v<T>, const char *                   > reflection_interface_field_name (const T *, int_const<I>) {return Cexpr::num_to_str<I>::value;}
 
         // Standard containers
         template <typename T, typename = decltype(std::size  (std::declval<const T &>()))> std::size_t reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
@@ -156,6 +158,8 @@ namespace Reflection
             ~Interface() = delete;
           public:
 
+            template <typename T> static constexpr bool is_structure() {return field_count<T>() > 0;}
+
             template <typename T> static constexpr int field_count() {return reflection_interface_field_count((const T *)0);}
 
             template <int I, typename T> static const auto &field(const T &obj) {return reflection_interface_field(&obj, int_const<I>{});}
@@ -165,19 +169,38 @@ namespace Reflection
 
             template <typename T, int I> static constexpr const char *field_name() {return reflection_interface_field_name((const T *)0, int_const<I>{});}
 
-            template <typename T> static std::string primitive_to_string(const T &obj) {return reflection_interface_primitive_to_string(&obj);}
-            template <typename T> static std::string composite_summary_string(const T &obj) {return reflection_interface_composite_summary_string(&obj);}
+            template <typename T> static std::string to_string(const T &obj)
+            {
+                if constexpr (is_primitive<T>())
+                    return reflection_interface_primitive_to_string(&obj);
+                else
+                    return reflection_interface_composite_summary_string(&obj);
+            }
 
-            template <typename T> static constexpr bool is_structure() {return field_count<T>() > 0;}
+
             template <typename T> static constexpr bool is_container()
             {
+                using type = std::remove_cv_t<T> *;
                 return !is_structure<T>()
-                    && sizeof (reflection_interface_container_size  (std::declval<const T *>()))
-                    && sizeof (reflection_interface_container_begin (std::declval<const T *>()))
-                    && sizeof (reflection_interface_container_end   (std::declval<const T *>()))
-                    && sizeof (reflection_interface_container_cbegin(std::declval<const T *>()))
-                    && sizeof (reflection_interface_container_cend  (std::declval<const T *>()));
+                    && !std::is_void_v<decltype(reflection_interface_container_size  (std::declval<type>()))>
+                    && !std::is_void_v<decltype(reflection_interface_container_begin (std::declval<type>()))>
+                    && !std::is_void_v<decltype(reflection_interface_container_end   (std::declval<type>()))>
+                    && !std::is_void_v<decltype(reflection_interface_container_cbegin(std::declval<type>()))>
+                    && !std::is_void_v<decltype(reflection_interface_container_cend  (std::declval<type>()))>;
             }
+
+            template <typename T> static std::size_t container_size  (const T &obj) {return reflection_interface_container_size  (&obj);}
+            template <typename T> static auto        container_begin (      T &obj) {return reflection_interface_container_begin (&obj);}
+            template <typename T> static auto        container_end   (      T &obj) {return reflection_interface_container_end   (&obj);}
+            template <typename T> static auto        container_cbegin(const T &obj) {return reflection_interface_container_cbegin(&obj);}
+            template <typename T> static auto        container_cend  (const T &obj) {return reflection_interface_container_cend  (&obj);}
+
+            template <typename T> using container_value_t = std::remove_const_t<std::remove_reference_t<decltype(*container_cbegin(std::declval<T>()))>>;
+
+            template <typename T, typename F> static void container_for_each(      T &obj, F &&func) {std::for_each(container_begin(obj), container_end(obj), (F &&) func);}
+            template <typename T, typename F> static void container_for_each(const T &obj, F &&func) {std::for_each(container_cbegin(obj), container_cend(obj), (F &&) func);}
+
+            template <typename T> static constexpr bool is_primitive() {return !is_structure<T>() && !is_container<T>();}
 
             class Impl
             {
@@ -217,60 +240,110 @@ namespace Reflection
     {
         using InterfaceDetails::int_const;
 
-        std::string ret;
-
-        auto lambda = [&](auto index)
+        [[maybe_unused]] auto Indent = [](std::string param, char symbol) -> std::string
         {
-            const auto &field = Interface::field<index.value>(object);
-            using field_t = std::remove_reference_t<decltype(field)>;
+            param = '\n' + param;
+            auto lf_c = std::count(param.begin(), param.end(), '\n');
+            std::string indented;
+            indented.reserve(param.size() + lf_c*2);
 
-            constexpr bool is_struct = Interface::is_structure<field_t>();
-
-            if (index.value != 0) ret += '\n';
-            ret += (index.value != sizeof...(Seq)-1 ? '|' : '`');
-            ret += (depth == 0 && is_struct ? '*' : '-');
-            ret += Interface::field_name<T, index.value>();
-            if constexpr (is_struct)
+            for (char ch : param)
             {
-                if (depth == 0)
+                if (ch != '\n')
+                    indented += ch;
+                else
                 {
-                    ret += '=';
-                    ret += Interface::composite_summary_string(field);
+                    indented += '\n';
+                    indented += symbol;
+                    indented += ' ';
+                }
+            }
+            return indented;
+        };
+
+
+        if constexpr (Interface::is_structure<T>())
+        {
+            std::string ret;
+
+            auto lambda = [&](auto index)
+            {
+                const auto &field = Interface::field<index.value>(object);
+                using field_t = std::remove_reference_t<decltype(field)>;
+
+                constexpr bool is_primitive = Interface::is_primitive<field_t>();
+
+                if (index.value != 0) ret += '\n';
+                ret += (index.value != sizeof...(Seq)-1 ? '|' : '`');
+                ret += (depth == 0 && !is_primitive ? '*' : '-');
+                ret += Interface::field_name<T, index.value>();
+                if constexpr (!is_primitive)
+                {
+                    if (depth == 0)
+                    {
+                        ret += '=';
+                        ret += Interface::to_string(field);
+                    }
+                    else
+                        ret += Indent(impl_to_string_tree(field, depth - 1, std::make_integer_sequence<int, Interface::field_count<field_t>()>{}), "| "[index.value == sizeof...(Seq)-1]);
                 }
                 else
                 {
-                    std::string tmp = '\n' + impl_to_string_tree(field, depth - 1, std::make_integer_sequence<int, Interface::field_count<field_t>()>{});
-                    auto lf_c = std::count(tmp.begin(), tmp.end(), '\n');
-                    std::string indented;
-                    indented.reserve(tmp.size() + lf_c*2);
-                    for (char ch : tmp)
-                    {
-                        if (ch != '\n')
-                            indented += ch;
-                        else
-                            indented += (index.value != sizeof...(Seq)-1 ? "\n| " : "\n  ");
-                    }
-                    ret += indented;
+                    ret += '=';
+                    ret += Interface::to_string(field);
                 }
-            }
-            else
+            };
+
+            (lambda(int_const<Seq>{}) , ...);
+
+            return ret;
+        }
+        else if constexpr (Interface::is_container<T>())
+        {
+            std::string ret;
+
+            std::size_t pos = 0, size = Interface::container_size(object);
+
+            using value_t = Interface::container_value_t<T>;
+
+            constexpr bool primitive_value = Interface::is_primitive<value_t>();
+
+
+            for (auto it = Interface::container_cbegin(object); it != Interface::container_cend(object); it++)
             {
-                ret += '=';
-                ret += Interface::primitive_to_string(field);
+                if (pos != 0) ret += '\n';
+                ret += (pos != size-1 ? ':' : '`');
+                ret += (depth == 0 && !primitive_value ? '*' : '-');
+                ret += std::to_string(pos);
+                if constexpr (!primitive_value)
+                {
+                    if (depth == 0)
+                    {
+                        ret += '=';
+                        ret += Interface::to_string(*it);
+                    }
+                    else
+                        ret += Indent(impl_to_string_tree(*it, depth - 1, std::make_integer_sequence<int, Interface::field_count<value_t>()>{}), ": "[pos == size-1]);
+                }
+                else
+                {
+                    ret += '=';
+                    ret += Interface::to_string(*it);
+                }
+                pos++;
             }
-        };
 
-        (lambda(int_const<Seq>{}) , ...);
-
-        return ret;
+            return ret;
+        }
+        else /* is_primitive<T>() */ // This is not used recursively.
+        {
+            return Interface::to_string(object);
+        }
     }
 
     template <typename T> std::string to_string_tree(const T &obj, int depth = -1) // `depth == -1` means no limit.
     {
-        if constexpr (Interface::is_structure<T>())
-            return impl_to_string_tree(obj, depth, std::make_integer_sequence<int, Interface::field_count<T>()>{});
-        else
-            return Interface::primitive_to_string(obj);
+        return impl_to_string_tree(obj, depth, std::make_integer_sequence<int, Interface::field_count<T>()>{});
     }
 }
 
