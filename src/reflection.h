@@ -2,6 +2,7 @@
 #define REFLECTION_H_INCLUDED
 
 #include <cstddef>
+#include <iterator>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -58,6 +59,8 @@ namespace Reflection
         }
         template <std::size_t N> using num_to_str = decltype(num_to_str_impl<N, 1>(std::make_index_sequence<1>{}));
 
+        // The sequence of names is "a", ..., "z", "a0", ..., "z0", "a1", ...
+        template <std::size_t N> using num_to_name = std::conditional_t<(N >= 26), str_cat<str<N % 26 + 'a'>, num_to_str<((N - 26) / 26) * (N >= 26)>>, str<N % 26 + 'a'>>;
 
         // Returns 1 only when the string consists of non-printable characters only.
         template <std::size_t N> static constexpr bool cexpr_string_is_empty(const char (&str)[N])
@@ -75,53 +78,77 @@ namespace Reflection
         template <auto...> struct value_list {};
         template <int I> using int_const = std::integral_constant<int, I>;
 
+        template <typename F, typename ...P> struct last_of_impl {using type = typename last_of_impl<P...>::type;};
+        template <typename F> struct last_of_impl<F> {using type = F;};
+        template <typename F, typename ...P> using last_of = typename last_of_impl<F, P...>::type;
+
 
         // Default interface functions
 
         inline constexpr int reflection_interface_field_count(/*unused*/ const void *) {return 0;}
 
         // This should return reference to the field.
-        template <int I> inline void reflection_interface_field(const void *, int_const<I>) {}
+        template <int I> void reflection_interface_field(const void *, int_const<I>) {}
 
-        template <int I> inline constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, int_const<I>) {return 0;}
+        template <int I> constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, int_const<I>) {return 0;}
 
-        template <int I> inline constexpr const char *reflection_interface_field_name(/*unused*/ const void *, int_const<I>) {return "?";}
+        template <int I> constexpr const char *reflection_interface_field_name(/*unused*/ const void *, int_const<I>) {return "?";}
 
         // Should be used for primitives only.
         inline std::string reflection_interface_primitive_to_string(const void *) {return "??";}
         // Should be used for composites only and return a short single-line summary of contents. Optional.
         inline std::string reflection_interface_composite_summary_string(const void *) {return "...";}
 
+        inline std::size_t reflection_interface_container_size(const void *) {return 0;}
+        // Those should return corresponding iterators.
+        inline void reflection_interface_container_begin(void *) {}
+        inline void reflection_interface_container_end(void *) {}
+        inline void reflection_interface_container_cbegin(const void *) {}
+        inline void reflection_interface_container_cend(const void *) {}
+
 
         // Interface function specializations
 
-        // Arithmetics
-        template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> std::string reflection_interface_primitive_to_string(const T *obj) {return Math::num_to_string<T>(*obj);}
+        // Arithmetic types
+        template <typename T> std::enable_if_t<std::is_arithmetic_v<T>, std::string> reflection_interface_primitive_to_string(const T *obj) {return Math::num_to_string<T>(*obj);}
         inline std::string reflection_interface_primitive_to_string(const bool *obj) {return (*obj ? "true" : "false");}
 
         // Vectors/matrices
-        template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline constexpr int reflection_interface_field_count(const T *)
+        template <typename T> constexpr std::enable_if_t<Math::type_category<T>::vec_or_mat, int> reflection_interface_field_count(const T *)
         {
             if constexpr (Math::type_category<T>::vec)
                 return T::size;
             else
                 return T::width;
         }
-        template <typename T, int I, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline const auto &reflection_interface_field(const T *ptr, int_const<I>)
+        template <typename T, int I> std::enable_if_t<Math::type_category<T>::vec_or_mat, const decltype(T::x) &> reflection_interface_field(const T *ptr, int_const<I>)
         {
                  if constexpr (I == 0) return ptr->x;
             else if constexpr (I == 1) return ptr->y;
             else if constexpr (I == 2) return ptr->z;
             else if constexpr (I == 3) return ptr->w;
+            else                       return {};
         }
-        template <typename T, int I, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline constexpr const char *reflection_interface_field_name(const T *, int_const<I>)
+        template <typename T, int I, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> constexpr const char *reflection_interface_field_name(const T *, int_const<I>)
         {
                  if constexpr (I == 0) return "x";
             else if constexpr (I == 1) return "y";
             else if constexpr (I == 2) return "z";
             else if constexpr (I == 3) return "w";
         }
-        template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> inline std::string reflection_interface_composite_summary_string(const T *ptr) {return ptr->to_string();}
+        template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> std::string reflection_interface_composite_summary_string(const T *ptr) {return ptr->to_string();}
+
+        // Tuples, pairs and `std::array`s.
+        template <typename T       > constexpr last_of<decltype(std::tuple_size<T>::value), int         > reflection_interface_field_count(const T *                 ) {return std::tuple_size<T>::value;}
+        template <typename T, int I> constexpr auto reflection_interface_field(const T *ptr, int_const<I>) -> last_of<decltype(std::tuple_size<T>::value), decltype(std::get<I>(*ptr))> {return std::get<I>(*ptr);}
+        template <typename T, int I> constexpr last_of<decltype(std::tuple_size<T>::value), const char *> reflection_interface_field_name (const T *   , int_const<I>) {return Cexpr::num_to_name<I>::value;}
+
+        // Standard containers
+        template <typename T, typename = decltype(std::size  (std::declval<const T &>()))> std::size_t reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
+        template <typename T, typename = decltype(std::begin (std::declval<      T &>()))> auto        reflection_interface_container_begin (      T *ptr) {return std::begin (*ptr);}
+        template <typename T, typename = decltype(std::end   (std::declval<      T &>()))> auto        reflection_interface_container_end   (      T *ptr) {return std::end   (*ptr);}
+        template <typename T, typename = decltype(std::cbegin(std::declval<const T &>()))> auto        reflection_interface_container_cbegin(const T *ptr) {return std::cbegin(*ptr);}
+        template <typename T, typename = decltype(std::cend  (std::declval<const T &>()))> auto        reflection_interface_container_cend  (const T *ptr) {return std::cend  (*ptr);}
 
 
         class Interface
@@ -142,6 +169,15 @@ namespace Reflection
             template <typename T> static std::string composite_summary_string(const T &obj) {return reflection_interface_composite_summary_string(&obj);}
 
             template <typename T> static constexpr bool is_structure() {return field_count<T>() > 0;}
+            template <typename T> static constexpr bool is_container()
+            {
+                return !is_structure<T>()
+                    && sizeof (reflection_interface_container_size  (std::declval<const T *>()))
+                    && sizeof (reflection_interface_container_begin (std::declval<const T *>()))
+                    && sizeof (reflection_interface_container_end   (std::declval<const T *>()))
+                    && sizeof (reflection_interface_container_cbegin(std::declval<const T *>()))
+                    && sizeof (reflection_interface_container_cend  (std::declval<const T *>()));
+            }
 
             class Impl
             {
