@@ -293,17 +293,17 @@ namespace Reflection
     PP0_DEL_PARENS(expr)
 
 #define REFL0_Reflect_B_2(i, seq) \
-    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (i, PP0_SEQ_FIRST(seq)/*type*/ , 0 , ))
+    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (i, (PP0_SEQ_FIRST(seq))/*type*/ , 0 , ))
 
 #define REFL0_Reflect_B_3(i, seq) \
-    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (i, PP0_SEQ_FIRST(seq)/*type*/ , 1 , PP0_SEQ_AT(2,seq)/*init*/))
+    PP0_SEQ_APPLY_A(PP0_VA_TO_SEQ(PP0_SEQ_AT(1,seq)), REFL0_Reflect_C, PP0_F_NULL, (i, (PP0_SEQ_FIRST(seq))/*type*/ , 1 , PP0_SEQ_AT(2,seq)/*init*/))
 
 #define REFL0_Reflect_C(j, data, name) \
     PP0_CALL_B(REFL0_Reflect_D, name, j, PP0_DEL_PARENS(data))
 
 #define REFL0_Reflect_D(name_, j_, i_, type_, has_init_, .../*init*/) \
     /* Define the field. */\
-    std::enable_if_t<1, type_> name_ __VA_ARGS__; \
+    std::enable_if_t<1, PP0_DEL_PARENS(type_)> name_ __VA_ARGS__; \
     /* Make sure there is no explicit empty init (because it would make `has_init_ == 1` without a good reason). */\
     static_assert(has_init_ == 0 || !::Reflection::Cexpr::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
     /* Field index. */\
