@@ -79,6 +79,8 @@ namespace Reflection
         template <typename F> struct last_of_impl<F> {using type = F;};
         template <typename F, typename ...P> using last_of = typename last_of_impl<F, P...>::type;
 
+        template <typename T> inline constexpr bool forced_primitive = std::is_same_v<std::string, T>;
+
 
         // Default interface functions
 
@@ -105,6 +107,54 @@ namespace Reflection
 
 
         // Interface function specializations
+
+        // Strings
+        inline std::string reflection_interface_primitive_to_string(const std::string *obj)
+        {
+            auto Escape = [](char c) constexpr -> char
+            {
+                switch (c)
+                {
+                    case '\"': return '"';
+                    case '\a': return 'a';
+                    case '\b': return 'b';
+                    case '\f': return 'f';
+                    case '\n': return 'n';
+                    case '\r': return 'r';
+                    case '\t': return 't';
+                    case '\v': return 'v';
+                    default: return 0;
+                }
+            };
+            auto HexEscape = [](char c) constexpr -> bool
+            {
+                return (c >= '\0' && c < ' ') || c == 127;
+            };
+
+            auto esc = std::count_if(obj->begin(), obj->end(), Escape);
+            auto hex = std::count_if(obj->begin(), obj->end(), HexEscape);
+
+            std::string ret;
+            ret.reserve(obj->size() + esc + hex * 3 + 2);
+            ret.push_back('"');
+            for (char ch : *obj)
+            {
+                if (Escape(ch))
+                {
+                    char tmp[] {'\\', Escape(ch), '\0'};
+                    ret += tmp;
+                }
+                else if (HexEscape(ch))
+                {
+                    char tmp[] {'\\', 'x', char((unsigned char)ch / 16 + '0'), char((unsigned char)ch % 16 + '0'), '\0'};
+                    ret += tmp;
+                }
+                else
+                    ret += ch;
+            }
+            ret.push_back('"');
+            return ret;
+        }
 
         // Arithmetic types
         template <typename T> std::enable_if_t<std::is_arithmetic_v<T>, std::string> reflection_interface_primitive_to_string(const T *obj) {return Math::num_to_string<T>(*obj);}
@@ -146,11 +196,11 @@ namespace Reflection
         template <typename T, int I> constexpr std::enable_if_t<std::is_array_v<T>, const char *                   > reflection_interface_field_name (const T *, int_const<I>) {return Cexpr::num_to_str<I>::value;}
 
         // Standard containers
-        template <typename T, typename = decltype(std::size  (std::declval<const T &>()))> std::size_t reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
-        template <typename T, typename = decltype(std::begin (std::declval<      T &>()))> auto        reflection_interface_container_begin (      T *ptr) {return std::begin (*ptr);}
-        template <typename T, typename = decltype(std::end   (std::declval<      T &>()))> auto        reflection_interface_container_end   (      T *ptr) {return std::end   (*ptr);}
-        template <typename T, typename = decltype(std::cbegin(std::declval<const T &>()))> auto        reflection_interface_container_cbegin(const T *ptr) {return std::cbegin(*ptr);}
-        template <typename T, typename = decltype(std::cend  (std::declval<const T &>()))> auto        reflection_interface_container_cend  (const T *ptr) {return std::cend  (*ptr);}
+        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::size  (std::declval<const T &>()))>> std::size_t reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
+        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::begin (std::declval<      T &>()))>> auto        reflection_interface_container_begin (      T *ptr) {return std::begin (*ptr);}
+        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::end   (std::declval<      T &>()))>> auto        reflection_interface_container_end   (      T *ptr) {return std::end   (*ptr);}
+        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::cbegin(std::declval<const T &>()))>> auto        reflection_interface_container_cbegin(const T *ptr) {return std::cbegin(*ptr);}
+        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::cend  (std::declval<const T &>()))>> auto        reflection_interface_container_cend  (const T *ptr) {return std::cend  (*ptr);}
 
 
         class Interface

@@ -52,6 +52,7 @@ struct A
         (std::vector<fmat2>)(std_vec)({{},{},{}}),
         (std::map<int,int>)(std_map)({{1,2},{3,4}}),
         (int[3])(plain_arr)({5,6,7}),
+        (std::string)(str)(="abc\n\t\x18"),
     )
 };
 
