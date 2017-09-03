@@ -24,7 +24,7 @@ void Resize()
 
 struct C
 {
-    Reflectable(C)
+    Reflect(C)
     (
         (int)(foo,bar)(=42),
     )
@@ -32,7 +32,7 @@ struct C
 
 struct B
 {
-    Reflectable(B)
+    Reflect(B)
     (
         (int)(w,h)(=1),
         (C)(c),
@@ -41,7 +41,9 @@ struct B
 
 struct A
 {
-    Reflectable(A)
+    ReflectMemberEnum(E, (enum_a)(enum_b)(enum_c))
+
+    Reflect(A)
     (
         (B)(b),
         (int)(x)(=1),
@@ -53,6 +55,7 @@ struct A
         (std::map<int,int>)(std_map)({{1,2},{3,4}}),
         (int[3])(plain_arr)({5,6,7}),
         (std::string)(str)(="abc\n\t\x18"),
+        (E)(enumeration)(=enum_c),
     )
 };
 
@@ -64,8 +67,6 @@ void Boot()
     A a;
 
     std::cout << Reflection::to_string_tree(a) << '\n';
-
-    std::cout << Reflection::Interface::field_name<int[3],1>();
 
     while (1)
     {

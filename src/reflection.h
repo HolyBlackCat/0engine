@@ -397,16 +397,34 @@ namespace Reflection
     }
 }
 
+/* Struct/class reflection.
+ * Example struct definition:
+ *
+ *   struct A
+ *   {
+ *     Reflectable(A)
+ *     (
+ *       (int)(a),
+ *       (int[3])(b),
+         (float)(c,d)
+ *       (int)(e,f)(=42),
+ *       (private:),
+ *       (int)(g),
+ *     )
+ *   };
+ *
+ * If you want to reflect more fields separately, you can use Reflect() macro with the same syntax (but without the class name enclosed in `()`).
+ */
 
-#define Reflectable(name_) \
+#define Reflect(name_) \
     friend class ::Reflection::Interface; \
     using _reflection_internal_this_type = name_; \
     /* Interface: Get field count */\
     /* (Making it a template delays the expansion so we can get a proper counter value.) */\
     template <typename = void> friend constexpr int reflection_interface_field_count(const _reflection_internal_this_type *) {return ::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, void>::value;} \
-    Reflect
+    ReflectMembers
 
-#define Reflect(...) \
+#define ReflectMembers(...) \
     PP0_SEQ_APPLY(PP0_VA_TO_SEQ_DISCARD_LAST(__VA_ARGS__), REFL0_Reflect_A, PP0_F_NULL, )
 
 #define REFL0_Reflect_A(i, data, seq) \
@@ -430,15 +448,58 @@ namespace Reflection
     /* Make sure there is no explicit empty init (because it would make `has_init_ == 1` without a good reason). */\
     static_assert(has_init_ == 0 || !::Reflection::Cexpr::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
     /* Field index. */\
-    static constexpr int _reflection_internal_field_index_##name_ = ::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value; \
-    using _reflection_internal_field_indextype_##name_ = ::Reflection::InterfaceDetails::int_const<_reflection_internal_field_index_##name_>; \
+    using _reflection_internal_field_index_type_##name_ = ::Reflection::InterfaceDetails::int_const<::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value>; \
     /* Increment field counter. */\
-    static void _reflection_internal_counter_crumb(::Reflection::InterfaceDetails::type_list<::Reflection::Interface::Impl::counter_tag_fields>, ::Reflection::InterfaceDetails::int_const<_reflection_internal_field_index_##name_>) {} \
+    static void _reflection_internal_counter_crumb(::Reflection::InterfaceDetails::type_list<::Reflection::Interface::Impl::counter_tag_fields>, _reflection_internal_field_index_type_##name_) {} \
     /* Inteface: Get the field by index. */\
-    friend const auto &reflection_interface_field(const _reflection_internal_this_type *ptr, _reflection_internal_field_indextype_##name_) {return ptr->name_;} \
+    friend const auto &reflection_interface_field(const _reflection_internal_this_type *ptr, _reflection_internal_field_index_type_##name_) {return ptr->name_;} \
     /* Inteface: Whether the field has a default value or not. */\
-    friend constexpr bool reflection_interface_field_has_default_value(const _reflection_internal_this_type *, _reflection_internal_field_indextype_##name_) {return has_init_;} \
+    friend constexpr bool reflection_interface_field_has_default_value(const _reflection_internal_this_type *, _reflection_internal_field_index_type_##name_) {return has_init_;} \
     /* Inteface: Field name. */\
-    friend constexpr const char *reflection_interface_field_name(const _reflection_internal_this_type *, _reflection_internal_field_indextype_##name_) {return #name_;} \
+    friend constexpr const char *reflection_interface_field_name(const _reflection_internal_this_type *, _reflection_internal_field_index_type_##name_) {return #name_;}
+
+
+/* Enum reflection.
+ * Grammar:
+ * [optional]
+ * `placeholders`
+ *
+ *   Reflect[Member]Enum[Class]('name' [,'type'], 'list`)
+ *
+ * Where `list` is a delimiter-less list of either
+ *   ('name')
+ * or
+ *   ('name', 'value')
+ */
+
+// `...` is `[underlying_type,] seq`
+#define ReflectEnum(name, ...)             PP0_VA_CALL(REFL0_ReflectEnum_A_, __VA_ARGS__)(name, inline,      , __VA_ARGS__)
+#define ReflectEnumClass(name, ...)        PP0_VA_CALL(REFL0_ReflectEnum_A_, __VA_ARGS__)(name, inline, class, __VA_ARGS__)
+#define ReflectMemberEnum(name, ...)       PP0_VA_CALL(REFL0_ReflectEnum_A_, __VA_ARGS__)(name, friend,      , __VA_ARGS__)
+#define ReflectMemberEnumClass(name, ...)  PP0_VA_CALL(REFL0_ReflectEnum_A_, __VA_ARGS__)(name, friend, class, __VA_ARGS__)
+
+#define REFL0_ReflectEnum_A_1(name, func_specifiers, pre, seq)                  REFL0_ReflectEnum_B(name, seq, func_specifiers, pre,)
+#define REFL0_ReflectEnum_A_2(name, func_specifiers, pre, underlying_type, seq) REFL0_ReflectEnum_B(name, seq, func_specifiers, pre, : underlying_type)
+
+#define REFL0_ReflectEnum_B(name, seq, func_specifiers, pre, post) enum pre name post { PP0_SEQ_APPLY(seq, REFL0_ReflectEnum_C, PP0_F_NULL,) }; ReflectExistingEnum(name, seq, func_specifiers)
+
+#define REFL0_ReflectEnum_C(i, data, ...) PP0_VA_CALL(REFL0_ReflectEnum_D_, __VA_ARGS__)(__VA_ARGS__)
+
+#define REFL0_ReflectEnum_D_1(name)        name,
+#define REFL0_ReflectEnum_D_2(name, value) name = value,
+
+// `func_specifiers_` depends on the scope. At namespace scope it must be `inline` (if the file is not a header, empty string may be used instead). At class scope it must be `friend`.
+#define ReflectExistingEnum(type_, seq_, func_specifiers_) \
+    /* Interface: To string. */\
+    func_specifiers_ ::std::string reflection_interface_primitive_to_string(const type_ *ptr) \
+    { \
+        switch (*ptr) \
+        { \
+            PP0_SEQ_APPLY(seq_, REFL0_ReflectEnum_Func_ToString_A, PP0_F_NULL, type_) \
+            default: return "invalid:" + ::std::to_string((::std::underlying_type_t<type_>)*ptr); \
+        } \
+    }
+
+#define REFL0_ReflectEnum_Func_ToString_A(i, type, ...) case type::PP0_VA_AT(0, __VA_ARGS__): return PP0_STR(PP0_VA_AT(0, __VA_ARGS__));
 
 #endif
