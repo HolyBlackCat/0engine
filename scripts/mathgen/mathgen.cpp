@@ -6,10 +6,10 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.9"
+#define VERSION "2.4.10"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
-std::ofstream out_file("extended_math.h");
+std::ofstream out_file("mat.h");
 
 int indentation = 0;
 bool new_line = 0;
@@ -1822,8 +1822,8 @@ return 0;
 int main()
 {
     r R"(
-#ifndef EXTENDED_MATH_H_INCLUDED
-#define EXTENDED_MATH_H_INCLUDED
+#ifndef MAT_H_INCLUDED
+#define MAT_H_INCLUDED
 
 // Version )" VERSION R"( by HolyBlackCat
 

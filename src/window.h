@@ -3,7 +3,7 @@
 
 #include "lib/sdl.h"
 #include "input.h"
-#include "extended_math.h"
+#include "mat.h"
 
 namespace Window
 {

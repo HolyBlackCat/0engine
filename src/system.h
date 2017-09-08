@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "input_enums.h"
-#include "extended_math.h"
+#include "mat.h"
 #include "os.h"
 
 #define MarkLocation(x) ::Sys::CodeLocation CODE_LOCATION_OBJECT(x)

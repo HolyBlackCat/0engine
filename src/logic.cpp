@@ -41,7 +41,7 @@ struct B
 
 struct A
 {
-    ReflectMemberEnum(E, (enum_a)(enum_b)(enum_c))
+    ReflectMemberEnumClass(E, (enum_a)(enum_b)(enum_c))
 
     Reflect(A)
     (
@@ -55,7 +55,6 @@ struct A
         (std::map<int,int>)(std_map)({{1,2},{3,4}}),
         (int[3])(plain_arr)({5,6,7}),
         (std::string)(str)(="abc\n\t\x18"),
-        (E)(enumeration)(=enum_c),
     )
 };
 
@@ -64,9 +63,13 @@ void Boot()
     MarkLocation("Boot");
 
 
-    A a;
+    //A a;
 
-    std::cout << Reflection::to_string_tree(a) << '\n';
+    //std::cout << Reflection::to_string_tree(a) << '\n';
+
+    std::string a = "\"\\\"\"", b;
+    std::cout << Reflection::Interface::primitive_from_string(b, a.c_str()) << "\n[" << b << "]\n";
+
 
     while (1)
     {

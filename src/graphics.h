@@ -14,7 +14,7 @@
 #include "lib/gl.h"
 #include "lib/sdl.h"
 #include "lib/sdlttf.h"
-#include "extended_math.h"
+#include "mat.h"
 #include "os.h"
 #include "system.h"
 #include "utils.h"

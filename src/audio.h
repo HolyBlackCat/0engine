@@ -6,7 +6,7 @@
 
 #include "exceptions.h"
 #include "lib/al.h"
-#include "extended_math.h"
+#include "mat.h"
 #include "system.h"
 #include "utils.h"
 

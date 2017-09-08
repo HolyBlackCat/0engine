@@ -22,7 +22,7 @@
 #include "audio.h"
 #include "graphics.h"
 #include "lib/z.h"
-#include "extended_math.h"
+#include "mat.h"
 #include "network.h"
 #include "window.h"
 #include "utils.h"

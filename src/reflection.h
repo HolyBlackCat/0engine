@@ -1,17 +1,191 @@
 #ifndef REFLECTION_H_INCLUDED
 #define REFLECTION_H_INCLUDED
 
+#include <cctype>
 #include <cstddef>
+#include <cstdlib>
+#include <cstring>
 #include <iterator>
+#include <map>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "extended_math.h"
+#include "mat.h"
 #include "preprocessor.h"
 
 namespace Reflection
 {
+    inline namespace Utils
+    {
+        std::string add_quotes(const std::string &str)
+        {
+            static auto Escape = [](char c) constexpr -> char
+            {
+                switch (c)
+                {
+                    case '\0': return '0';
+                    case '\"': return '"';
+                    case '\a': return 'a';
+                    case '\b': return 'b';
+                    case '\f': return 'f';
+                    case '\n': return 'n';
+                    case '\r': return 'r';
+                    case '\t': return 't';
+                    case '\v': return 'v';
+                    default: return 0;
+                }
+            };
+            static auto HexEscape = [](char c) constexpr -> bool
+            {
+                if (Escape(c))
+                    return 0;
+                return (c >= '\0' && c < ' ') || c == 127;
+            };
+
+            auto esc = std::count_if(str.begin(), str.end(), Escape);
+            auto hex = std::count_if(str.begin(), str.end(), HexEscape);
+
+            std::string ret;
+            ret.reserve(str.size() + esc + hex * 3 + 2);
+            ret.push_back('"');
+            for (char ch : str)
+            {
+                if (Escape(ch))
+                {
+                    char tmp[] {'\\', Escape(ch), '\0'};
+                    ret += tmp;
+                }
+                else if (HexEscape(ch))
+                {
+                    char tmp[] {'\\', 'x', char((unsigned char)ch / 16 + '0'), char((unsigned char)ch % 16 + '0'), '\0'};
+                    ret += tmp;
+                }
+                else
+                    ret += ch;
+            }
+            ret.push_back('"');
+            return ret;
+        }
+
+        std::string remove_quotes(const char *str, std::size_t *chars_consumed = 0)
+        {
+            if (*str != '"')
+            {
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return "";
+            }
+            str++;
+
+            const char *ptr = str;
+            std::size_t len = 0;
+            while (*ptr != '"' || ptr[-1] == '\\')
+            {
+                if (!*ptr)
+                {
+                    if (chars_consumed)
+                        *chars_consumed = 0;
+                    return "";
+                }
+
+                len++;
+
+                if (*ptr != '\\')
+                {
+                    ptr++;
+                }
+                else
+                {
+                    switch (ptr[1])
+                    {
+                      case '0':
+                      case '"':
+                      case 'a':
+                      case 'b':
+                      case 'f':
+                      case 'n':
+                      case 'r':
+                      case 't':
+                      case 'v':
+                        ptr += 2;
+                        break;
+                      case 'x':
+                        if (((ptr[2] >= '0' && ptr[2] <= '9') || (ptr[2] >= 'a' && ptr[2] <= 'f') || (ptr[2] >= 'A' && ptr[2] <= 'F')) &&
+                            ((ptr[3] >= '0' && ptr[3] <= '9') || (ptr[3] >= 'a' && ptr[3] <= 'f') || (ptr[3] >= 'A' && ptr[3] <= 'F')))
+                        {
+                            ptr += 4;
+                        }
+                        else
+                        {
+                            if (chars_consumed)
+                                *chars_consumed = 0;
+                            return "";
+                        }
+                        break;
+                      default:
+                        if (chars_consumed)
+                            *chars_consumed = 0;
+                        return "";
+                    }
+                }
+            }
+
+            if (chars_consumed)
+                *chars_consumed = ptr - str + 2;
+
+            std::string ret;
+            ret.reserve(len);
+            while (*str != '"' || str[-1] == '\\')
+            {
+                if (*str != '\\')
+                {
+                    ret.push_back(*str);
+                    str++;
+                }
+                else
+                {
+                    switch (str[1])
+                    {
+                      case '0':
+                        ret.push_back('\0'); str += 2; break;
+                      case '"':
+                        ret.push_back('\"'); str += 2; break;
+                      case 'a':
+                        ret.push_back('\a'); str += 2; break;
+                      case 'b':
+                        ret.push_back('\b'); str += 2; break;
+                      case 'f':
+                        ret.push_back('\f'); str += 2; break;
+                      case 'n':
+                        ret.push_back('\n'); str += 2; break;
+                      case 'r':
+                        ret.push_back('\r'); str += 2; break;
+                      case 't':
+                        ret.push_back('\t'); str += 2; break;
+                      case 'v':
+                        ret.push_back('\v'); str += 2; break;
+                      case 'x':
+                        {
+                            unsigned char tmp;
+                                 if (str[2] >= 'a' && str[2] <= 'f') tmp = (str[2] - 'a' + 10) << 4;
+                            else if (str[2] >= 'A' && str[2] <= 'F') tmp = (str[2] - 'A' + 10) << 4;
+                            else                                     tmp = (str[2] - '0'     ) << 4;
+                                 if (str[3] >= 'a' && str[3] <= 'f') tmp |= str[3] - 'a' + 10;
+                            else if (str[3] >= 'A' && str[3] <= 'F') tmp |= str[3] - 'A' + 10;
+                            else                                     tmp |= str[3] - '0'     ;
+                            ret.push_back(tmp);
+                            str += 4;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }
+
     namespace Cexpr
     {
         // Strings
@@ -87,7 +261,7 @@ namespace Reflection
         inline constexpr int reflection_interface_field_count(/*unused*/ const void *) {return 0;}
 
         // This should return reference to the field.
-        template <int I> void reflection_interface_field(const void *, int_const<I>) {}
+        template <int I> void reflection_interface_field(const void *, int_const<I>) = delete;
 
         template <int I> constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, int_const<I>) {return 0;}
 
@@ -95,6 +269,7 @@ namespace Reflection
 
         // Should be used for primitives only.
         inline std::string reflection_interface_primitive_to_string(const void *) {return "??";}
+        inline std::size_t reflection_interface_primitive_from_string(void *, const char *) = delete; // Returns a number of chars consumed or 0 if the conversion has failed (in this case the object is left unchanged).
         // Should be used for composites only and return a short single-line summary of contents. Optional.
         inline std::string reflection_interface_composite_summary_string(const void *) {return "...";}
 
@@ -105,60 +280,142 @@ namespace Reflection
         inline void reflection_interface_container_cbegin(const void *) {}
         inline void reflection_interface_container_cend(const void *) {}
 
+        template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<std::string, T> &> reflection_interface_enum_string_value_map(const void *) {static std::map<std::string, T> ret; return ret;}
+        template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<T, std::string> &> reflection_interface_enum_value_string_map(const void *) {static std::map<T, std::string> ret; return ret;}
+
 
         // Interface function specializations
 
         // Strings
         inline std::string reflection_interface_primitive_to_string(const std::string *obj)
         {
-            auto Escape = [](char c) constexpr -> char
-            {
-                switch (c)
-                {
-                    case '\"': return '"';
-                    case '\a': return 'a';
-                    case '\b': return 'b';
-                    case '\f': return 'f';
-                    case '\n': return 'n';
-                    case '\r': return 'r';
-                    case '\t': return 't';
-                    case '\v': return 'v';
-                    default: return 0;
-                }
-            };
-            auto HexEscape = [](char c) constexpr -> bool
-            {
-                return (c >= '\0' && c < ' ') || c == 127;
-            };
-
-            auto esc = std::count_if(obj->begin(), obj->end(), Escape);
-            auto hex = std::count_if(obj->begin(), obj->end(), HexEscape);
-
-            std::string ret;
-            ret.reserve(obj->size() + esc + hex * 3 + 2);
-            ret.push_back('"');
-            for (char ch : *obj)
-            {
-                if (Escape(ch))
-                {
-                    char tmp[] {'\\', Escape(ch), '\0'};
-                    ret += tmp;
-                }
-                else if (HexEscape(ch))
-                {
-                    char tmp[] {'\\', 'x', char((unsigned char)ch / 16 + '0'), char((unsigned char)ch % 16 + '0'), '\0'};
-                    ret += tmp;
-                }
-                else
-                    ret += ch;
-            }
-            ret.push_back('"');
-            return ret;
+            return add_quotes(*obj);
+        }
+        inline std::size_t reflection_interface_primitive_from_string(std::string *obj, const char *str)
+        {
+            std::size_t chars_consumed;
+            std::string val = remove_quotes(str, &chars_consumed);
+            if (chars_consumed == 0)
+                return 0;
+            *obj = val;
+            return chars_consumed;
         }
 
         // Arithmetic types
         template <typename T> std::enable_if_t<std::is_arithmetic_v<T>, std::string> reflection_interface_primitive_to_string(const T *obj) {return Math::num_to_string<T>(*obj);}
         inline std::string reflection_interface_primitive_to_string(const bool *obj) {return (*obj ? "true" : "false");}
+
+        template <typename T> std::enable_if_t<std::is_arithmetic_v<T>, std::size_t> reflection_interface_primitive_from_string(T *obj, const char *str)
+        {
+            if (std::isspace(*str))
+                return 0;
+
+            T ret;
+            char *end;
+
+            if constexpr (std::is_integral_v<T>)
+            {
+                if constexpr (sizeof (T) <= sizeof (long))
+                {
+                    if constexpr (std::is_signed_v<T>)
+                        ret = std::strtol(str, &end, 0);
+                    else
+                        ret = std::strtoul(str, &end, 0);
+                }
+                else
+                {
+                    if constexpr (std::is_signed_v<T>)
+                        ret = std::strtoll(str, &end, 0);
+                    else
+                        ret = std::strtoull(str, &end, 0);
+                }
+            }
+            else if constexpr (sizeof (T) <= sizeof (float))
+                ret = std::strtof(str, &end);
+            else if constexpr (sizeof (T) <= sizeof (double))
+                ret = std::strtod(str, &end);
+            else
+                ret = std::strtold(str, &end);
+
+            if (end == str)
+                return 0;
+
+            *obj = ret;
+            return end - str;
+        }
+        inline std::size_t reflection_interface_primitive_from_string(bool *obj, const char *str)
+        {
+            bool ok, value;
+            switch (*str)
+            {
+              case 0:
+              case 1:
+                *obj = *str - '0';
+                return 1;
+              case 't':
+                ok = !strncmp(str+1, "rue", 3);
+                value = 1;
+                break;
+              case 'T':
+                ok = !strncmp(str+1, "RUE", 3);
+                value = 1;
+                break;
+              case 'f':
+                ok = !strncmp(str+1, "alse", 4);
+                value = 0;
+                break;
+              case 'F':
+                ok = !strncmp(str+1, "ALSE", 4);
+                value = 0;
+                break;
+            }
+
+            if (ok)
+            {
+                *obj = value;
+                return 4 + value;
+            }
+            else
+                return 0;
+        }
+
+        // Enums
+        template <typename T> std::enable_if_t<std::is_enum_v<T>, std::string> reflection_interface_primitive_to_string(const T *obj)
+        {
+            const auto &map = reflection_interface_enum_value_string_map(obj);
+            auto it = map.find(*obj);
+            if (it == map.end())
+            {
+                std::underlying_type_t<T> val = (std::underlying_type_t<T>)*obj;
+                return reflection_interface_primitive_to_string(&val);
+            }
+            else
+                return it->second;
+        }
+        template <typename T> std::enable_if_t<std::is_enum_v<T>, std::size_t> reflection_interface_primitive_from_string(T *obj, const char *str)
+        {
+            if ((*str >= '0' && *str <= '9') || *str == '-' || *str == '+')
+            {
+                std::underlying_type_t<T> val;
+                std::size_t status = reflection_interface_primitive_from_string(&val, str);
+                if (!status) return 0;
+                *obj = (T)val;
+                return status;
+            }
+            std::size_t len = 0;
+            const char *ptr = str;
+            while ((*ptr >= 'a' && *ptr <= 'z') || (*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= '0' && *ptr <= '9') || *ptr == '_')
+            {
+                ptr++;
+                len++;
+            }
+            const auto &map = reflection_interface_enum_string_value_map(obj);
+            auto it = map.find(std::string(str, len));
+            if (it == map.end())
+                return 0;
+            *obj = it->second;
+            return it->first.size();
+        }
 
         // Vectors/matrices
         template <typename T> constexpr std::enable_if_t<Math::type_category<T>::vec_or_mat, int> reflection_interface_field_count(const T *)
@@ -219,6 +476,7 @@ namespace Reflection
 
             template <typename T, int I> static constexpr const char *field_name() {return reflection_interface_field_name((const T *)0, int_const<I>{});}
 
+            // Note that for composites this returns a short summary of contents.
             template <typename T> static std::string to_string(const T &obj)
             {
                 if constexpr (is_primitive<T>())
@@ -226,6 +484,8 @@ namespace Reflection
                 else
                     return reflection_interface_composite_summary_string(&obj);
             }
+
+            template <typename T> static std::size_t primitive_from_string(T &obj, const char *str) {return reflection_interface_primitive_from_string(&obj, str);}
 
 
             template <typename T> static constexpr bool is_container()
@@ -481,7 +741,7 @@ namespace Reflection
 #define REFL0_ReflectEnum_A_1(name, func_specifiers, pre, seq)                  REFL0_ReflectEnum_B(name, seq, func_specifiers, pre,)
 #define REFL0_ReflectEnum_A_2(name, func_specifiers, pre, underlying_type, seq) REFL0_ReflectEnum_B(name, seq, func_specifiers, pre, : underlying_type)
 
-#define REFL0_ReflectEnum_B(name, seq, func_specifiers, pre, post) enum pre name post { PP0_SEQ_APPLY(seq, REFL0_ReflectEnum_C, PP0_F_NULL,) }; ReflectExistingEnum(name, seq, func_specifiers)
+#define REFL0_ReflectEnum_B(name, seq, func_specifiers, pre, post) enum pre name post { PP0_SEQ_APPLY(seq, REFL0_ReflectEnum_C, PP0_F_NULL,) }; ReflectExistingEnum(name, func_specifiers, seq)
 
 #define REFL0_ReflectEnum_C(i, data, ...) PP0_VA_CALL(REFL0_ReflectEnum_D_, __VA_ARGS__)(__VA_ARGS__)
 
@@ -489,17 +749,13 @@ namespace Reflection
 #define REFL0_ReflectEnum_D_2(name, value) name = value,
 
 // `func_specifiers_` depends on the scope. At namespace scope it must be `inline` (if the file is not a header, empty string may be used instead). At class scope it must be `friend`.
-#define ReflectExistingEnum(type_, seq_, func_specifiers_) \
-    /* Interface: To string. */\
-    func_specifiers_ ::std::string reflection_interface_primitive_to_string(const type_ *ptr) \
-    { \
-        switch (*ptr) \
-        { \
-            PP0_SEQ_APPLY(seq_, REFL0_ReflectEnum_Func_ToString_A, PP0_F_NULL, type_) \
-            default: return "invalid:" + ::std::to_string((::std::underlying_type_t<type_>)*ptr); \
-        } \
-    }
+#define ReflectExistingEnum(type_, func_specifiers_, seq_) \
+    /* Interface: String->value map. */\
+    func_specifiers_ const auto &reflection_interface_enum_string_value_map(const type_ *) { static ::std::map<::std::string, type_> ret{ PP0_SEQ_APPLY(seq_, REFL0_ReflectEnum_Func_StringValueMap, PP0_F_COMMA, type_) }; return ret; } \
+    /* Interface: Value->string map. */\
+    func_specifiers_ const auto &reflection_interface_enum_value_string_map(const type_ *) { static ::std::map<type_, ::std::string> ret{ PP0_SEQ_APPLY(seq_, REFL0_ReflectEnum_Func_ValueStringMap, PP0_F_COMMA, type_) }; return ret; }
 
-#define REFL0_ReflectEnum_Func_ToString_A(i, type, ...) case type::PP0_VA_AT(0, __VA_ARGS__): return PP0_STR(PP0_VA_AT(0, __VA_ARGS__));
+#define REFL0_ReflectEnum_Func_StringValueMap(i, type, ...) { PP0_STR(PP0_VA_AT(0, __VA_ARGS__)) , type::PP0_VA_AT(0, __VA_ARGS__) }
+#define REFL0_ReflectEnum_Func_ValueStringMap(i, type, ...) { type::PP0_VA_AT(0, __VA_ARGS__) , PP0_STR(PP0_VA_AT(0, __VA_ARGS__)) }
 
 #endif

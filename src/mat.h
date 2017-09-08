@@ -1,7 +1,7 @@
-#ifndef EXTENDED_MATH_H_INCLUDED
-#define EXTENDED_MATH_H_INCLUDED
+#ifndef MAT_H_INCLUDED
+#define MAT_H_INCLUDED
 
-// Version 2.4.9 by HolyBlackCat
+// Version 2.4.10 by HolyBlackCat
 
 #include <algorithm>
 #include <cctype>

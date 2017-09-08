@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "graphics.h"
-#include "extended_math.h"
+#include "mat.h"
 #include "os.h"
 #include "system.h"
 #include "utils.h"
