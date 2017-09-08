@@ -125,7 +125,6 @@
 		<Unit filename="src/audio.cpp" />
 		<Unit filename="src/audio.h" />
 		<Unit filename="src/exceptions.h" />
-		<Unit filename="src/extended_math.h" />
 		<Unit filename="src/graphics.cpp" />
 		<Unit filename="src/graphics.h" />
 		<Unit filename="src/input.cpp" />
@@ -147,6 +146,7 @@
 			<Option compile="1" />
 			<Option weight="25" />
 		</Unit>
+		<Unit filename="src/mat.h" />
 		<Unit filename="src/network.cpp" />
 		<Unit filename="src/network.h" />
 		<Unit filename="src/os.h" />

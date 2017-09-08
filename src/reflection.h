@@ -16,59 +16,140 @@
 
 namespace Reflection
 {
-    inline namespace Utils
+    namespace Strings
     {
-        std::string add_quotes(const std::string &str)
+        // Returns a number of characters required to represent an escape sequence for a character.
+        // 1 is returned if no escape is needed.
+        // 2 is returned if \@ escape is needed.
+        // 4 is returned if \x@@ escape is needed.
+        inline int char_escape_len(char c)
         {
-            static auto Escape = [](char c) constexpr -> char
+            switch (c)
             {
+              case '\0':
+              case '\"':
+              case '\a':
+              case '\b':
+              case '\f':
+              case '\n':
+              case '\r':
+              case '\t':
+              case '\v':
+                return 2;
+              default:
+                if ((c >= '\0' && c < ' ') || c == 127)
+                    return 4;
+                else
+                    return 1;
+            }
+        }
+
+        inline std::string char_escape_seq(char c)
+        {
+            char tmp[5]{};
+            switch (char_escape_len(c))
+            {
+              case 1:
+                tmp[0] = c;
+                tmp[1] = '\0';
+                break;
+              case 2:
+                tmp[0] = '\\';
+                tmp[2] = '\0';
                 switch (c)
                 {
-                    case '\0': return '0';
-                    case '\"': return '"';
-                    case '\a': return 'a';
-                    case '\b': return 'b';
-                    case '\f': return 'f';
-                    case '\n': return 'n';
-                    case '\r': return 'r';
-                    case '\t': return 't';
-                    case '\v': return 'v';
-                    default: return 0;
+                    case '\0': tmp[1] = '0'; break;
+                    case '\"': tmp[1] = '"'; break;
+                    case '\a': tmp[1] = 'a'; break;
+                    case '\b': tmp[1] = 'b'; break;
+                    case '\f': tmp[1] = 'f'; break;
+                    case '\n': tmp[1] = 'n'; break;
+                    case '\r': tmp[1] = 'r'; break;
+                    case '\t': tmp[1] = 't'; break;
+                    case '\v': tmp[1] = 'v'; break;
+                    default: tmp[0] = c; tmp[1] = '\0'; break;
                 }
-            };
-            static auto HexEscape = [](char c) constexpr -> bool
-            {
-                if (Escape(c))
-                    return 0;
-                return (c >= '\0' && c < ' ') || c == 127;
-            };
+                break;
+              case 4:
+                tmp[0] = '\\';
+                tmp[1] = 'x';
+                tmp[2] = (unsigned char)c / 16 + '0';
+                tmp[3] = (unsigned char)c % 16 + '0';
+                tmp[4] = '\0';
+                break;
+            }
+            return tmp;
+        }
 
-            auto esc = std::count_if(str.begin(), str.end(), Escape);
-            auto hex = std::count_if(str.begin(), str.end(), HexEscape);
+        inline char char_from_escape(const char *ptr, const char **new_ptr = 0)
+        {
+            if (*ptr != '\\')
+            {
+                if (new_ptr)
+                    *new_ptr = ptr + 1;
+                return *ptr;
+            }
+
+            switch (ptr[1])
+            {
+              case '0': if (new_ptr) *new_ptr = ptr + 2; return '\0';
+              case '"': if (new_ptr) *new_ptr = ptr + 2; return '\"';
+              case 'a': if (new_ptr) *new_ptr = ptr + 2; return '\a';
+              case 'b': if (new_ptr) *new_ptr = ptr + 2; return '\b';
+              case 'f': if (new_ptr) *new_ptr = ptr + 2; return '\f';
+              case 'n': if (new_ptr) *new_ptr = ptr + 2; return '\n';
+              case 'r': if (new_ptr) *new_ptr = ptr + 2; return '\r';
+              case 't': if (new_ptr) *new_ptr = ptr + 2; return '\t';
+              case 'v': if (new_ptr) *new_ptr = ptr + 2; return '\v';
+              case 'x':
+                if (((ptr[2] >= '0' && ptr[2] <= '9') || (ptr[2] >= 'a' && ptr[2] <= 'f') || (ptr[2] >= 'A' && ptr[2] <= 'F')) &&
+                    ((ptr[3] >= '0' && ptr[3] <= '9') || (ptr[3] >= 'a' && ptr[3] <= 'f') || (ptr[3] >= 'A' && ptr[3] <= 'F')))
+                {
+                    if (new_ptr)
+                        *new_ptr = ptr + 4;
+
+                    unsigned char tmp;
+
+                         if (ptr[2] >= 'a' && ptr[2] <= 'f') tmp = (ptr[2] - 'a' + 10) << 4;
+                    else if (ptr[2] >= 'A' && ptr[2] <= 'F') tmp = (ptr[2] - 'A' + 10) << 4;
+                    else                                     tmp = (ptr[2] - '0'     ) << 4;
+                         if (ptr[3] >= 'a' && ptr[3] <= 'f') tmp |= ptr[3] - 'a' + 10;
+                    else if (ptr[3] >= 'A' && ptr[3] <= 'F') tmp |= ptr[3] - 'A' + 10;
+                    else                                     tmp |= ptr[3] - '0'     ;
+
+                    return tmp;
+                }
+              [[fallthrough]];
+              default:
+                {
+                    if (new_ptr)
+                        *new_ptr = ptr + 1;
+                    return '\\';
+                }
+            }
+        }
+
+        inline std::string add_quotes(const std::string &str)
+        {
+            std::size_t len = 2; // For 2 quotes.
+            for (char ch : str)
+                len += char_escape_len(ch);
 
             std::string ret;
-            ret.reserve(str.size() + esc + hex * 3 + 2);
+            ret.reserve(len);
             ret.push_back('"');
             for (char ch : str)
             {
-                if (Escape(ch))
-                {
-                    char tmp[] {'\\', Escape(ch), '\0'};
-                    ret += tmp;
-                }
-                else if (HexEscape(ch))
-                {
-                    char tmp[] {'\\', 'x', char((unsigned char)ch / 16 + '0'), char((unsigned char)ch % 16 + '0'), '\0'};
-                    ret += tmp;
-                }
+                if (char_escape_len(ch) == 1)
+                    ret.push_back(ch);
                 else
-                    ret += ch;
+                    ret += char_escape_seq(ch);
             }
             ret.push_back('"');
             return ret;
         }
 
-        std::string remove_quotes(const char *str, std::size_t *chars_consumed = 0)
+        inline std::string remove_quotes(const char *str, std::size_t *chars_consumed = 0)
         {
             if (*str != '"')
             {
@@ -78,109 +159,21 @@ namespace Reflection
             }
             str++;
 
-            const char *ptr = str;
-            std::size_t len = 0;
-            while (*ptr != '"' || ptr[-1] == '\\')
+            const char *begin = str;
+            std::string ret;
+
+            while ((*str != '"' || str[-1] == '\\') && *str != '\0')
+                ret += char_from_escape(str, &str);
+
+            if (*str != '"')
             {
-                if (!*ptr)
-                {
-                    if (chars_consumed)
-                        *chars_consumed = 0;
-                    return "";
-                }
-
-                len++;
-
-                if (*ptr != '\\')
-                {
-                    ptr++;
-                }
-                else
-                {
-                    switch (ptr[1])
-                    {
-                      case '0':
-                      case '"':
-                      case 'a':
-                      case 'b':
-                      case 'f':
-                      case 'n':
-                      case 'r':
-                      case 't':
-                      case 'v':
-                        ptr += 2;
-                        break;
-                      case 'x':
-                        if (((ptr[2] >= '0' && ptr[2] <= '9') || (ptr[2] >= 'a' && ptr[2] <= 'f') || (ptr[2] >= 'A' && ptr[2] <= 'F')) &&
-                            ((ptr[3] >= '0' && ptr[3] <= '9') || (ptr[3] >= 'a' && ptr[3] <= 'f') || (ptr[3] >= 'A' && ptr[3] <= 'F')))
-                        {
-                            ptr += 4;
-                        }
-                        else
-                        {
-                            if (chars_consumed)
-                                *chars_consumed = 0;
-                            return "";
-                        }
-                        break;
-                      default:
-                        if (chars_consumed)
-                            *chars_consumed = 0;
-                        return "";
-                    }
-                }
+                if (chars_consumed)
+                    *chars_consumed = 0;
+                return "";
             }
 
             if (chars_consumed)
-                *chars_consumed = ptr - str + 2;
-
-            std::string ret;
-            ret.reserve(len);
-            while (*str != '"' || str[-1] == '\\')
-            {
-                if (*str != '\\')
-                {
-                    ret.push_back(*str);
-                    str++;
-                }
-                else
-                {
-                    switch (str[1])
-                    {
-                      case '0':
-                        ret.push_back('\0'); str += 2; break;
-                      case '"':
-                        ret.push_back('\"'); str += 2; break;
-                      case 'a':
-                        ret.push_back('\a'); str += 2; break;
-                      case 'b':
-                        ret.push_back('\b'); str += 2; break;
-                      case 'f':
-                        ret.push_back('\f'); str += 2; break;
-                      case 'n':
-                        ret.push_back('\n'); str += 2; break;
-                      case 'r':
-                        ret.push_back('\r'); str += 2; break;
-                      case 't':
-                        ret.push_back('\t'); str += 2; break;
-                      case 'v':
-                        ret.push_back('\v'); str += 2; break;
-                      case 'x':
-                        {
-                            unsigned char tmp;
-                                 if (str[2] >= 'a' && str[2] <= 'f') tmp = (str[2] - 'a' + 10) << 4;
-                            else if (str[2] >= 'A' && str[2] <= 'F') tmp = (str[2] - 'A' + 10) << 4;
-                            else                                     tmp = (str[2] - '0'     ) << 4;
-                                 if (str[3] >= 'a' && str[3] <= 'f') tmp |= str[3] - 'a' + 10;
-                            else if (str[3] >= 'A' && str[3] <= 'F') tmp |= str[3] - 'A' + 10;
-                            else                                     tmp |= str[3] - '0'     ;
-                            ret.push_back(tmp);
-                            str += 4;
-                        }
-                        break;
-                    }
-                }
-            }
+                *chars_consumed = str - begin + 2;
 
             return ret;
         }
@@ -289,12 +282,12 @@ namespace Reflection
         // Strings
         inline std::string reflection_interface_primitive_to_string(const std::string *obj)
         {
-            return add_quotes(*obj);
+            return Strings::add_quotes(*obj);
         }
         inline std::size_t reflection_interface_primitive_from_string(std::string *obj, const char *str)
         {
             std::size_t chars_consumed;
-            std::string val = remove_quotes(str, &chars_consumed);
+            std::string val = Strings::remove_quotes(str, &chars_consumed);
             if (chars_consumed == 0)
                 return 0;
             *obj = val;
