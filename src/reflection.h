@@ -280,8 +280,8 @@ namespace Reflection
         inline void reflection_interface_container_cbegin(const void *) {}
         inline void reflection_interface_container_cend(const void *) {}
 
-        template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<std::string, T> &> reflection_interface_enum_string_value_map(const void *) {static std::map<std::string, T> ret; return ret;}
-        template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<T, std::string> &> reflection_interface_enum_value_string_map(const void *) {static std::map<T, std::string> ret; return ret;}
+        template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<std::string, T> &> reflection_interface_enum_string_value_map(const T *) {static std::map<std::string, T> ret; return ret;}
+        template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<T, std::string> &> reflection_interface_enum_value_string_map(const T *) {static std::map<T, std::string> ret; return ret;}
 
 
         // Interface function specializations
@@ -486,6 +486,10 @@ namespace Reflection
             }
 
             template <typename T> static std::size_t primitive_from_string(T &obj, const char *str) {return reflection_interface_primitive_from_string(&obj, str);}
+
+
+            template <typename T> static const auto &enum_string_value_map() {return reflection_interface_enum_string_value_map((const T *)0);}
+            template <typename T> static const auto &enum_value_string_map() {return reflection_interface_enum_value_string_map((const T *)0);}
 
 
             template <typename T> static constexpr bool is_container()

@@ -63,12 +63,9 @@ void Boot()
     MarkLocation("Boot");
 
 
-    //A a;
+    A a;
 
-    //std::cout << Reflection::to_string_tree(a) << '\n';
-
-    std::string a = "\"\\\"\"", b;
-    std::cout << Reflection::Interface::primitive_from_string(b, a.c_str()) << "\n[" << b << "]\n";
+    std::cout << Reflection::to_string_tree(a) << '\n';
 
 
     while (1)
