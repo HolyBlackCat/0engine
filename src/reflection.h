@@ -181,6 +181,14 @@ namespace Reflection
 
     namespace Cexpr
     {
+        // Utils
+
+        template <typename F, std::size_t ...Seq> static void for_each(std::index_sequence<Seq...>, F &&f)
+        {
+            (f(std::integral_constant<std::size_t, Seq>{}) , ...);
+        }
+
+
         // Strings
 
         template <char ...C> struct str
@@ -240,25 +248,29 @@ namespace Reflection
     {
         template <typename...> struct type_list {};
         template <auto...> struct value_list {};
-        template <int I> using int_const = std::integral_constant<int, I>;
+
+        template <std::size_t I> using index_const = std::integral_constant<std::size_t, I>;
 
         template <typename F, typename ...P> struct last_of_impl {using type = typename last_of_impl<P...>::type;};
         template <typename F> struct last_of_impl<F> {using type = F;};
         template <typename F, typename ...P> using last_of = typename last_of_impl<F, P...>::type;
+
 
         template <typename T> inline constexpr bool forced_primitive = std::is_same_v<std::string, T>;
 
 
         // Default interface functions
 
-        inline constexpr int reflection_interface_field_count(/*unused*/ const void *) {return 0;}
+        inline constexpr std::size_t reflection_interface_field_count(/*unused*/ const void *) {return 0;}
 
         // This should return reference to the field.
-        template <int I> void reflection_interface_field(const void *, int_const<I>) = delete;
+        template <std::size_t I> void reflection_interface_field(const void *, index_const<I>) = delete;
 
-        template <int I> constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, int_const<I>) {return 0;}
+        template <std::size_t I> constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, index_const<I>) {return 0;}
 
-        template <int I> constexpr const char *reflection_interface_field_name(/*unused*/ const void *, int_const<I>) {return "?";}
+        template <std::size_t I> constexpr const char *reflection_interface_field_name(/*unused*/ const void *, index_const<I>) {return "?";}
+
+        inline constexpr bool reflection_interface_anonymous_fields(/*unused*/ const void *) {return 0;} // Setting this to 1 has higher priority than `reflection_interface_field_name`. It will make all fields have numeric names.
 
         // Should be used for primitives only.
         inline std::string reflection_interface_primitive_to_string(const void *) {return "??";}
@@ -411,14 +423,14 @@ namespace Reflection
         }
 
         // Vectors/matrices
-        template <typename T> constexpr std::enable_if_t<Math::type_category<T>::vec_or_mat, int> reflection_interface_field_count(const T *)
+        template <typename T> constexpr std::enable_if_t<Math::type_category<T>::vec_or_mat, std::size_t> reflection_interface_field_count(const T *)
         {
             if constexpr (Math::type_category<T>::vec)
                 return T::size;
             else
                 return T::width;
         }
-        template <typename T, int I> std::enable_if_t<Math::type_category<T>::vec_or_mat, const decltype(T::x) &> reflection_interface_field(const T *ptr, int_const<I>)
+        template <typename T, std::size_t I> std::enable_if_t<Math::type_category<T>::vec_or_mat, const decltype(T::x) &> reflection_interface_field(const T *ptr, index_const<I>)
         {
                  if constexpr (I == 0) return ptr->x;
             else if constexpr (I == 1) return ptr->y;
@@ -426,7 +438,7 @@ namespace Reflection
             else if constexpr (I == 3) return ptr->w;
             else                       return {};
         }
-        template <typename T, int I, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> constexpr const char *reflection_interface_field_name(const T *, int_const<I>)
+        template <typename T, std::size_t I, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> constexpr const char *reflection_interface_field_name(const T *, index_const<I>)
         {
                  if constexpr (I == 0) return "x";
             else if constexpr (I == 1) return "y";
@@ -436,14 +448,14 @@ namespace Reflection
         template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> std::string reflection_interface_composite_summary_string(const T *ptr) {return ptr->to_string();}
 
         // Tuples, pairs and `std::array`s.
-        template <typename T       > constexpr last_of<decltype(std::tuple_size<T>::value), int         > reflection_interface_field_count(const T *              ) {return std::tuple_size<T>::value;}
-        template <typename T, int I> constexpr auto reflection_interface_field(const T *ptr, int_const<I>) -> last_of<decltype(std::tuple_size<T>::value), decltype(std::get<I>(*ptr))> {return std::get<I>(*ptr);}
-        template <typename T, int I> constexpr last_of<decltype(std::tuple_size<T>::value), const char *> reflection_interface_field_name (const T *, int_const<I>) {return Cexpr::num_to_str<I>::value;}
+        template <typename T               > constexpr last_of<decltype(std::tuple_size<T>::value), std::size_t> reflection_interface_field_count     (const T *) {return std::tuple_size<T>::value;}
+        template <typename T, std::size_t I> constexpr auto reflection_interface_field(const T *ptr, index_const<I>) -> last_of<decltype(std::tuple_size<T>::value), decltype(std::get<I>(*ptr))> {return std::get<I>(*ptr);}
+        template <typename T               > constexpr last_of<decltype(std::tuple_size<T>::value), bool       > reflection_interface_anonymous_fields(const T *) {return 1;}
 
         // Plain arrays.
-        template <typename T       > constexpr std::enable_if_t<std::is_array_v<T>, int                            > reflection_interface_field_count(const T *              ) {return std::extent_v<T>;}
-        template <typename T, int I> constexpr std::enable_if_t<std::is_array_v<T>, const std::remove_extent_t<T> &> reflection_interface_field(const T *ptr, int_const<I>) {return (*ptr)[I];}
-        template <typename T, int I> constexpr std::enable_if_t<std::is_array_v<T>, const char *                   > reflection_interface_field_name (const T *, int_const<I>) {return Cexpr::num_to_str<I>::value;}
+        template <typename T               > constexpr std::enable_if_t<std::is_array_v<T>, std::size_t                    > reflection_interface_field_count     (const T *                   ) {return std::extent_v<T>;}
+        template <typename T, std::size_t I> constexpr std::enable_if_t<std::is_array_v<T>, const std::remove_extent_t<T> &> reflection_interface_field           (const T *ptr, index_const<I>) {return (*ptr)[I];}
+        template <typename T               > constexpr std::enable_if_t<std::is_array_v<T>, bool                           > reflection_interface_anonymous_fields(const T *                   ) {return 1;}
 
         // Standard containers
         template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::size  (std::declval<const T &>()))>> std::size_t reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
@@ -460,14 +472,22 @@ namespace Reflection
 
             template <typename T> static constexpr bool is_structure() {return field_count<T>() > 0;}
 
-            template <typename T> static constexpr int field_count() {return reflection_interface_field_count((const T *)0);}
+            template <typename T> static constexpr std::size_t field_count() {return reflection_interface_field_count((const T *)0);}
 
-            template <int I, typename T> static const auto &field(const T &obj) {return reflection_interface_field(&obj, int_const<I>{});}
-            template <int I, typename T> static       auto &field(      T &obj) {return (std::remove_const_t<std::remove_reference_t<decltype(field<I>((const T &)obj))>> &)field<I>((const T &)obj);}
+            template <std::size_t I, typename T> static const auto &field(const T &obj) {return reflection_interface_field(&obj, index_const<I>{});}
+            template <std::size_t I, typename T> static       auto &field(      T &obj) {return (std::remove_const_t<std::remove_reference_t<decltype(field<I>((const T &)obj))>> &)field<I>((const T &)obj);}
 
-            template <typename T, int I> static constexpr bool field_has_default_value() {return reflection_interface_field_has_default_value((const T *)0, int_const<I>{});}
+            template <typename T, std::size_t I> static constexpr bool field_has_default_value() {return reflection_interface_field_has_default_value((const T *)0, index_const<I>{});}
 
-            template <typename T, int I> static constexpr const char *field_name() {return reflection_interface_field_name((const T *)0, int_const<I>{});}
+            template <typename T> static constexpr bool anonymous_fields() {return reflection_interface_anonymous_fields((const T *)0);} // If this is set to 1, `field_name` returns field indices.
+
+            template <typename T, std::size_t I> static constexpr const char *field_name()
+            {
+                if constexpr (anonymous_fields<T>())
+                    return Cexpr::num_to_str<I>::value;
+                else
+                    return reflection_interface_field_name((const T *)0, index_const<I>{});
+            }
 
             // Note that for composites this returns a short summary of contents.
             template <typename T> static std::string to_string(const T &obj)
@@ -509,6 +529,7 @@ namespace Reflection
 
             template <typename T> static constexpr bool is_primitive() {return !is_structure<T>() && !is_container<T>();}
 
+
             class Impl
             {
                 ~Impl() = delete;
@@ -516,23 +537,23 @@ namespace Reflection
 
                 // Counter
 
-                template <typename T, typename Tag, int I, typename Unique, typename = void> struct counter_has_crumb
+                template <typename T, typename Tag, std::size_t I, typename Unique, typename = void> struct counter_has_crumb
                 {
                     static constexpr bool value = 0;
                 };
-                template <typename T, typename Tag, int I, typename Unique> struct counter_has_crumb<T,Tag,I,Unique,std::void_t<decltype(T::_reflection_internal_counter_crumb(type_list<Tag>{}, int_const<I>{}))>>
+                template <typename T, typename Tag, std::size_t I, typename Unique> struct counter_has_crumb<T,Tag,I,Unique,std::void_t<decltype(T::_reflection_internal_counter_crumb(type_list<Tag>{}, index_const<I>{}))>>
                 {
                     static constexpr bool value = 1;
                 };
 
-                template <typename T, typename Tag, typename Unique, int I = 0> struct counter_value
+                template <typename T, typename Tag, typename Unique, std::size_t I = 0> struct counter_value
                 {
                     static constexpr bool has_crumb = counter_has_crumb<T,Tag,I,Unique>::value;
-                    static constexpr int value = has_crumb + counter_value<T, Tag, Unique, has_crumb ? I+1 : -1>::value;
+                    static constexpr std::size_t value = has_crumb + counter_value<T, Tag, Unique, has_crumb ? I+1 : -1>::value;
                 };
                 template <typename T, typename Tag, typename Unique> struct counter_value<T,Tag,Unique,-1>
                 {
-                    static constexpr int value = 0;
+                    static constexpr std::size_t value = 0;
                 };
 
                 struct counter_tag_fields {};
@@ -543,10 +564,55 @@ namespace Reflection
     using InterfaceDetails::Interface;
 
 
-    template <typename T, int ...Seq> std::string impl_to_string_tree(const T &object, int depth, std::integer_sequence<int, Seq...>)
+    template <typename T> std::string to_string(const T &object)
     {
-        using InterfaceDetails::int_const;
+        if constexpr (Interface::is_structure<T>())
+        {
+            std::string ret = "{";
 
+            auto lambda = [&](auto index)
+            {
+                constexpr bool no_names = !Interface::anonymous_fields<T>();
+                if constexpr (no_names)
+                {
+                    ret += Interface::field_name<T, index.value>();
+                    ret += '=';
+                }
+                ret += to_string(Interface::field<index.value>(object));
+                ret += ',';
+            };
+
+            Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, lambda);
+
+            if (Interface::field_count<T>())
+                ret[ret.size()-1] = '}';
+
+            return ret;
+        }
+        else if constexpr (Interface::is_container<T>())
+        {
+            std::string ret = "{";
+
+            for (auto it = Interface::container_cbegin(object); it != Interface::container_cend(object); it++)
+            {
+                ret += to_string(*it);
+                ret += ',';
+            }
+
+            if (Interface::container_size(object))
+                ret[ret.size()-1] = '}';
+
+            return ret;
+        }
+        else
+        {
+            return Interface::to_string(object);
+        }
+    }
+
+
+    template <typename T> std::string to_string_tree(const T &object, int depth = -1) // `depth == -1` means no limit.
+    {
         [[maybe_unused]] auto Indent = [](std::string param, char symbol) -> std::string
         {
             param = '\n' + param;
@@ -581,7 +647,7 @@ namespace Reflection
                 constexpr bool is_primitive = Interface::is_primitive<field_t>();
 
                 if (index.value != 0) ret += '\n';
-                ret += (index.value != sizeof...(Seq)-1 ? '|' : '`');
+                ret += (index.value != Interface::field_count<T>()-1 ? '|' : '`');
                 ret += (depth == 0 && !is_primitive ? '*' : '-');
                 ret += Interface::field_name<T, index.value>();
                 if constexpr (!is_primitive)
@@ -592,7 +658,7 @@ namespace Reflection
                         ret += Interface::to_string(field);
                     }
                     else
-                        ret += Indent(impl_to_string_tree(field, depth - 1, std::make_integer_sequence<int, Interface::field_count<field_t>()>{}), "| "[index.value == sizeof...(Seq)-1]);
+                        ret += Indent(to_string_tree(field, depth - 1), "| "[index.value == Interface::field_count<T>()-1]);
                 }
                 else
                 {
@@ -601,7 +667,7 @@ namespace Reflection
                 }
             };
 
-            (lambda(int_const<Seq>{}) , ...);
+            Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, lambda);
 
             return ret;
         }
@@ -630,7 +696,7 @@ namespace Reflection
                         ret += Interface::to_string(*it);
                     }
                     else
-                        ret += Indent(impl_to_string_tree(*it, depth - 1, std::make_integer_sequence<int, Interface::field_count<value_t>()>{}), ": "[pos == size-1]);
+                        ret += Indent(to_string_tree(*it, depth - 1), ": "[pos == size-1]);
                 }
                 else
                 {
@@ -648,10 +714,36 @@ namespace Reflection
         }
     }
 
-    template <typename T> std::string to_string_tree(const T &obj, int depth = -1) // `depth == -1` means no limit.
+
+
+    /*
+    // Generic runtime reflection
+
+    struct Generic;
+
+    struct Element
     {
-        return impl_to_string_tree(obj, depth, std::make_integer_sequence<int, Interface::field_count<T>()>{});
-    }
+        Generic value;
+
+        std::string name;
+        bool has_default_value;
+    };
+
+    struct GenericTable
+    {
+        bool is_structure,
+             is_container,
+             is_primitive;
+
+        bool anonymous_fields;
+
+        std::size_t (*element_count )(const void *);
+        Element     (*element       )(const void *, std::string);
+
+        std::string (*to_string     )(const void *);
+        std::string (*to_string_tree)(const void *);
+        std::size_t (*from_string   )(      void *, const char *)
+    };*/
 }
 
 /* Struct/class reflection.
@@ -678,7 +770,7 @@ namespace Reflection
     using _reflection_internal_this_type = name_; \
     /* Interface: Get field count */\
     /* (Making it a template delays the expansion so we can get a proper counter value.) */\
-    template <typename = void> friend constexpr int reflection_interface_field_count(const _reflection_internal_this_type *) {return ::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, void>::value;} \
+    template <typename = void> friend constexpr ::std::size_t reflection_interface_field_count(const _reflection_internal_this_type *) {return ::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, void>::value;} \
     ReflectMembers
 
 #define ReflectMembers(...) \
@@ -705,7 +797,7 @@ namespace Reflection
     /* Make sure there is no explicit empty init (because it would make `has_init_ == 1` without a good reason). */\
     static_assert(has_init_ == 0 || !::Reflection::Cexpr::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
     /* Field index. */\
-    using _reflection_internal_field_index_type_##name_ = ::Reflection::InterfaceDetails::int_const<::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value>; \
+    using _reflection_internal_field_index_type_##name_ = ::Reflection::InterfaceDetails::index_const<::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value>; \
     /* Increment field counter. */\
     static void _reflection_internal_counter_crumb(::Reflection::InterfaceDetails::type_list<::Reflection::Interface::Impl::counter_tag_fields>, _reflection_internal_field_index_type_##name_) {} \
     /* Inteface: Get the field by index. */\

@@ -63,6 +63,7 @@ void Boot()
     MarkLocation("Boot");
 
     A a;
+    std::cout << Reflection::to_string(a) << '\n';
     std::cout << Reflection::to_string_tree(a) << '\n';
 
     while (1)
