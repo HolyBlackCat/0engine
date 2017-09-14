@@ -16,6 +16,9 @@
 
 namespace Reflection
 {
+    template <std::size_t I> using index_const = std::integral_constant<std::size_t, I>;
+
+
     namespace Strings
     {
         // Returns a number of characters required to represent an escape sequence for a character.
@@ -249,7 +252,6 @@ namespace Reflection
         template <typename...> struct type_list {};
         template <auto...> struct value_list {};
 
-        template <std::size_t I> using index_const = std::integral_constant<std::size_t, I>;
 
         template <typename F, typename ...P> struct last_of_impl {using type = typename last_of_impl<P...>::type;};
         template <typename F> struct last_of_impl<F> {using type = F;};
@@ -270,7 +272,9 @@ namespace Reflection
 
         template <std::size_t I> constexpr const char *reflection_interface_field_name(/*unused*/ const void *, index_const<I>) {return "?";}
 
-        inline constexpr bool reflection_interface_anonymous_fields(/*unused*/ const void *) {return 0;} // Setting this to 1 has higher priority than `reflection_interface_field_name`. It will make all fields have numeric names.
+        // Setting this to 1 has higher priority than `reflection_interface_field_name`. It makes all fields have numeric names.
+        // `reflection_interface_field_has_default_value` is also overriden to 0.
+        inline constexpr bool reflection_interface_anonymous_fields(/*unused*/ const void *) {return 0;}
 
         // Should be used for primitives only.
         inline std::string reflection_interface_primitive_to_string(const void *) {return "??";}
@@ -477,9 +481,15 @@ namespace Reflection
             template <std::size_t I, typename T> static const auto &field(const T &obj) {return reflection_interface_field(&obj, index_const<I>{});}
             template <std::size_t I, typename T> static       auto &field(      T &obj) {return (std::remove_const_t<std::remove_reference_t<decltype(field<I>((const T &)obj))>> &)field<I>((const T &)obj);}
 
-            template <typename T, std::size_t I> static constexpr bool field_has_default_value() {return reflection_interface_field_has_default_value((const T *)0, index_const<I>{});}
-
             template <typename T> static constexpr bool anonymous_fields() {return reflection_interface_anonymous_fields((const T *)0);} // If this is set to 1, `field_name` returns field indices.
+
+            template <typename T, std::size_t I> static constexpr bool field_has_default_value()
+            {
+                if constexpr (anonymous_fields<T>())
+                    return 0;
+                else
+                    return reflection_interface_field_has_default_value((const T *)0, index_const<I>{});
+            }
 
             template <typename T, std::size_t I> static constexpr const char *field_name()
             {
@@ -715,35 +725,156 @@ namespace Reflection
     }
 
 
-
-    /*
     // Generic runtime reflection
-
-    struct Generic;
-
-    struct Element
+    inline namespace GenericRefl
     {
-        Generic value;
+        class Generic;
+        class Element;
 
-        std::string name;
-        bool has_default_value;
-    };
+        struct GenericTable
+        {
+            bool is_structure,
+                 is_container,
+                 is_primitive;
 
-    struct GenericTable
-    {
-        bool is_structure,
-             is_container,
-             is_primitive;
+            bool anonymous_fields;
 
-        bool anonymous_fields;
+            std::size_t (*element_count   )(const Generic *);
+            Element     (*element_by_index)(const Generic *, std::size_t);
+            Element     (*element         )(const Generic *, std::string);
 
-        std::size_t (*element_count )(const void *);
-        Element     (*element       )(const void *, std::string);
+            std::string (*to_string       )(const Generic *);
+            std::string (*to_string_tree  )(const Generic *);
+            std::size_t (*from_string     )(const Generic *, const char *);
+        };
 
-        std::string (*to_string     )(const void *);
-        std::string (*to_string_tree)(const void *);
-        std::size_t (*from_string   )(      void *, const char *)
-    };*/
+        template <typename T> const GenericTable &generic_table();
+
+        class Generic
+        {
+            const void *ptr;
+            bool constant;
+            const GenericTable *table;
+          public:
+            constexpr Generic(const void *ptr, bool constant, const GenericTable *table) : ptr(ptr), constant(constant), table(table) {}
+            constexpr Generic() : Generic(0, 1, 0) {}
+            template <typename T> Generic(T &object) : Generic(&object, std::is_const_v<T>, generic_table<T>()) {}
+
+            const void *pointer() const {return ptr;}
+            bool is_const() const {return constant;}
+
+            bool           is_structure    ()                  const {return table->is_structure;}
+            bool           is_container    ()                  const {return table->is_container;}
+            bool           is_primitive    ()                  const {return table->is_primitive;}
+
+            bool           anonymous_fields()                  const {return table->anonymous_fields;}
+
+            std::size_t    element_count   ()                  const {return table->element_count (this);}
+            inline Element element_by_index(std::size_t index) const;
+            inline Element element         (std::string name)  const;
+
+            std::string    to_string       ()                  const {return table->to_string     (this);}
+            std::string    to_string_tree  ()                  const {return table->to_string_tree(this);}
+            std::size_t    from_string     (const char *str)   const {return table->from_string   (this, str);}
+        };
+
+        class Element : public Generic
+        {
+            std::string field_name;
+            bool field_has_default_value;
+          public:
+            Element(const void *ptr, bool constant, const GenericTable *table, const std::string &field_name, bool field_has_default_value)
+                : Generic(ptr, constant, table), field_name(field_name), field_has_default_value(field_has_default_value) {}
+            Element() : Element(0, 1, 0, "<invalid>", 0) {}
+
+            template <typename T> Element(T &object, const std::string &field_name, bool field_has_default_value)
+              : Generic(object),
+                field_name(field_name),
+                field_has_default_value(field_has_default_value)
+            {}
+            template <typename T, std::size_t I> Element(T &object, index_const<I>)
+              : Generic(Interface::field<I>(object)),
+                field_name(Interface::field_name<T, I>()),
+                field_has_default_value(Interface::field_has_default_value<T, I>())
+            {}
+            template <typename T, std::size_t ...Seq> Element(T &object, std::size_t index, [[maybe_unused]] std::index_sequence<Seq...> indices_to_check = std::make_index_sequence<Interface::field_count<T>()>{})
+            {
+                ( (index-- != 0 || (*this = Element(object, index_const<Seq>{}), 0)) || ...);
+            }
+
+            const std::string &name             () const {return field_name;}
+            bool               has_default_value() const {return field_has_default_value;}
+        };
+
+        inline Element Generic::element_by_index(std::size_t index) const {return table->element_by_index(this, index);}
+        inline Element Generic::element         (std::string name ) const {return table->element         (this, name );}
+
+
+        template <typename T, std::size_t ...Seq> std::size_t field_name_to_index(const std::string &name, [[maybe_unused]] std::index_sequence<Seq...> indices_to_check = std::make_index_sequence<Interface::field_count<T>()>{})
+        {
+            if (name[0] >= '0' && name[0] <= '9')
+            {
+                std::size_t index, len = Interface::primitive_from_string(index, name.c_str());
+                if (len == 0 || name[len] != '\0')
+                    return -1;
+                else
+                    return index;
+            }
+            else
+            {
+                if constexpr (Interface::anonymous_fields<T>())
+                    return -1;
+
+                static std::map<std::string, std::size_t> map{ {Interface::field_name<T, Seq>(), Seq}... };
+                auto it = map.find(name);
+                if (it == map.end())
+                    return -1;
+                else
+                    return it->second;
+            }
+        }
+
+        template <typename T> const GenericTable &generic_table()
+        {
+            static constexpr GenericTable ret
+            {
+                Interface::is_structure<T>(),
+                Interface::is_container<T>(),
+                Interface::is_primitive<T>(),
+                Interface::anonymous_fields<T>(),
+
+                [](const Generic *ptr) -> std::size_t // element_count
+                {
+                         if constexpr (Interface::is_structure<T>()) return Interface::field_count<T>();
+                    else if constexpr (Interface::is_container<T>()) return Interface::container_size(*(const T *)ptr->pointer());
+                    else                                             return 0;
+                },
+                [](const Generic *ptr, std::size_t index) -> Element // element_by_index
+                {
+                    return {*(const T *)ptr->pointer(), index};
+                },
+                [](const Generic *ptr, std::string name) -> Element // element
+                {
+                    return {*(const T *)ptr->pointer(), field_name_to_index<const T>(name)};
+                },
+                [](const Generic *ptr) -> std::string // to_string
+                {
+                    return to_string(*(const T *)ptr->pointer());
+                },
+                [](const Generic *ptr) -> std::string // to_string_tree
+                {
+                    return to_string_tree(*(const T *)ptr->pointer());
+                },
+                [](const Generic *ptr, const char *str) -> std::size_t // from_string
+                {
+                    "Write me!";
+                    return 0;
+                },
+            };
+
+            return ret;
+        }
+    }
 }
 
 /* Struct/class reflection.
@@ -797,7 +928,7 @@ namespace Reflection
     /* Make sure there is no explicit empty init (because it would make `has_init_ == 1` without a good reason). */\
     static_assert(has_init_ == 0 || !::Reflection::Cexpr::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
     /* Field index. */\
-    using _reflection_internal_field_index_type_##name_ = ::Reflection::InterfaceDetails::index_const<::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value>; \
+    using _reflection_internal_field_index_type_##name_ = ::Reflection::index_const<::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value>; \
     /* Increment field counter. */\
     static void _reflection_internal_counter_crumb(::Reflection::InterfaceDetails::type_list<::Reflection::Interface::Impl::counter_tag_fields>, _reflection_internal_field_index_type_##name_) {} \
     /* Inteface: Get the field by index. */\
