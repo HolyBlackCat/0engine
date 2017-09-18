@@ -10,6 +10,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "mat.h"
 #include "preprocessor.h"
@@ -21,6 +22,25 @@ namespace Reflection
 
     namespace Strings
     {
+        inline constexpr bool is_digit(char ch)
+        {
+            return ch >= '0' && ch <= '9';
+        }
+        inline constexpr bool is_hex_digit(char ch)
+        {
+            return is_digit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+        }
+        inline constexpr bool is_alphanum(char ch)
+        {
+            return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || is_digit(ch) || ch == '_';
+        }
+        inline constexpr int hex_digit_to_number(char ch)
+        {
+                 if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+            else if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+            else                             return ch - '0';
+        }
+
         // Returns a number of characters required to represent an escape sequence for a character.
         // 1 is returned if no escape is needed.
         // 2 is returned if \@ escape is needed.
@@ -105,22 +125,12 @@ namespace Reflection
               case 't': if (new_ptr) *new_ptr = ptr + 2; return '\t';
               case 'v': if (new_ptr) *new_ptr = ptr + 2; return '\v';
               case 'x':
-                if (((ptr[2] >= '0' && ptr[2] <= '9') || (ptr[2] >= 'a' && ptr[2] <= 'f') || (ptr[2] >= 'A' && ptr[2] <= 'F')) &&
-                    ((ptr[3] >= '0' && ptr[3] <= '9') || (ptr[3] >= 'a' && ptr[3] <= 'f') || (ptr[3] >= 'A' && ptr[3] <= 'F')))
+                if (is_hex_digit(ptr[2]) && is_hex_digit(ptr[3]))
                 {
                     if (new_ptr)
                         *new_ptr = ptr + 4;
 
-                    unsigned char tmp;
-
-                         if (ptr[2] >= 'a' && ptr[2] <= 'f') tmp = (ptr[2] - 'a' + 10) << 4;
-                    else if (ptr[2] >= 'A' && ptr[2] <= 'F') tmp = (ptr[2] - 'A' + 10) << 4;
-                    else                                     tmp = (ptr[2] - '0'     ) << 4;
-                         if (ptr[3] >= 'a' && ptr[3] <= 'f') tmp |= ptr[3] - 'a' + 10;
-                    else if (ptr[3] >= 'A' && ptr[3] <= 'F') tmp |= ptr[3] - 'A' + 10;
-                    else                                     tmp |= ptr[3] - '0'     ;
-
-                    return tmp;
+                    return (hex_digit_to_number(ptr[2]) << 4) | hex_digit_to_number(ptr[3]);
                 }
               [[fallthrough]];
               default:
@@ -180,6 +190,13 @@ namespace Reflection
 
             return ret;
         }
+
+        inline const char *skip_whitespace(const char *ptr)
+        {
+            while (*ptr && *ptr <= ' ')
+                ptr++;
+            return ptr;
+        }
     }
 
     namespace Cexpr
@@ -191,6 +208,13 @@ namespace Reflection
             (f(std::integral_constant<std::size_t, Seq>{}) , ...);
         }
 
+        template <typename T, typename = void> struct supports_reset_by_empty_list_assignment_impl : std::false_type {};
+        template <typename T> struct supports_reset_by_empty_list_assignment_impl<T, std::void_t<decltype(std::declval<T &>() = {})>> : std::true_type {};
+        template <typename T> inline constexpr bool supports_reset_by_empty_list_assignment = supports_reset_by_empty_list_assignment_impl<T>::value;
+
+        template <typename T, typename = void> struct supports_reset_by_swap_impl : std::false_type {};
+        template <typename T> struct supports_reset_by_swap_impl<T, std::void_t<decltype(std::swap(std::declval<T &>(), std::declval<T &>()))>> : std::true_type {};
+        template <typename T> inline constexpr bool supports_reset_by_swap = supports_reset_by_swap_impl<T>::value;
 
         // Strings
 
@@ -238,7 +262,7 @@ namespace Reflection
         template <std::size_t N> using num_to_str = decltype(num_to_str_impl<N, 1>(std::make_index_sequence<1>{}));
 
         // Returns 1 only when the string consists of non-printable characters only.
-        template <std::size_t N> static constexpr bool cexpr_string_is_empty(const char (&str)[N])
+        template <std::size_t N> static constexpr bool string_is_empty(const char (&str)[N])
         {
             for (std::size_t i = 0; i < N; i++)
                 if (str[i] > ' ')
@@ -252,6 +276,12 @@ namespace Reflection
         template <typename...> struct type_list {};
         template <auto...> struct value_list {};
 
+        struct sink
+        {
+            template <typename T> constexpr sink(T &&) {}
+            template <typename T> constexpr sink operator=(T &&) {return *this;}
+            template <typename T> operator T() const {return {};}
+        };
 
         template <typename F, typename ...P> struct last_of_impl {using type = typename last_of_impl<P...>::type;};
         template <typename F> struct last_of_impl<F> {using type = F;};
@@ -265,16 +295,17 @@ namespace Reflection
 
         inline constexpr std::size_t reflection_interface_field_count(/*unused*/ const void *) {return 0;}
 
-        // This should return reference to the field.
-        template <std::size_t I> void reflection_interface_field(const void *, index_const<I>) = delete;
+        // This should return a reference to the field.
+        template <std::size_t I> void reflection_interface_field(void *, index_const<I>) = delete;
 
         template <std::size_t I> constexpr bool reflection_interface_field_has_default_value(/*unused*/ const void *, index_const<I>) {return 0;}
 
         template <std::size_t I> constexpr const char *reflection_interface_field_name(/*unused*/ const void *, index_const<I>) {return "?";}
 
-        // Setting this to 1 has higher priority than `reflection_interface_field_name`. It makes all fields have numeric names.
+        // It makes all fields have numeric names, overriding `reflection_interface_field_name`.
         // `reflection_interface_field_has_default_value` is also overriden to 0.
-        inline constexpr bool reflection_interface_anonymous_fields(/*unused*/ const void *) {return 0;}
+        // When converting tuples to strings, field names aren't printed.
+        inline constexpr bool reflection_interface_structure_is_tuple(/*unused*/ const void *) {return 0;}
 
         // Should be used for primitives only.
         inline std::string reflection_interface_primitive_to_string(const void *) {return "??";}
@@ -283,11 +314,16 @@ namespace Reflection
         inline std::string reflection_interface_composite_summary_string(const void *) {return "...";}
 
         inline std::size_t reflection_interface_container_size(const void *) {return 0;}
-        // Those should return corresponding iterators.
-        inline void reflection_interface_container_begin(void *) {}
-        inline void reflection_interface_container_end(void *) {}
-        inline void reflection_interface_container_cbegin(const void *) {}
-        inline void reflection_interface_container_cend(const void *) {}
+        // These should return corresponding iterators.
+        inline void/*iterator*/ reflection_interface_container_begin(void *) {}
+        inline void/*iterator*/ reflection_interface_container_end(void *) {}
+        inline void/*iterator*/ reflection_interface_container_cbegin(const void *) {}
+        inline void/*iterator*/ reflection_interface_container_cend(const void *) {}
+        // These should return an iterator to the insterted element. For associative containers, this should do nothing if the element already exists.
+        inline void/*iterator*/ reflection_interface_container_insert(void *, sink/*const const_iterator? &iterator*/, sink/*const decltype(*std::begin(T(...))) &value*/);
+        inline void/*iterator*/ reflection_interface_container_insert_move(void *, sink/*const const_iterator? &iterator*/, sink/*decltype(*std::begin(T(...))) &&value*/);
+        // This should return an iterator to the next valid element.
+        inline void/*iterator*/ reflection_interface_container_erase(void *, sink/*const const_iterator? &begin_iterator*/, sink/*const const_iterator? &end_iterator*/);
 
         template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<std::string, T> &> reflection_interface_enum_string_value_map(const T *) {static std::map<std::string, T> ret; return ret;}
         template <typename T> std::enable_if_t<std::is_enum_v<T>, const std::map<T, std::string> &> reflection_interface_enum_value_string_map(const T *) {static std::map<T, std::string> ret; return ret;}
@@ -403,7 +439,7 @@ namespace Reflection
         }
         template <typename T> std::enable_if_t<std::is_enum_v<T>, std::size_t> reflection_interface_primitive_from_string(T *obj, const char *str)
         {
-            if ((*str >= '0' && *str <= '9') || *str == '-' || *str == '+')
+            if (Strings::is_digit(*str) || *str == '-' || *str == '+')
             {
                 std::underlying_type_t<T> val;
                 std::size_t status = reflection_interface_primitive_from_string(&val, str);
@@ -413,7 +449,7 @@ namespace Reflection
             }
             std::size_t len = 0;
             const char *ptr = str;
-            while ((*ptr >= 'a' && *ptr <= 'z') || (*ptr >= 'A' && *ptr <= 'Z') || (*ptr >= '0' && *ptr <= '9') || *ptr == '_')
+            while (Strings::is_alphanum(*ptr))
             {
                 ptr++;
                 len++;
@@ -434,7 +470,7 @@ namespace Reflection
             else
                 return T::width;
         }
-        template <typename T, std::size_t I> std::enable_if_t<Math::type_category<T>::vec_or_mat, const decltype(T::x) &> reflection_interface_field(const T *ptr, index_const<I>)
+        template <typename T, std::size_t I> std::enable_if_t<Math::type_category<T>::vec_or_mat, decltype(T::x) &> reflection_interface_field(T *ptr, index_const<I>)
         {
                  if constexpr (I == 0) return ptr->x;
             else if constexpr (I == 1) return ptr->y;
@@ -442,32 +478,34 @@ namespace Reflection
             else if constexpr (I == 3) return ptr->w;
             else                       return {};
         }
-        template <typename T, std::size_t I, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> constexpr const char *reflection_interface_field_name(const T *, index_const<I>)
-        {
-                 if constexpr (I == 0) return "x";
-            else if constexpr (I == 1) return "y";
-            else if constexpr (I == 2) return "z";
-            else if constexpr (I == 3) return "w";
-        }
+        template <typename T> constexpr std::enable_if_t<Math::type_category<T>::vec_or_mat, bool> reflection_interface_structure_is_tuple(const T *) {return 1;}
         template <typename T, typename = std::enable_if_t<Math::type_category<T>::vec_or_mat>> std::string reflection_interface_composite_summary_string(const T *ptr) {return ptr->to_string();}
 
         // Tuples, pairs and `std::array`s.
-        template <typename T               > constexpr last_of<decltype(std::tuple_size<T>::value), std::size_t> reflection_interface_field_count     (const T *) {return std::tuple_size<T>::value;}
-        template <typename T, std::size_t I> constexpr auto reflection_interface_field(const T *ptr, index_const<I>) -> last_of<decltype(std::tuple_size<T>::value), decltype(std::get<I>(*ptr))> {return std::get<I>(*ptr);}
-        template <typename T               > constexpr last_of<decltype(std::tuple_size<T>::value), bool       > reflection_interface_anonymous_fields(const T *) {return 1;}
+        template <typename T               > constexpr last_of<decltype(std::tuple_size<T>::value), std::size_t> reflection_interface_field_count       (const T *) {return std::tuple_size<T>::value;}
+        template <typename T, std::size_t I> constexpr decltype(auto) reflection_interface_field(T *ptr, index_const<I>) -> last_of<decltype(std::tuple_size<T>::value), decltype(std::get<I>(*ptr))> {return std::get<I>(*ptr);}
+        template <typename T               > constexpr last_of<decltype(std::tuple_size<T>::value), bool       > reflection_interface_structure_is_tuple(const T *) {return 1;}
 
         // Plain arrays.
-        template <typename T               > constexpr std::enable_if_t<std::is_array_v<T>, std::size_t                    > reflection_interface_field_count     (const T *                   ) {return std::extent_v<T>;}
-        template <typename T, std::size_t I> constexpr std::enable_if_t<std::is_array_v<T>, const std::remove_extent_t<T> &> reflection_interface_field           (const T *ptr, index_const<I>) {return (*ptr)[I];}
-        template <typename T               > constexpr std::enable_if_t<std::is_array_v<T>, bool                           > reflection_interface_anonymous_fields(const T *                   ) {return 1;}
+        template <typename T               > constexpr std::enable_if_t<std::is_array_v<T>, std::size_t              > reflection_interface_field_count       (const T *                   ) {return std::extent_v<T>;}
+        template <typename T, std::size_t I> constexpr std::enable_if_t<std::is_array_v<T>, std::remove_extent_t<T> &> reflection_interface_field             (      T *ptr, index_const<I>) {return (*ptr)[I];}
+        template <typename T               > constexpr std::enable_if_t<std::is_array_v<T>, bool                     > reflection_interface_structure_is_tuple(const T *                   ) {return 1;}
 
         // Standard containers
-        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::size  (std::declval<const T &>()))>> std::size_t reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
-        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::begin (std::declval<      T &>()))>> auto        reflection_interface_container_begin (      T *ptr) {return std::begin (*ptr);}
-        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::end   (std::declval<      T &>()))>> auto        reflection_interface_container_end   (      T *ptr) {return std::end   (*ptr);}
-        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::cbegin(std::declval<const T &>()))>> auto        reflection_interface_container_cbegin(const T *ptr) {return std::cbegin(*ptr);}
-        template <typename T, typename = std::enable_if_t<!forced_primitive<T>, decltype(std::cend  (std::declval<const T &>()))>> auto        reflection_interface_container_cend  (const T *ptr) {return std::cend  (*ptr);}
-
+        /*internal*/ template <typename T> using impl_std_cont_iter_t       = decltype(std::begin(std::declval<T &>()));
+        /*internal*/ template <typename T> using impl_std_cont_const_iter_t = decltype(std::cbegin(std::declval<const T &>()));
+        /*interanl*/ template <typename T> using impl_std_cont_value_t      = std::remove_const_t<std::remove_reference_t<decltype(*std::declval<impl_std_cont_const_iter_t<T>>())>>;
+        template <typename T> std::enable_if_t<!forced_primitive<T>, std::size_t                                     > reflection_interface_container_size  (const T *ptr) {return std::size  (*ptr);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::begin (std::declval<      T &>()))> reflection_interface_container_begin (      T *ptr) {return std::begin (*ptr);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::end   (std::declval<      T &>()))> reflection_interface_container_end   (      T *ptr) {return std::end   (*ptr);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::cbegin(std::declval<const T &>()))> reflection_interface_container_cbegin(const T *ptr) {return std::cbegin(*ptr);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::cend  (std::declval<const T &>()))> reflection_interface_container_cend  (const T *ptr) {return std::cend  (*ptr);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::declval<T &>().insert(std::cbegin(std::declval<const T &>()), std::declval<impl_std_cont_value_t<T>>()))>
+                              reflection_interface_container_insert     (T *ptr, const impl_std_cont_const_iter_t<T> &iter, const impl_std_cont_value_t<T>  &value) {return ptr->insert(iter, value);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::declval<T &>().insert(std::cbegin(std::declval<const T &>()), std::declval<impl_std_cont_value_t<T>>()))>
+                              reflection_interface_container_insert_move(T *ptr, const impl_std_cont_const_iter_t<T> &iter,       impl_std_cont_value_t<T> &&value) {return ptr->insert(iter, (impl_std_cont_value_t<T> &&) value);}
+        template <typename T> std::enable_if_t<!forced_primitive<T>, decltype(std::declval<T &>().erase(std::cbegin(std::declval<const T &>()), std::cbegin/*sic*/(std::declval<const T &>())))>
+                              reflection_interface_container_erase      (T *ptr, const impl_std_cont_const_iter_t<T> &begin, const impl_std_cont_const_iter_t<T> &end) {return ptr->erase(begin, end);}
 
         class Interface
         {
@@ -478,14 +516,14 @@ namespace Reflection
 
             template <typename T> static constexpr std::size_t field_count() {return reflection_interface_field_count((const T *)0);}
 
-            template <std::size_t I, typename T> static const auto &field(const T &obj) {return reflection_interface_field(&obj, index_const<I>{});}
-            template <std::size_t I, typename T> static       auto &field(      T &obj) {return (std::remove_const_t<std::remove_reference_t<decltype(field<I>((const T &)obj))>> &)field<I>((const T &)obj);}
+            template <std::size_t I, typename T> static       auto &field(      T &obj) {return reflection_interface_field(&obj, index_const<I>{});}
+            template <std::size_t I, typename T> static const auto &field(const T &obj) {return (const std::remove_reference_t<decltype(field<I>((T &)obj))> &)field<I>((T &)obj);}
 
-            template <typename T> static constexpr bool anonymous_fields() {return reflection_interface_anonymous_fields((const T *)0);} // If this is set to 1, `field_name` returns field indices.
+            template <typename T> static constexpr bool structure_is_tuple() {return reflection_interface_structure_is_tuple((const T *)0);} // If this is set to 1, `field_name` returns field indices.
 
             template <typename T, std::size_t I> static constexpr bool field_has_default_value()
             {
-                if constexpr (anonymous_fields<T>())
+                if constexpr (structure_is_tuple<T>())
                     return 0;
                 else
                     return reflection_interface_field_has_default_value((const T *)0, index_const<I>{});
@@ -493,7 +531,7 @@ namespace Reflection
 
             template <typename T, std::size_t I> static constexpr const char *field_name()
             {
-                if constexpr (anonymous_fields<T>())
+                if constexpr (structure_is_tuple<T>())
                     return Cexpr::num_to_str<I>::value;
                 else
                     return reflection_interface_field_name((const T *)0, index_const<I>{});
@@ -526,13 +564,24 @@ namespace Reflection
                     && !std::is_void_v<decltype(reflection_interface_container_cend  (std::declval<type>()))>;
             }
 
-            template <typename T> static std::size_t container_size  (const T &obj) {return reflection_interface_container_size  (&obj);}
-            template <typename T> static auto        container_begin (      T &obj) {return reflection_interface_container_begin (&obj);}
-            template <typename T> static auto        container_end   (      T &obj) {return reflection_interface_container_end   (&obj);}
-            template <typename T> static auto        container_cbegin(const T &obj) {return reflection_interface_container_cbegin(&obj);}
-            template <typename T> static auto        container_cend  (const T &obj) {return reflection_interface_container_cend  (&obj);}
+            template <typename T> using container_iterator_t       = decltype(reflection_interface_container_begin(std::declval<T *>()));
+            template <typename T> using container_const_iterator_t = decltype(reflection_interface_container_cbegin(std::declval<const T *>()));
 
-            template <typename T> using container_value_t = std::remove_const_t<std::remove_reference_t<decltype(*container_cbegin(std::declval<T>()))>>;
+          private:
+            template <typename T, typename = void> struct container_value_t_impl {using type = std::remove_const_t<std::remove_reference_t<decltype(*std::declval<container_const_iterator_t<T>>())>>;};
+            template <typename T> struct container_value_t_impl<T, container_const_iterator_t<T>> {using type = void;};
+          public:
+            template <typename T> using container_value_t          = typename container_value_t_impl<T>::type;
+
+            template <typename T> static std::size_t             container_size       (const T &obj) {return reflection_interface_container_size  (&obj);}
+            template <typename T> static auto                    container_begin      (      T &obj) {return reflection_interface_container_begin (&obj);}
+            template <typename T> static auto                    container_end        (      T &obj) {return reflection_interface_container_end   (&obj);}
+            template <typename T> static auto                    container_cbegin     (const T &obj) {return reflection_interface_container_cbegin(&obj);}
+            template <typename T> static auto                    container_cend       (const T &obj) {return reflection_interface_container_cend  (&obj);}
+            template <typename T> static container_iterator_t<T> container_insert     (      T &obj, const container_const_iterator_t<T> &iter, const container_value_t<T>  &val) {return reflection_interface_container_insert     (&obj, iter, val);}
+            template <typename T> static container_iterator_t<T> container_insert_move(      T &obj, const container_const_iterator_t<T> &iter,       container_value_t<T> &&val) {return reflection_interface_container_insert_move(&obj, iter, (container_value_t<T> &&) val);}
+            template <typename T> static container_iterator_t<T> container_erase      (      T &obj, const container_const_iterator_t<T> &begin, const container_const_iterator_t<T> &end) {return reflection_interface_container_erase(&obj, begin, end);}
+
 
             template <typename T, typename F> static void container_for_each(      T &obj, F &&func) {std::for_each(container_begin(obj), container_end(obj), (F &&) func);}
             template <typename T, typename F> static void container_for_each(const T &obj, F &&func) {std::for_each(container_cbegin(obj), container_cend(obj), (F &&) func);}
@@ -578,11 +627,11 @@ namespace Reflection
     {
         if constexpr (Interface::is_structure<T>())
         {
-            std::string ret = "{";
+            std::string ret = (Interface::structure_is_tuple<T>() ? "(" : "{");
 
             auto lambda = [&](auto index)
             {
-                constexpr bool no_names = !Interface::anonymous_fields<T>();
+                constexpr bool no_names = !Interface::structure_is_tuple<T>();
                 if constexpr (no_names)
                 {
                     ret += Interface::field_name<T, index.value>();
@@ -595,13 +644,13 @@ namespace Reflection
             Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, lambda);
 
             if (Interface::field_count<T>())
-                ret[ret.size()-1] = '}';
+                ret[ret.size()-1] = (Interface::structure_is_tuple<T>() ? ')' : '}');
 
             return ret;
         }
         else if constexpr (Interface::is_container<T>())
         {
-            std::string ret = "{";
+            std::string ret = "[";
 
             for (auto it = Interface::container_cbegin(object); it != Interface::container_cend(object); it++)
             {
@@ -610,7 +659,7 @@ namespace Reflection
             }
 
             if (Interface::container_size(object))
-                ret[ret.size()-1] = '}';
+                ret[ret.size()-1] = ']';
 
             return ret;
         }
@@ -623,9 +672,12 @@ namespace Reflection
 
     template <typename T> std::string to_string_tree(const T &object, int depth = -1) // `depth == -1` means no limit.
     {
-        [[maybe_unused]] auto Indent = [](std::string param, char symbol) -> std::string
+        [[maybe_unused]] auto Indent = [](std::string param, char symbol, bool no_leading_lf = 0) -> std::string
         {
-            param = '\n' + param;
+            if (param.empty())
+                return param;
+            if (!no_leading_lf)
+                param = '\n' + param;
             auto lf_c = std::count(param.begin(), param.end(), '\n');
             std::string indented;
             indented.reserve(param.size() + lf_c*2);
@@ -655,24 +707,31 @@ namespace Reflection
                 using field_t = std::remove_reference_t<decltype(field)>;
 
                 constexpr bool is_primitive = Interface::is_primitive<field_t>();
+                constexpr bool structure_is_tuple = Interface::structure_is_tuple<T>();
 
                 if (index.value != 0) ret += '\n';
                 ret += (index.value != Interface::field_count<T>()-1 ? '|' : '`');
                 ret += (depth == 0 && !is_primitive ? '*' : '-');
-                ret += Interface::field_name<T, index.value>();
+                if constexpr (!structure_is_tuple)
+                    ret += Interface::field_name<T, index.value>();
                 if constexpr (!is_primitive)
                 {
                     if (depth == 0)
                     {
-                        ret += '=';
+                        ret += (structure_is_tuple ? ':' : '=');
                         ret += Interface::to_string(field);
                     }
                     else
-                        ret += Indent(to_string_tree(field, depth - 1), "| "[index.value == Interface::field_count<T>()-1]);
+                    {
+                        std::string str = Indent(to_string_tree(field, depth - 1), "| "[index.value == Interface::field_count<T>()-1], Interface::structure_is_tuple<T>());
+                        if (structure_is_tuple && str.size() >= 1)
+                            str[0] = '+';
+                        ret += str;
+                    }
                 }
                 else
                 {
-                    ret += '=';
+                    ret += (structure_is_tuple ? ':' : '=');
                     ret += Interface::to_string(field);
                 }
             };
@@ -726,8 +785,133 @@ namespace Reflection
 
 
     // Generic runtime reflection
-    inline namespace GenericRefl
+    namespace GenericRefl
     {
+        struct ParsingErrorContext
+        {
+            std::vector<std::string> stack;
+            std::string message;
+
+            std::string to_string() const
+            {
+                std::string ret;
+                if (stack.size() != 0)
+                {
+                    ret = "At ";
+                    for (auto it = stack.begin(); it != stack.end(); it++)
+                    {
+                        if (it != stack.begin())
+                            ret += '.';
+                        ret += *it;
+                    }
+                    ret += ": ";
+                }
+                ret += message;
+                return ret;
+            }
+
+            void push(const std::string &str)
+            {
+                stack.push_back(str);
+            }
+            void pop()
+            {
+                stack.pop_back();
+            }
+
+            void error_expected_char(char exp, char got)
+            {
+                message = "Expected `" + Strings::char_escape_seq(exp) + "` but got `" + Strings::char_escape_seq(got) + "`.";
+            }
+            void error_expected_str(std::string exp)
+            {
+                message = "Expected " + exp + ".";
+            }
+        };
+        class ParsingErrorContextRef
+        {
+            ParsingErrorContext *ptr;
+          public:
+            ParsingErrorContextRef(std::nullptr_t) : ptr(0) {}
+            ParsingErrorContextRef(ParsingErrorContext &con) : ptr(&con) {}
+
+            void push(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->stack.push_back(str);
+            }
+            void pop()
+            {
+                if (!ptr) return;
+                ptr->stack.pop_back();
+            }
+            void error(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->message = str + '.';
+            }
+            void error_append(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->message += str;
+            }
+            void error_primitive()
+            {
+                if (!ptr) return;
+                ptr->message = "Primitive data type parsing failed.";
+            }
+            void error_immutable()
+            {
+                if (!ptr) return;
+                ptr->message = "The object is immutable.";
+            }
+            void error_not_a_container()
+            {
+                if (!ptr) return;
+                ptr->message = "The object is not a container.";
+            }
+            void error_bad_field_name(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->message = "Invalid field name `" + str + "`.";
+            }
+            void error_duplicate_field(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->message = "Duplicate field `" + str + "`.";
+            }
+            void error_missing_initializers()
+            {
+                if (!ptr) return;
+                ptr->message = "Missing initializers for following fields: " + ptr->message + ".";
+            }
+            void error_expected(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->message = "Expected " + str + '.';
+            }
+            void error_expected_end()
+            {
+                if (!ptr) return;
+                ptr->message = "Expected end of data.";
+            }
+            void error_unexpected(const std::string &str)
+            {
+                if (!ptr) return;
+                ptr->message = "Unexpected " + str + '.';
+            }
+            void error_unexpected_char(char exp, char got)
+            {
+                if (!ptr) return;
+                ptr->message = "Expected `" + Strings::char_escape_seq(exp) + "` but got `" + Strings::char_escape_seq(got) + "`.";
+            }
+            void error_unexpected_char(std::string exp, char got)
+            {
+                if (!ptr) return;
+                ptr->message = "Expected " + exp + " but got `" + Strings::char_escape_seq(got) + "`.";
+            }
+        };
+
         class Generic;
         class Element;
 
@@ -743,9 +927,13 @@ namespace Reflection
             Element     (*element_by_index)(const Generic *, std::size_t);
             Element     (*element         )(const Generic *, std::string);
 
+            void        (*reset           )(const Generic *);
+
+            std::size_t (*insert          )(const Generic *, std::size_t pos, bool back, const char *str, ParsingErrorContextRef); // For containers only. `pos` is clamped to the [0;element_count()].
+
             std::string (*to_string       )(const Generic *);
             std::string (*to_string_tree  )(const Generic *);
-            std::size_t (*from_string     )(const Generic *, const char *);
+            std::size_t (*from_string     )(const Generic *, const char *, ParsingErrorContextRef);
         };
 
         template <typename T> const GenericTable &generic_table();
@@ -758,7 +946,7 @@ namespace Reflection
           public:
             constexpr Generic(const void *ptr, bool constant, const GenericTable *table) : ptr(ptr), constant(constant), table(table) {}
             constexpr Generic() : Generic(0, 1, 0) {}
-            template <typename T> Generic(T &object) : Generic(&object, std::is_const_v<T>, generic_table<T>()) {}
+            template <typename T> Generic(T &object) : Generic(&object, std::is_const_v<T>, &generic_table<T>()) {}
 
             const void *pointer() const {return ptr;}
             bool is_const() const {return constant;}
@@ -773,9 +961,15 @@ namespace Reflection
             inline Element element_by_index(std::size_t index) const;
             inline Element element         (std::string name)  const;
 
+            // Swaps the object with a fresh default-constructed copy.
+            void           reset           ()                  const {       table->reset         (this);}
+
+            // For containers only. `pos` is clamped to the [0;element_count()].
+            std::size_t    insert          (std::size_t pos, bool back, const char *str, ParsingErrorContextRef con = 0) const {return table->insert(this, pos, back, str, con);}
+
             std::string    to_string       ()                  const {return table->to_string     (this);}
             std::string    to_string_tree  ()                  const {return table->to_string_tree(this);}
-            std::size_t    from_string     (const char *str)   const {return table->from_string   (this, str);}
+            std::size_t    from_string     (const char *str, ParsingErrorContextRef con = 0) const {reset(); return table->from_string(this, str, con);}
         };
 
         class Element : public Generic
@@ -797,9 +991,19 @@ namespace Reflection
                 field_name(Interface::field_name<T, I>()),
                 field_has_default_value(Interface::field_has_default_value<T, I>())
             {}
-            template <typename T, std::size_t ...Seq> Element(T &object, std::size_t index, [[maybe_unused]] std::index_sequence<Seq...> indices_to_check = std::make_index_sequence<Interface::field_count<T>()>{})
+            template <typename T> Element(T &object, std::size_t index)
             {
-                ( (index-- != 0 || (*this = Element(object, index_const<Seq>{}), 0)) || ...);
+                bool found = 0;
+                Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, [&](auto i)
+                {
+                    if (index-- == 0)
+                    {
+                        found = 1;
+                        *this = Element(object, i);
+                    }
+                });
+                if (!found)
+                    *this = {};
             }
 
             const std::string &name             () const {return field_name;}
@@ -809,39 +1013,53 @@ namespace Reflection
         inline Element Generic::element_by_index(std::size_t index) const {return table->element_by_index(this, index);}
         inline Element Generic::element         (std::string name ) const {return table->element         (this, name );}
 
-
-        template <typename T, std::size_t ...Seq> std::size_t field_name_to_index(const std::string &name, [[maybe_unused]] std::index_sequence<Seq...> indices_to_check = std::make_index_sequence<Interface::field_count<T>()>{})
+        template <typename T, typename = std::make_index_sequence<Interface::field_count<T>()>> struct field_name_to_index_impl{};
+        template <typename T, std::size_t ...Seq> struct field_name_to_index_impl<T, std::index_sequence<Seq...>>
         {
-            if (name[0] >= '0' && name[0] <= '9')
+            static std::size_t func(const std::string &name)
             {
-                std::size_t index, len = Interface::primitive_from_string(index, name.c_str());
-                if (len == 0 || name[len] != '\0')
-                    return -1;
+                if (Strings::is_digit(name[0]))
+                {
+                    std::size_t index, len = Interface::primitive_from_string(index, name.c_str());
+                    if (len == 0 || name[len] != '\0' || index < 0 || index >= Interface::field_count<T>())
+                        return -1;
+                    else
+                        return index;
+                }
                 else
-                    return index;
-            }
-            else
-            {
-                if constexpr (Interface::anonymous_fields<T>())
-                    return -1;
+                {
+                    if constexpr (Interface::structure_is_tuple<T>())
+                        return -1;
 
-                static std::map<std::string, std::size_t> map{ {Interface::field_name<T, Seq>(), Seq}... };
-                auto it = map.find(name);
-                if (it == map.end())
-                    return -1;
-                else
-                    return it->second;
+                    static std::map<std::string, std::size_t> map{ {Interface::field_name<T, Seq>(), Seq}... };
+                    auto it = map.find(name);
+                    if (it == map.end())
+                        return -1;
+                    else
+                        return it->second;
+                }
             }
+        };
+        template <typename T> std::size_t field_name_to_index(const std::string &name)
+        {
+            return field_name_to_index_impl<T>::func(name);
         }
+
+        enum class FieldStatus
+        {
+            not_assigned = 0,
+            default_value,
+            assigned,
+        };
 
         template <typename T> const GenericTable &generic_table()
         {
-            static constexpr GenericTable ret
+            static const GenericTable ret
             {
                 Interface::is_structure<T>(),
                 Interface::is_container<T>(),
                 Interface::is_primitive<T>(),
-                Interface::anonymous_fields<T>(),
+                Interface::structure_is_tuple<T>(),
 
                 [](const Generic *ptr) -> std::size_t // element_count
                 {
@@ -857,6 +1075,60 @@ namespace Reflection
                 {
                     return {*(const T *)ptr->pointer(), field_name_to_index<const T>(name)};
                 },
+                [](const Generic *ptr) -> void // clear
+                {
+                    if constexpr (std::is_const_v<T>)
+                    {
+                        (void)ptr;
+                    }
+                    else
+                    {
+                        if constexpr (Cexpr::supports_reset_by_empty_list_assignment<T>)
+                        {
+                            *(T *)ptr->pointer() = {};
+                        }
+                        else if constexpr (Cexpr::supports_reset_by_swap<T>)
+                        {
+                            T tmp{};
+                            std::swap(*(T *)ptr->pointer(), tmp);
+                        }
+                        else
+                        {
+                            (void)ptr;
+                        }
+                    }
+                },
+                [](const Generic *ptr, std::size_t pos, bool back, const char *str, ParsingErrorContextRef con) -> std::size_t // insert
+                {
+                    if constexpr (std::is_const_v<T> || !Interface::is_container<T>())
+                    {
+                        (void)ptr;
+                        (void)pos;
+                        (void)back;
+                        (void)str;
+                        if constexpr (std::is_const_v<T>)
+                            con.error_immutable();
+                        else
+                            con.error_not_a_container();
+                        return 0;
+                    }
+                    else
+                    {
+                        std::size_t element_c = ptr->element_count();
+                        if (pos > element_c+1)
+                            pos = element_c+1;
+                        Interface::container_const_iterator_t<T> iter = (back ? Interface::container_cend(*(const T *)ptr->pointer())
+                                                                              : Interface::container_cbegin(*(const T *)ptr->pointer()));
+                        std::advance(iter, back ? -pos : pos);
+
+                        Interface::container_value_t<T> element{};
+                        std::size_t len = Generic(element).from_string(str, con);
+                        if (len == 0)
+                            return 0;
+                        Interface::container_insert_move(*(T *)ptr->pointer(), iter, (Interface::container_value_t<T> &&)element);
+                        return len;
+                    }
+                },
                 [](const Generic *ptr) -> std::string // to_string
                 {
                     return to_string(*(const T *)ptr->pointer());
@@ -865,15 +1137,227 @@ namespace Reflection
                 {
                     return to_string_tree(*(const T *)ptr->pointer());
                 },
-                [](const Generic *ptr, const char *str) -> std::size_t // from_string
+                [](const Generic *ptr, const char *str, ParsingErrorContextRef con) -> std::size_t // from_string
                 {
-                    "Write me!";
-                    return 0;
+                    if constexpr (std::is_const_v<T>)
+                    {
+                        (void)ptr;
+                        (void)str;
+                        con.error_immutable();
+                        return 0;
+                    }
+                    else
+                    {
+                        const char *begin = str;
+                        str = Strings::skip_whitespace(str);
+
+                        if constexpr (Interface::is_structure<T>())
+                        {
+                            if constexpr (Interface::structure_is_tuple<T>())
+                            {
+                                if (*(str++) != '(')
+                                {
+                                    con.error_unexpected_char('(', str[-1]);
+                                    return 0;
+                                }
+                                bool error = 0;
+                                Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, [&](auto index)
+                                {
+                                    if (error)
+                                        return;
+
+                                    if (index.value != 0)
+                                    {
+                                        if (*(str++) != ',')
+                                        {
+                                            error = 1;
+                                            con.error_unexpected_char(',', str[-1]);
+                                            return;
+                                        }
+                                    }
+                                    con.push(Interface::field_name<T, index.value>());
+                                    std::size_t len = Generic(Interface::field<index.value>(*(T *)ptr->pointer())).from_string(str, con);
+                                    if (len == 0)
+                                    {
+                                        error = 1;
+                                        return; // The error message here comes from the nested `from_string()` call.
+                                    }
+                                    con.pop();
+                                    str += len;
+                                    str = Strings::skip_whitespace(str);
+                                });
+                                if (error)
+                                    return 0; // The error message here comes from the nested `from_string()` call.
+                                if (*(str++) != ')')
+                                {
+                                    con.error_unexpected_char(')', str[-1]);
+                                    return 0;
+                                }
+                            }
+                            else
+                            {
+                                if (*(str++) != '{')
+                                {
+                                    con.error_unexpected_char('{', str[-1]);
+                                    return 0;
+                                }
+                                FieldStatus field_status[Interface::field_count<T>()]{};
+                                Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, [&](auto index)
+                                {
+                                    if (Interface::field_has_default_value<T, index.value>())
+                                        field_status[index.value] = FieldStatus::default_value;
+                                });
+
+                                str = Strings::skip_whitespace(str);
+
+                                bool first = 1;
+
+                                while (*str != '}')
+                                {
+                                    if (!first)
+                                    {
+                                        if (*(str++) != ',')
+                                        {
+                                            con.error_unexpected_char("`,` or `}`", str[-1]);
+                                            return 0;
+                                        }
+                                        str = Strings::skip_whitespace(str);
+                                    }
+                                    else
+                                        first = 0;
+
+                                    std::string field_name;
+                                    while (Strings::is_alphanum(*str))
+                                        field_name += *(str++);
+                                    if (field_name.empty())
+                                    {
+                                        con.error_expected("field name");
+                                        return 0;
+                                    }
+
+                                    std::size_t field_index = field_name_to_index<T>(field_name);
+                                    if (field_index == std::size_t(-1))
+                                    {
+                                        con.error_bad_field_name(field_name);
+                                        return 0;
+                                    }
+
+                                    str = Strings::skip_whitespace(str);
+                                    if (*(str++) != '=')
+                                    {
+                                        con.error_unexpected_char('=', str[-1]);
+                                        return 0;
+                                    }
+
+                                    if (field_status[field_index] == FieldStatus::assigned)
+                                    {
+                                        con.error_duplicate_field(field_name);
+                                        return 0;
+                                    }
+                                    field_status[field_index] = FieldStatus::assigned;
+
+                                    Element field = {*(T *)ptr->pointer(), field_index};
+
+                                    con.push(field_name);
+                                    std::size_t len = field.from_string(str, con);
+                                    if (len == 0)
+                                        return 0; // The error message here comes from the nested `from_string()` call.
+                                    con.pop();
+
+                                    str += len;
+                                    str = Strings::skip_whitespace(str);
+                                }
+
+                                bool uninitialized_fields = 0;
+                                Cexpr::for_each(std::make_index_sequence<Interface::field_count<T>()>{}, [&](auto index)
+                                {
+                                    if (field_status[index.value] == FieldStatus::not_assigned)
+                                    {
+                                        if (uninitialized_fields)
+                                            con.error_append(", ");
+                                        con.error_append(std::string("`") + Interface::field_name<T, index.value>() + '`');
+                                        uninitialized_fields = 1;
+                                    }
+                                });
+                                if (uninitialized_fields)
+                                {
+                                    con.error_missing_initializers();
+                                    return 0;
+                                }
+
+                                str++; // Skip the '}'.
+                            }
+                        }
+                        else if constexpr (Interface::is_container<T>())
+                        {
+                            if (*(str++) != '[')
+                            {
+                                con.error_unexpected_char('[', str[-1]);
+                                return 0;
+                            }
+
+                            bool first = 1;
+
+                            while (*str != ']')
+                            {
+                                if (!first)
+                                {
+                                    if (*(str++) != ',')
+                                    {
+                                        con.error_unexpected_char("`,` or `]`", str[-1]);
+                                        return 0;
+                                    }
+                                }
+                                else
+                                    first = 0;
+
+                                con.push(str);
+                                std::size_t len = ptr->insert(0, 1, str, con);
+                                if (len == 0)
+                                    return 0; // The error message here comes from the nested `from_string()` call.
+                                con.pop();
+
+                                str += len;
+                                str = Strings::skip_whitespace(str);
+                            }
+
+                            str++; // Skip the ']'.
+                        }
+                        else // Interface::is_primitive<T>()
+                        {
+                            std::size_t len = Interface::primitive_from_string(*(T *)ptr->pointer(), str);
+                            if (len == 0)
+                            {
+                                con.error_primitive();
+                                return 0;
+                            }
+                            str += len;
+                        }
+
+                        return str - begin;
+                    }
                 },
             };
 
             return ret;
         }
+    }
+
+    using GenericRefl::Generic;
+    using GenericRefl::Element;
+    using GenericRefl::ParsingErrorContext;
+
+    template <typename T> bool from_string(T &ref, const std::string &str, GenericRefl::ParsingErrorContextRef con = 0)
+    {
+        std::size_t len = Generic(ref).from_string(str.c_str(), con);
+        if (len == 0)
+            return 0;
+        if (Strings::skip_whitespace(str.c_str() + len) != &*str.end())
+        {
+            con.error_expected_end();
+            return 0;
+        }
+        return 1;
     }
 }
 
@@ -925,14 +1409,14 @@ namespace Reflection
 #define REFL0_Reflect_D(name_, j_, i_, type_, has_init_, .../*init*/) \
     /* Define the field. */\
     std::enable_if_t<1, PP0_DEL_PARENS(type_)> name_ __VA_ARGS__; \
-    /* Make sure there is no explicit empty init (because it would make `has_init_ == 1` without a good reason). */\
-    static_assert(has_init_ == 0 || !::Reflection::Cexpr::cexpr_string_is_empty(#__VA_ARGS__), "Empty default value."); \
+    /* Make sure there is no explicit empty init (because it would set `has_init_` to `1` without a good reason). */\
+    static_assert(has_init_ == 0 || !::Reflection::Cexpr::string_is_empty(#__VA_ARGS__), "Empty default value."); \
     /* Field index. */\
     using _reflection_internal_field_index_type_##name_ = ::Reflection::index_const<::Reflection::Interface::Impl::counter_value<_reflection_internal_this_type, ::Reflection::Interface::Impl::counter_tag_fields, ::Reflection::InterfaceDetails::value_list<__LINE__, i_, j_>>::value>; \
     /* Increment field counter. */\
     static void _reflection_internal_counter_crumb(::Reflection::InterfaceDetails::type_list<::Reflection::Interface::Impl::counter_tag_fields>, _reflection_internal_field_index_type_##name_) {} \
     /* Inteface: Get the field by index. */\
-    friend const auto &reflection_interface_field(const _reflection_internal_this_type *ptr, _reflection_internal_field_index_type_##name_) {return ptr->name_;} \
+    friend auto &reflection_interface_field(_reflection_internal_this_type *ptr, _reflection_internal_field_index_type_##name_) {return ptr->name_;} \
     /* Inteface: Whether the field has a default value or not. */\
     friend constexpr bool reflection_interface_field_has_default_value(const _reflection_internal_this_type *, _reflection_internal_field_index_type_##name_) {return has_init_;} \
     /* Inteface: Field name. */\
