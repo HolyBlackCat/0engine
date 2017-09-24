@@ -6,7 +6,7 @@
 #include <sstream>
 
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
-#define VERSION "2.4.10"
+#define VERSION "2.4.11"
 // ---------------------------- UPDATE THIS WHEN YOU CHANGE THE CODE
 
 std::ofstream out_file("mat.h");
@@ -217,7 +217,7 @@ template <typename T,
                             std::is_signed_v        <std::remove_extent_t<T>> ? 'i' :
                             /* else */                                          'u'),
           char ...flags>
-std::string num_to_string(std::remove_extent_t<T> param)
+[[nodiscard]] std::string num_to_string(std::remove_extent_t<T> param)
 {
 char buffer[(std::is_array_v<T> ? std::extent_v<T> : 64) + 1];
 
@@ -292,7 +292,7 @@ return buffer;
 }
 
 
-template <typename T> std::enable_if_t<std::is_floating_point_v<T>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
+template <typename T> [[nodiscard]] std::enable_if_t<std::is_floating_point_v<T>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
 {
 if (std::isspace(*ptr))
 {
@@ -322,7 +322,7 @@ if (chars_consumed)
     *chars_consumed = end - ptr;
 return value;
 }
-template <typename T> std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int base = 0)
+template <typename T> [[nodiscard]] std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int base = 0)
 {
 if (std::isspace(*ptr))
 {
@@ -360,7 +360,7 @@ if (chars_consumed)
     *chars_consumed = end - ptr;
 return value;
 }
-template <typename T> std::enable_if_t<std::is_same_v<T, bool>, bool> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
+template <typename T> [[nodiscard]] std::enable_if_t<std::is_same_v<T, bool>, bool> num_from_string_mid(const char *ptr, int *chars_consumed = 0, int /*base*/ = 0)
 {
 switch (*ptr)
 {
@@ -388,7 +388,7 @@ return *ptr - '0';
 }
 }
 
-template <typename T> T num_from_string(const char *ptr, bool *success = 0, int base = 0)
+template <typename T> [[nodiscard]] T num_from_string(const char *ptr, bool *success = 0, int base = 0)
 {
 int ch_con;
 T ret = num_from_string<T>(ptr, &ch_con, base);
@@ -522,19 +522,19 @@ using type = T;
         auto CommonMembers = [&](int sz)
         {
             // [] operator
-            l "template <typename I> T &operator[](I pos) {switch (pos) {";
+            l "template <typename I> [[nodiscard]] T &operator[](I pos) {switch (pos) {";
             for (int i = 0; i < sz; i++)
                 l "case " << i << ": return " << field_names_main[i] << "; ";
             l "default: static T ret; ret = {}; return ret;}}\n";
 
             // const [] operator
-            l "template <typename I> constexpr T operator[](I pos) const {switch (pos) {";
+            l "template <typename I> [[nodiscard]] constexpr T operator[](I pos) const {switch (pos) {";
             for (int i = 0; i < sz; i++)
                 l "case " << i << ": return " << field_names_main[i] << "; ";
             l "default: return {};}}\n";
 
             // Cast to bool
-            l "explicit constexpr operator bool() const {return ";
+            l "[[nodiscard]] explicit constexpr operator bool() const {return ";
             for (int i = 0; i < sz; i++)
             {
                 if (i != 0) l " || ";
@@ -573,14 +573,14 @@ using type = T;
             l " {}\n";
 
             // Member combinations
-            l "constexpr auto sum() const {return "; // Sum
+            l "[[nodiscard]] constexpr auto sum() const {return "; // Sum
             for (int i = 0; i < sz; i++)
             {
                 if (i != 0) l " + ";
                 l field_names_main[i];
             }
             l ";}\n";
-            l "constexpr auto product() const {return "; // Product
+            l "[[nodiscard]] constexpr auto product() const {return "; // Product
             for (int i = 0; i < sz; i++)
             {
                 if (i != 0) l " * ";
@@ -589,18 +589,18 @@ using type = T;
             l ";}\n";
 
             // As array
-            l "constexpr T *as_array() {return (T *)this;}\n";
-            l "constexpr const T *as_array() const {return (const T *)this;}\n";
+            l "[[nodiscard]] constexpr T *as_array() {return (T *)this;}\n";
+            l "[[nodiscard]] constexpr const T *as_array() const {return (const T *)this;}\n";
 
             // Interpolate
-            l "template <typename TT, typename TTT> constexpr vec" << sz << "<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec" << sz << "<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}\n";
+            l "template <typename TT, typename TTT> [[nodiscard]] constexpr vec" << sz << "<decltype(T{}*(1-TTT{})+TT{}*TTT{})> interpolate(const vec" << sz << "<TT> &o, TTT fac) const {return *this * (1 - fac) + o * fac;}\n";
 
             // Temporary field changers
             for (int i = 0; i < sz; i++)
             {
                 for (int name = 0; name < field_names_count; name++)
                 {
-                    l "constexpr vec set_" << field_names[name][i] << "(T o) const {return {";
+                    l "[[nodiscard]] constexpr vec set_" << field_names[name][i] << "(T o) const {return {";
                     for (int j = 0; j < sz; j++)
                     {
                         if (j != 0) l ", ";
@@ -618,7 +618,7 @@ using type = T;
             {
               case 4:
                 r R"(
-constexpr mat4<T> inverse() const
+[[nodiscard]] constexpr mat4<T> inverse() const
 {
 mat4<T> inv;
 inv.x.x = y.y * z.z * w.w -
@@ -727,7 +727,7 @@ return inv * det;
                 break;
               case 3:
                 r R"(
-constexpr mat3<T> inverse() const
+[[nodiscard]] constexpr mat3<T> inverse() const
 {
 mat3<T> inv;
 inv.x.x = y.y * z.z -
@@ -758,7 +758,7 @@ return inv * det;
                 break;
               case 2:
                 r R"(
-constexpr mat2<T> inverse() const
+[[nodiscard]] constexpr mat2<T> inverse() const
 {
 mat2<T> inv;
 inv.x.x =  y.y;
@@ -793,7 +793,7 @@ return inv * det;
                 return Jo(field_names_main[x], '.', field_names_main[y]);
             };
 
-            l "template <typename TT> constexpr " << Ma("larger_type_t<T,TT>", x2, y1) << " mul(const " << Ma("TT", x2, x1y2) << " &o) const {return {";
+            l "template <typename TT> [[nodiscard]] constexpr " << Ma("larger_type_t<T,TT>", x2, y1) << " mul(const " << Ma("TT", x2, x1y2) << " &o) const {return {";
             for (int h = 0; h < y1; h++)
             {
                 for (int w = 0; w < x2; w++)
@@ -826,7 +826,7 @@ return inv * det;
                 // Members
                 CommonMembers(sz);
                 { // Change type
-                    l "template <typename TT> constexpr vec" << sz << "<TT> to() const {return {";
+                    l "template <typename TT> [[nodiscard]] constexpr vec" << sz << "<TT> to() const {return {";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ",";
@@ -835,19 +835,19 @@ return inv * det;
                     l "};}\n";
                 }
                 { // Length
-                    l "constexpr auto len_sqr() const {return "; // Squared
+                    l "[[nodiscard]] constexpr auto len_sqr() const {return "; // Squared
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l " + ";
                         l field_names_main[i] << '*' << field_names_main[i];
                     }
                     l ";}\n";
-                    l "constexpr auto len() const {return std::sqrt(len_sqr());}\n"; // Normal
+                    l "[[nodiscard]] constexpr auto len() const {return std::sqrt(len_sqr());}\n"; // Normal
                 }
                 { // Cross and dot products
 
                     // Dot
-                    l "template <typename TT> constexpr auto dot(const vec" << sz << "<TT> &o) const {return ";
+                    l "template <typename TT> [[nodiscard]] constexpr auto dot(const vec" << sz << "<TT> &o) const {return ";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l " + ";
@@ -859,19 +859,19 @@ return inv * det;
                     switch (sz)
                     {
                       case 3:
-                        l "template <typename TT> constexpr auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};}\n";
+                        l "template <typename TT> [[nodiscard]] constexpr auto cross(const vec3<TT> &o) const -> vec3<decltype(y * o.z - z * o.y)> {return {y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x};}\n";
                         break;
                       case 2: // Pseudo cross product. Returns z only.
-                        l "template <typename TT> constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}\n";
+                        l "template <typename TT> [[nodiscard]] constexpr auto cross(const vec2<TT> &o) const -> decltype(x * o.y - y * o.x) {return x * o.y - y * o.x;}\n";
                         break;
                     }
                 }
                 if (sz == 2) // Ratio
-                    l "constexpr floating_point_t<T> ratio() const {return floating_point_t<T>(x) / floating_point_t<T>(y);}\n";
+                    l "[[nodiscard]] constexpr floating_point_t<T> ratio() const {return floating_point_t<T>(x) / floating_point_t<T>(y);}\n";
                 // Normalize
-                l "constexpr auto norm() const -> vec" << sz << "<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec" << sz << "<T>(0); else return *this / l;}\n";
+                l "[[nodiscard]] constexpr auto norm() const -> vec" << sz << "<decltype(T{}/len())> {auto l = len(); if (l == 0) return vec" << sz << "<T>(0); else return *this / l;}\n";
                 { // Apply
-                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const vec" << sz << "<P> &... p) const -> vec" << sz << "<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {";
+                    l "template <typename F, typename ...P> [[nodiscard]] constexpr auto apply(F &&func, const vec" << sz << "<P> &... p) const -> vec" << sz << "<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ", ";
@@ -883,7 +883,7 @@ return inv * det;
                     for (int i = 2; i <= 4; i++)
                     {
                         if (sz == i) continue;
-                        l "constexpr vec" << i << "<T> to_vec" << i << "(";
+                        l "[[nodiscard]] constexpr vec" << i << "<T> to_vec" << i << "(";
                         for (int j = sz; j < i; j++)
                         {
                             if (j != sz) l ", ";
@@ -900,7 +900,7 @@ return inv * det;
                     }
                     for (int i = sz+1; i <= 4; i++)
                     {
-                        l "constexpr vec" << i << "<T> to_vec" << i << "() const {return to_vec" << i << "(";
+                        l "[[nodiscard]] constexpr vec" << i << "<T> to_vec" << i << "() const {return to_vec" << i << "(";
                         for (int j = sz; j < i; j++)
                         {
                             if (j != sz) l ", ";
@@ -912,7 +912,7 @@ return inv * det;
                 { // Bool pack
                     auto BoolFunc = [&](const char *name, const char *bin, bool inverted)
                     {
-                        l "constexpr bool " << name << "() const {return ";
+                        l "[[nodiscard]] constexpr bool " << name << "() const {return ";
                         if (inverted) l "!(";
                         for (int i = 0; i < sz; i++)
                         {
@@ -929,14 +929,14 @@ return inv * det;
                 for (int i = 1; i <= 4; i++) // Multiplication
                     MatrixMul(sz, i, 1);
                 { // Min and max
-                    l "constexpr T min() const {return std::min({";
+                    l "[[nodiscard]] constexpr T min() const {return std::min({";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ',';
                         l field_names_main[i];
                     }
                     l "});}\n";
-                    l "constexpr T max() const {return std::max({";
+                    l "[[nodiscard]] constexpr T max() const {return std::max({";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0) l ',';
@@ -946,7 +946,7 @@ return inv * det;
                 }
                 { // String operations
                     // To string
-                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start";
+                    l "[[nodiscard]] std::string to_string(const std::string &start, const std::string &sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start";
                     for (int i = 0; i < sz; i++)
                     {
                         if (i != 0)
@@ -955,14 +955,14 @@ return inv * det;
                     }
                     l " + end;}\n";
 
-                    l "std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
+                    l "[[nodiscard]] std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string(\"[\", \",\", \"]\", f);}\n";
 
-                    l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
+                    l "[[nodiscard]] std::string to_string_pretty() const {if constexpr (is_floating_point) "
                       "return to_string(" R"("[ "," "," ]")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
                       "return to_string(" R"("[ "," "," ]")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
 
                     // From string
-                    l R"(static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
+                    l R"([[nodiscard]] static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &end, int base = 0)
 {
 if (chars_consumed) *chars_consumed = 0;
 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
@@ -982,9 +982,9 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                       "return ret;\n"
                       "}\n";
 
-                    l "static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {int ch_con; vec ret = from_string_mid(src, &ch_con, start, sep, end, base); ch_con = src[ch_con] == '\\0'; if (success) {*success = ch_con;} if (ch_con) {return ret;} else {return {};}}\n";
-                    l "static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
-                    l "static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \"]\", base);}\n";
+                    l "[[nodiscard]] static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &end, int base = 0) {int ch_con; vec ret = from_string_mid(src, &ch_con, start, sep, end, base); ch_con = src[ch_con] == '\\0'; if (success) {*success = ch_con;} if (ch_con) {return ret;} else {return {};}}\n";
+                    l "[[nodiscard]] static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \"]\", base);}\n";
+                    l "[[nodiscard]] static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \"]\", base);}\n";
                 }
 
                 l "};\n";
@@ -1032,7 +1032,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                     l " {}\n";
                 }
                 { // Change type
-                    l "template <typename TT> constexpr mat" << w << "x" << h << "<TT> to() const {return {";
+                    l "template <typename TT> [[nodiscard]] constexpr mat" << w << "x" << h << "<TT> to() const {return {";
                     for (int hh = 0; hh < h; hh++)
                     for (int ww = 0; ww < w; ww++)
                     {
@@ -1042,7 +1042,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                     l "};}\n";
                 }
                 { // Transpose
-                    l "constexpr mat" << h << 'x' << w << "<T> transpose() const {return {";
+                    l "[[nodiscard]] constexpr mat" << h << 'x' << w << "<T> transpose() const {return {";
                     for (int ww = 0; ww < w; ww++)
                     {
                         for (int hh = 0; hh < h; hh++)
@@ -1054,7 +1054,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                     l "};}\n";
                 }
                 { // Factory methods
-                    l "static constexpr vec identity() {return {"; // Identity
+                    l "[[nodiscard]] static constexpr vec identity() {return {"; // Identity
                     for (int hh = 0; hh < h; hh++)
                     {
                         for (int ww = 0; ww < w; ww++)
@@ -1068,7 +1068,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
 
                     for (int i = 2; i <= std::min(w,h); i++) // Diagonal
                     {
-                        l "static constexpr vec dia(const vec" << i << "<T> &v) {return {";
+                        l "[[nodiscard]] static constexpr vec dia(const vec" << i << "<T> &v) {return {";
                         for (int hh = 0; hh < h; hh++)
                         {
                             for (int ww = 0; ww < w; ww++)
@@ -1089,11 +1089,12 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                     {
                         if (w == minw && h == minh)
                         {
-                            l "static constexpr vec " << name << '(' << params << ")\n{\n";
+                            l "[[nodiscard]] static constexpr vec " << name << '(' << params << ")\n{\n";
                             if (float_only) l "static_assert(is_floating_point, \"This function only makes sense for floating-point matrices.\");\n";
                             l (1+body) << "}\n";
                         }
-                        else if (w >= minw && h >= minh) l "static constexpr vec " << name << '(' << params << ") {return mat" << minw << 'x' << minh << "<T>::" << name << "(" << sh_params << ").to_mat" << w << 'x' << h << "();}\n";
+                        else if (w >= minw && h >= minh)
+                            l "[[nodiscard]] static constexpr vec " << name << '(' << params << ") {return mat" << minw << 'x' << minh << "<T>::" << name << "(" << sh_params << ").to_mat" << w << 'x' << h << "();}\n";
                     };
 
                     MatrixFactoryMethod(2, 2, "ortho2D", "const vec2<T> &sz", "sz", R"(
@@ -1172,7 +1173,7 @@ $       0, 0, 0, s};
                         for (int www = 2; www <= 4; www++)
                         {
                             if (www == w && hhh == h) continue;
-                            l "constexpr mat" << www << 'x' << hhh << "<T> to_mat" << www << 'x' << hhh << "() const {return {";
+                            l "[[nodiscard]] constexpr mat" << www << 'x' << hhh << "<T> to_mat" << www << 'x' << hhh << "() const {return {";
                             for (int hh = 0; hh < hhh; hh++)
                             {
                                 for (int ww = 0; ww < www; ww++)
@@ -1189,12 +1190,12 @@ $       0, 0, 0, s};
                             }
                             l "};}\n";
                             if (www == hhh)
-                                l "constexpr mat" << www << "<T> to_mat" << www << "() const {return to_mat" << www << 'x' << www << "();}\n";
+                                l "[[nodiscard]] constexpr mat" << www << "<T> to_mat" << www << "() const {return to_mat" << www << 'x' << www << "();}\n";
                         }
                     }
                 }
                 { // Apply
-                    l "template <typename F, typename ...P> constexpr auto apply(F &&func, const mat" << w << "x" << h << "<P> &... p) const -> mat" << w << "x" << h << "<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {";
+                    l "template <typename F, typename ...P> [[nodiscard]] constexpr auto apply(F &&func, const mat" << w << "x" << h << "<P> &... p) const -> mat" << w << "x" << h << "<decltype(func(std::declval<T>(), std::declval<P>()...))> {return {";
                     for (int i = 0; i < w; i++)
                     {
                         if (i != 0) l ", ";
@@ -1205,7 +1206,7 @@ $       0, 0, 0, s};
                 { // Bool pack
                     auto BoolFunc = [&](const char *name, const char *bin, bool inverted)
                     {
-                        l "constexpr bool " << name << "() const {return ";
+                        l "[[nodiscard]] constexpr bool " << name << "() const {return ";
                         if (inverted) l "!(";
                         for (int hh = 0; hh < h; hh++)
                         {
@@ -1223,7 +1224,7 @@ $       0, 0, 0, s};
                     BoolFunc("all", "&&", 0);
                 }
                 { // Min and max
-                    l "constexpr T min() const {return std::min({";
+                    l "[[nodiscard]] constexpr T min() const {return std::min({";
                     for (int i = 0; i < w; i++)
                     {
                         for (int j = 0; j < h; j++)
@@ -1233,7 +1234,7 @@ $       0, 0, 0, s};
                         }
                     }
                     l "});}\n";
-                    l "constexpr T max() const {return std::max({";
+                    l "[[nodiscard]] constexpr T max() const {return std::max({";
                     for (int i = 0; i < w; i++)
                     {
                         for (int j = 0; j < h; j++)
@@ -1249,7 +1250,7 @@ $       0, 0, 0, s};
                     MatrixMul(w, i, h);
                 { // String operations
                     // To string
-                    l "std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start";
+                    l "[[nodiscard]] std::string to_string(const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, std::string(*f)(T) = num_to_string<T>) const {return start";
                     for (int hh = 0; hh < h; hh++)
                     {
                         if (hh != 0)
@@ -1263,14 +1264,14 @@ $       0, 0, 0, s};
                     }
                     l " + end;}\n";
 
-                    l "std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
+                    l "[[nodiscard]] std::string to_string(std::string(*f)(T) = num_to_string<T>) const {return to_string(\"[\", \",\", \";\", \"]\", f);}\n";
 
-                    l "std::string to_string_pretty() const {if constexpr (is_floating_point) "
+                    l "[[nodiscard]] std::string to_string_pretty() const {if constexpr (is_floating_point) "
                       "return to_string(" R"("/ "," "," |\n| "," /")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << "," << pretty_string_field_precision << ",'g','#'>); else "
                       "return to_string(" R"("/ "," "," |\n| "," /")" ",num_to_string<T[" << pretty_string_field_width << "]," << pretty_string_field_width << ",-1>);}\n";
 
                     // From string
-                    l R"(static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
+                    l R"([[nodiscard]] static vec from_string_mid(const char *src, int *chars_consumed, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0)
 {
 if (chars_consumed) *chars_consumed = 0;
 if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = start.size(); int offset; vec ret;
@@ -1297,9 +1298,9 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                       "return ret;\n"
                       "}\n";
 
-                    l "static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {int ch_con; vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base); ch_con = src[ch_con] == '\\0'; if (success) {*success = ch_con;} if (ch_con) {return ret;} else {return {};}}\n";
-                    l "static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
-                    l "static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \";\", \"]\", base);}\n";
+                    l "[[nodiscard]] static vec from_string(const char *src, bool *success, const std::string &start, const std::string &sep, const std::string &row_sep, const std::string &end, int base = 0) {int ch_con; vec ret = from_string_mid(src, &ch_con, start, sep, row_sep, end, base); ch_con = src[ch_con] == '\\0'; if (success) {*success = ch_con;} if (ch_con) {return ret;} else {return {};}}\n";
+                    l "[[nodiscard]] static vec from_string_mid(const char *src, int *chars_consumed = 0, int base = 0) {return from_string_mid(src, chars_consumed, \"[\", \",\", \";\", \"]\", base);}\n";
+                    l "[[nodiscard]] static vec from_string(const char *src, bool *success = 0, int base = 0) {return from_string(src, success, \"[\", \",\", \";\", \"]\", base);}\n";
                 }
 
                 l "};\n";
@@ -1313,7 +1314,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
             for (const char *op : ops_bin)
             {
                 // vec @ vec
-                l "template <typename T1, typename T2> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return {";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1321,7 +1322,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                 }
                 l "};}\n";
                 // vec @ other
-                l "template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T2>::io_or_op>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return {";
+                l "template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T2>::io_or_op>> [[nodiscard]] constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1329,7 +1330,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                 }
                 l "};}\n";
                 // other @ vec
-                l "template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T1>::io_or_op>> constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return {";
+                l "template <typename T1, typename T2, typename = std::enable_if_t<!type_category<T1>::io_or_op>> [[nodiscard]] constexpr vec" << sz << "<decltype(T1{}" << op << "T2{})> operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1340,15 +1341,15 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
             for (const char *op : ops_bool_bin)
             {
                 // vec @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return bool(first) " << op << " bool(second);}\n";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return bool(first) " << op << " bool(second);}\n";
                 // vec @ other
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return bool(first) " << op << " second;}\n";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return bool(first) " << op << " second;}\n";
                 // other @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return first " << op << " bool(second);}\n";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return first " << op << " bool(second);}\n";
             }
             for (const char *op : ops_un)
             {
-                l "template <typename T> constexpr vec" << sz << "<decltype(" << op << "T{})> operator" << op << "(const vec" << sz << "<T> &object) {return {";
+                l "template <typename T> [[nodiscard]] constexpr vec" << sz << "<decltype(" << op << "T{})> operator" << op << "(const vec" << sz << "<T> &object) {return {";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l ',';
@@ -1358,7 +1359,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
             }
             for (const char *op : ops_bool_un)
             {
-                l "template <typename T> constexpr vec" << sz << "<decltype(" << op << "T{})> operator" << op << "(const vec" << sz << "<T> &object) {return " << op << "bool(object);}\n";
+                l "template <typename T> [[nodiscard]] constexpr vec" << sz << "<decltype(" << op << "T{})> operator" << op << "(const vec" << sz << "<T> &object) {return " << op << "bool(object);}\n";
             }
             for (const char *op : ops_fix)
             {
@@ -1402,7 +1403,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                 const char *op = eq_ops[i];
                 const char *delim = eq_op_delims[i];
                 // vec @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return ";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const vec" << sz << "<T2> &second) {return ";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l delim;
@@ -1410,7 +1411,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                 }
                 l ";}\n";
                 // vec @ other
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return ";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr bool operator" << op << "(const vec" << sz << "<T1> &first, const T2 &second) {return ";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l delim;
@@ -1418,7 +1419,7 @@ if (strncmp(src, start.c_str(), start.size())) {return {};} std::size_t pos = st
                 }
                 l ";}\n";
                 // other @ vec
-                l "template <typename T1, typename T2> constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return ";
+                l "template <typename T1, typename T2> [[nodiscard]] constexpr bool operator" << op << "(const T1 &first, const vec" << sz << "<T2> &second) {return ";
                 for (int i = 0; i < sz; i++)
                 {
                     if (i != 0) l delim;
@@ -1497,11 +1498,11 @@ vec4<T> vec;
 constexpr quat() : vec{0,0,0,1} {}
 constexpr quat(const vec4<T> &o) : vec(o) {}
 
-static quat around_norm_axis(const vec3<T> &v, T angle)
+[[nodiscard]] static quat around_norm_axis(const vec3<T> &v, T angle)
 {
 return quat({v.x * std::sin(angle / 2.f), v.y * std::sin(angle / 2.f), v.z * std::sin(angle / 2.f), std::cos(angle / 2.f)});
 }
-static quat around_axis(const vec3<T> &v, T angle)
+[[nodiscard]] static quat around_axis(const vec3<T> &v, T angle)
 {
 return around_norm_axis(v.norm(), angle);
 }
@@ -1511,37 +1512,37 @@ void normalize()
 vec = vec.norm();
 }
 
-template <typename TT> constexpr quat<larger_type_t<T,TT>> mul(const quat<TT> &o) const
+template <typename TT> [[nodiscard]] constexpr quat<larger_type_t<T,TT>> mul(const quat<TT> &o) const
 {
 return quat({vec.w*o.vec.x + vec.x*o.vec.w + vec.y*o.vec.z - vec.z*o.vec.y,
 $            vec.w*o.vec.y - vec.x*o.vec.z + vec.y*o.vec.w + vec.z*o.vec.x,
 $            vec.w*o.vec.z + vec.x*o.vec.y - vec.y*o.vec.x + vec.z*o.vec.w,
 $            vec.w*o.vec.w - vec.x*o.vec.x - vec.y*o.vec.y - vec.z*o.vec.z});
 }
-quat combine(const quat &o, T fac) const
+[[nodiscard]] quat combine(const quat &o, T fac) const
 {
 return quat(vec.interpolate(o.vec, fac));
 }
 
-vec3<T> get_axis() const
+[[nodiscard]] vec3<T> get_axis() const
 {
 return vec.to_vec3().norm();
 }
-constexpr vec3<T> get_not_norm_axis() const
+[[nodiscard]] constexpr vec3<T> get_not_norm_axis() const
 {
 return vec.to_vec3();
 }
-T get_angle() const
+[[nodiscard]] T get_angle() const
 {
 return std::atan2(vec.to_vec3().len(), vec.w) * 2;
 }
 
-quat set_angle(T n) const
+[[nodiscard]] quat set_angle(T n) const
 {
 return from_axis_and_angle(get_not_norm_axis(), n);
 }
 
-template <typename TT> constexpr vec3<larger_type_t<T,TT>> mul(const vec3<TT> &in) const // Complexity: 24x`*` 17x`+-`
+template <typename TT> [[nodiscard]] constexpr vec3<larger_type_t<T,TT>> mul(const vec3<TT> &in) const // Complexity: 24x`*` 17x`+-`
 {
 float newx = vec.w*in.x + vec.y*in.z - vec.z*in.y;
 float newy = vec.w*in.y - vec.x*in.z + vec.z*in.x;
@@ -1553,12 +1554,12 @@ $       neww*vec.y + newx*vec.z + newy*vec.w - newz*vec.x,
 $       neww*vec.z - newx*vec.y + newy*vec.x + newz*vec.w};
 }
 
-template <typename TT> constexpr vec4<larger_type_t<T,TT>> mul(const vec4<TT> &in) const // Leaves in.w unchanged. Complexity: 24x`*` 17x`+-`
+template <typename TT> [[nodiscard]] constexpr vec4<larger_type_t<T,TT>> mul(const vec4<TT> &in) const // Leaves in.w unchanged. Complexity: 24x`*` 17x`+-`
 {
     return mul(in.to_vec3).to_vec4(in.w);
 }
 
-constexpr mat3<T> matrix() const // The quaternion must be normalized! Complexity: 18x`*` 12x`+-` (+ multiplication 9x`*` 6x`+-`)
+[[nodiscard]] constexpr mat3<T> matrix() const // The quaternion must be normalized! Complexity: 18x`*` 12x`+-` (+ multiplication 9x`*` 6x`+-`)
 {
 return {1 - 2*vec.y*vec.y - 2*vec.z*vec.z, 2*vec.x*vec.y - 2*vec.z*vec.w, 2*vec.x*vec.z + 2*vec.y*vec.w,
 $       2*vec.x*vec.y + 2*vec.z*vec.w, 2*vec.y*vec.z - 2*vec.x*vec.w, 1 - 2*vec.x*vec.x - 2*vec.z*vec.z,
@@ -1582,7 +1583,7 @@ using ldquat = quat<long double>;
             l "{\n";
             l "T first_arg;\n";
             l "template <typename TT> constexpr " << name << "_operator_impl_expression_t(TT &&obj) : first_arg((TT &&) obj) {}\n";
-            l "template <typename TT> constexpr auto operator" << op_delim << "(TT &&obj) const {return first_arg." << name << "((TT &&) obj);}\n";
+            l "template <typename TT> [[nodiscard]] constexpr auto operator" << op_delim << "(TT &&obj) const {return first_arg." << name << "((TT &&) obj);}\n";
             l "};\n";
         }
         l '\n';
@@ -1603,23 +1604,23 @@ using ldquat = quat<long double>;
         r R"(
 inline namespace Misc
 {
-template <typename T> constexpr T pi() {return T(3.14159265358979323846l);}
+template <typename T> [[nodiscard]] constexpr T pi() {return T(3.14159265358979323846l);}
 constexpr float       f_pi  = pi<float>();
 constexpr double      d_pi  = pi<double>();
 constexpr long double ld_pi = pi<long double>();
 
-template <typename T> T to_rad(T in)
+template <typename T> [[nodiscard]] T to_rad(T in)
 {
 static_assert(!std::is_integral_v<T>, "Integral argument makes no sense for this function.");
 return in * pi<T>() / (T)180;
 }
-template <typename T> T to_deg(T in)
+template <typename T> [[nodiscard]] T to_deg(T in)
 {
 static_assert(!std::is_integral_v<T>, "Integral argument makes no sense for this function.");
 return in * (T)180 / pi<T>();
 }
 
-template <typename T, typename TT> constexpr T ipow(T a, TT b)
+template <typename T, typename TT> [[nodiscard]] constexpr T ipow(T a, TT b)
 {
 static_assert(std::is_integral_v<TT>, "Non integral power makes no sense for this function.");
 T ret = 1;
@@ -1628,7 +1629,7 @@ while (b-- > 0)
 return ret;
 }
 
-template <typename T, typename Min, typename Max> constexpr T clamp(T val, Min min, Max max)
+template <typename T, typename Min, typename Max> [[nodiscard]] constexpr T clamp(T val, Min min, Max max)
 {
 static_assert(std::is_arithmetic_v<T> &&
               std::is_arithmetic_v<Min> &&
@@ -1637,24 +1638,24 @@ if (val < min) return min;
 if (val > max) return max;
 return val;
 }
-template <typename T, unsigned int D, typename Min, typename Max> constexpr vec<D,T> clamp(const vec<D,T> &val, Min min, Max max)
+template <typename T, unsigned int D, typename Min, typename Max> [[nodiscard]] constexpr vec<D,T> clamp(const vec<D,T> &val, Min min, Max max)
 {
 using v = vec<D,T>;
 static_assert(!type_category<Min>::vec_or_mat || std::is_same_v<change_base_type_t<v,Min>, Min>, "Second argument must be a scalar or must have the same dimensions as the first one.");
 static_assert(!type_category<Max>::vec_or_mat || std::is_same_v<change_base_type_t<v,Max>, Max>, "Third argument must be a scalar or must have the same dimensions as the first one.");
 return val.apply(clamp<base_type_t<v>, base_type_t<Min>, base_type_t<Max>>, change_base_type_t<v,Min>(min), change_base_type_t<v,Max>(max));
 }
-template <typename T> constexpr T clamp(T val)
+template <typename T> [[nodiscard]] constexpr T clamp(T val)
 {
 return clamp(val, 0, 1);
 }
 
-template <typename T> constexpr change_base_type_t<T,int> sign(T val)
+template <typename T> [[nodiscard]] constexpr change_base_type_t<T,int> sign(T val)
 {
 return (val > 0) - (val < 0);
 }
 
-template <typename I = int, typename F> I iround(F x)
+template <typename I = int, typename F> [[nodiscard]] I iround(F x)
 {
 static_assert(std::is_floating_point_v<F>, "Argument type must be floating-point.");
 static_assert(std::is_integral_v<I> && std::is_signed_v<I>, "Template argument must be integral and signed.");
@@ -1663,18 +1664,18 @@ if constexpr (sizeof (I) <= sizeof (long))
 else
     return std::llround(x);
 }
-template <typename I = int, typename T, unsigned int D> change_base_type_t<vec<D,T>,I> iround(const vec<D,T> &val)
+template <typename I = int, typename T, unsigned int D> [[nodiscard]] change_base_type_t<vec<D,T>,I> iround(const vec<D,T> &val)
 {
 return val.apply(iround<I, base_type_t<vec<D,T>>>);
 }
 
-template <typename T> constexpr T smoothstep(T x)
+template <typename T> [[nodiscard]] constexpr T smoothstep(T x)
 {
 static_assert(std::is_floating_point_v<base_type_t<T>>, "Argument type must be floating-point.");
 return 3 * x*x - 2 * x*x*x;
 }
 
-template <typename T> T constexpr abs(T x)
+template <typename T> [[nodiscard]] T constexpr abs(T x)
 {
 return (x >= 0 ? x : -x);
 }
@@ -1683,47 +1684,47 @@ template <typename T, unsigned int D> vec<D,T> abs(const vec<D,T> &val)
 return val.apply(abs<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> T floor(T x)
+template <typename T> [[nodiscard]] T floor(T x)
 {
 static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::floor(x);
 }
-template <typename T, unsigned int D> vec<D,T> floor(const vec<D,T> &val)
+template <typename T, unsigned int D> [[nodiscard]] vec<D,T> floor(const vec<D,T> &val)
 {
 return val.apply(floor<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> T ceil(T x)
+template <typename T> [[nodiscard]] T ceil(T x)
 {
 static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::ceil(x);
 }
-template <typename T, unsigned int D> vec<D,T> ceil(const vec<D,T> &val)
+template <typename T, unsigned int D> [[nodiscard]] vec<D,T> ceil(const vec<D,T> &val)
 {
 return val.apply(ceil<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> T trunc(T x)
+template <typename T> [[nodiscard]] T trunc(T x)
 {
 static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::trunc(x);
 }
-template <typename T, unsigned int D> vec<D,T> trunc(const vec<D,T> &val)
+template <typename T, unsigned int D> [[nodiscard]] vec<D,T> trunc(const vec<D,T> &val)
 {
 return val.apply(trunc<base_type_t<vec<D,T>>>);
 }
 
-template <typename T> T frac(T x)
+template <typename T> [[nodiscard]] T frac(T x)
 {
 static_assert(std::is_floating_point_v<T>, "Argument type must be floating-point.");
 return std::modf(x, 0);
 }
-template <typename T, unsigned int D> vec<D,T> frac(const vec<D,T> &val)
+template <typename T, unsigned int D> [[nodiscard]] vec<D,T> frac(const vec<D,T> &val)
 {
 return val.apply(frac<base_type_t<vec<D,T>>>);
 }
 
-template <typename T, typename TT> constexpr T div_ex(T a, TT b)
+template <typename T, typename TT> [[nodiscard]] constexpr T div_ex(T a, TT b)
 {
 static_assert(std::is_integral_v<T> &&
               std::is_integral_v<TT>, "Parameter types must be integral scalars, vectors, or matrices.");
@@ -1732,12 +1733,12 @@ if (a >= 0)
 else
     return (a + 1) / b - sign(b);
 }
-template <typename T, typename TT, unsigned int D> vec<D,T> div_ex(const vec<D,T> &a, TT b)
+template <typename T, typename TT, unsigned int D> [[nodiscard]] vec<D,T> div_ex(const vec<D,T> &a, TT b)
 {
 return a.apply(div_ex<base_type_t<vec<D,T>>, base_type_t<TT>>, change_base_type_t<vec<D,T>,TT>(b));
 }
 
-template <typename T, typename TT> constexpr T mod_ex(T a, TT b)
+template <typename T, typename TT> [[nodiscard]] constexpr T mod_ex(T a, TT b)
 {
 static_assert(std::is_integral_v<T> &&
               std::is_integral_v<TT>, "Parameter types must be integral scalars, vectors, or matrices.");
@@ -1746,7 +1747,7 @@ if (a >= 0)
 else
     return abs(b) - 1 + (a + 1) % b;
 }
-template <typename T, typename TT, unsigned int D> vec<D,T> mod_ex(const vec<D,T> &a, TT b)
+template <typename T, typename TT, unsigned int D> [[nodiscard]] vec<D,T> mod_ex(const vec<D,T> &a, TT b)
 {
 return a.apply(mod_ex<base_type_t<vec<D,T>>, base_type_t<TT>>, change_base_type_t<vec<D,T>,TT>(b));
 }
@@ -1761,10 +1762,10 @@ return a.apply(mod_ex<base_type_t<vec<D,T>>, base_type_t<TT>>, change_base_type_
         for (const auto &it : min_max)
         {
             l '\n';
-            l "template <typename T1, typename T2> constexpr larger_type_t<T1,T2> " << it.name << "(T1 a, T2 b) {return (" << it.logic << ");}\n";
-            l "template <typename T1, typename T2, unsigned int D1> constexpr larger_type_t<vec<D1,T1>,T2> " << it.name << "(const vec<D1,T1> &a, T2 b) {return a.apply(" << it.name << "<base_type_t<vec<D1,T1>>, T2>, change_base_type_t<vec<D1,T1>,T2>(b));}\n";
-            l "template <typename T1, typename T2, unsigned int D2> constexpr larger_type_t<T1,vec<D2,T2>> " << it.name << "(T1 a, const vec<D2,T2> &b) {return b.apply(" << it.name << "<T1, base_type_t<vec<D2,T2>>>, change_base_type_t<vec<D2,T2>,T1>(a));}\n";
-            l "template <typename T1, typename T2, unsigned int D1, unsigned int D2> constexpr larger_type_t<vec<D1,T1>,vec<D2,T2>> " << it.name << "(const vec<D1,T1> &a, const vec<D2,T2> &b) {return a.apply(" << it.name << "<base_type_t<vec<D1,T1>>, base_type_t<vec<D2,T2>>>, b);}\n";
+            l "template <typename T1, typename T2> [[nodiscard]] constexpr larger_type_t<T1,T2> " << it.name << "(T1 a, T2 b) {return (" << it.logic << ");}\n";
+            l "template <typename T1, typename T2, unsigned int D1> [[nodiscard]] constexpr larger_type_t<vec<D1,T1>,T2> " << it.name << "(const vec<D1,T1> &a, T2 b) {return a.apply(" << it.name << "<base_type_t<vec<D1,T1>>, T2>, change_base_type_t<vec<D1,T1>,T2>(b));}\n";
+            l "template <typename T1, typename T2, unsigned int D2> [[nodiscard]] constexpr larger_type_t<T1,vec<D2,T2>> " << it.name << "(T1 a, const vec<D2,T2> &b) {return b.apply(" << it.name << "<T1, base_type_t<vec<D2,T2>>>, change_base_type_t<vec<D2,T2>,T1>(a));}\n";
+            l "template <typename T1, typename T2, unsigned int D1, unsigned int D2> [[nodiscard]] constexpr larger_type_t<vec<D1,T1>,vec<D2,T2>> " << it.name << "(const vec<D1,T1> &a, const vec<D2,T2> &b) {return a.apply(" << it.name << "<base_type_t<vec<D1,T1>>, base_type_t<vec<D2,T2>>>, b);}\n";
         }
         r R"(
 }
